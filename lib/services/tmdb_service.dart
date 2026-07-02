@@ -26,4 +26,24 @@ class TmdbService {
         .map((r) => TmdbSearchResult.fromJson(r as Map<String, dynamic>))
         .toList();
   }
+
+  Future<TvDetails> getTvDetails(int id) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/tv/$id')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB tv details failed: ${response.statusCode}');
+    }
+    return TvDetails.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<SeasonDetails> getSeasonDetails(int tvId, int seasonNumber) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/tv/$tvId/season/$seasonNumber')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB season details failed: ${response.statusCode}');
+    }
+    return SeasonDetails.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
 }
