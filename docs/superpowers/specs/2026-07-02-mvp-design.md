@@ -82,4 +82,4 @@ One doc per tracked title. The doc id is prefixed with `type` because TMDB ids a
 
 ## Testing
 
-Manual verification on-device against the golden path (search → add → mark episodes watched → confirm Up Next/Library reflect state) — no automated test suite planned for this MVP; matches the pace of a 2-week personal project.
+Manual verification in-browser against the golden path (search → add → mark episodes watched → confirm Up Next/Library reflect state) — no automated test suite planned for this MVP; matches the pace of a 2-week personal project.
