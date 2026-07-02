@@ -113,4 +113,21 @@ void main() {
       expect(details.episodes[1].airDate, isNull);
     });
   });
+
+  group('MovieDetails', () {
+    test('parses a movie', () {
+      final json = {
+        'id': 550,
+        'title': 'Fight Club',
+        'poster_path': '/def.jpg',
+        'release_date': '1999-10-15',
+      };
+
+      final details = MovieDetails.fromJson(json);
+
+      expect(details.id, 550);
+      expect(details.title, 'Fight Club');
+      expect(details.releaseDate, DateTime.parse('1999-10-15'));
+    });
+  });
 }

@@ -131,3 +131,27 @@ class SeasonDetails {
     return SeasonDetails(seasonNumber: seasonNumber, episodes: episodes);
   }
 }
+
+class MovieDetails {
+  final int id;
+  final String title;
+  final String? posterPath;
+  final DateTime? releaseDate;
+
+  MovieDetails({
+    required this.id,
+    required this.title,
+    required this.posterPath,
+    required this.releaseDate,
+  });
+
+  factory MovieDetails.fromJson(Map<String, dynamic> json) => MovieDetails(
+        id: json['id'] as int,
+        title: json['title'] as String,
+        posterPath: json['poster_path'] as String?,
+        releaseDate:
+            json['release_date'] != null && (json['release_date'] as String).isNotEmpty
+                ? DateTime.parse(json['release_date'] as String)
+                : null,
+      );
+}

@@ -46,4 +46,14 @@ class TmdbService {
     }
     return SeasonDetails.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
+
+  Future<MovieDetails> getMovieDetails(int id) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/movie/$id')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB movie details failed: ${response.statusCode}');
+    }
+    return MovieDetails.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
 }
