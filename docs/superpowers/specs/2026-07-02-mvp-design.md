@@ -29,7 +29,7 @@ The site URL is publicly reachable (GitHub Pages has no access control of its ow
 
 ```
 allow read, write: if request.auth != null
-  && request.auth.token.email in ['you@example.com'];
+  && request.auth.token.email in ['you@example.com', 'teammate@example.com'];
 ```
 
 Anyone can load the page and attempt to sign in, but only allowlisted emails get Firestore read/write access — everyone else's sign-in succeeds at the Firebase Auth level but every Firestore call is denied, so the app effectively refuses them. Mehdi will add more emails to the list later by editing and redeploying `firestore.rules`; no code change needed elsewhere. Each allowlisted person gets their own isolated `users/{uid}/library` — no shared state between people.
