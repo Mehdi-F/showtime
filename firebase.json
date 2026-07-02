@@ -1,1 +1,17 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"showtime-mehdi","configurations":{"web":"1:704108506497:web:ba42015ee856a5b7644c80"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "showtime-mehdi",
+          "configurations": {
+            "web": "1:704108506497:web:ba42015ee856a5b7644c80"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
