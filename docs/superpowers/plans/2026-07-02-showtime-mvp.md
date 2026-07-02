@@ -2,20 +2,22 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the Showtime MVP — a personal Flutter/Android app to search TMDB for shows/movies, track them in a Firebase-backed library, mark episodes/movies watched, and see what's next to watch and when new episodes air.
+**Goal:** Build the Showtime MVP — a Flutter Web app, hosted on GitHub Pages, to search TMDB for shows/movies, track them in a Firebase-backed library, mark episodes/movies watched, and see what's next to watch and when new episodes air.
 
-**Architecture:** Flutter app calling TMDB's public REST API directly (API key via `--dart-define`, no backend proxy). Firestore stores only tracking state under `users/{uid}/library/{docId}`; TMDB is queried live for all metadata/posters — never cached into Firestore. Google Sign-In is the sole auth method (single user).
+**Architecture:** Flutter Web app calling TMDB's public REST API directly (API key via `--dart-define`, no backend proxy — GitHub Pages is static hosting only, so there is nowhere to run one). Firestore stores only tracking state under `users/{uid}/library/{docId}`; TMDB is queried live for all metadata/posters — never cached into Firestore. Firebase Auth with Google Sign-In (`signInWithPopup`) is the sole auth method; a Firestore rule allowlist restricts writes to two known email addresses since the site is publicly reachable. A GitHub Actions workflow builds and deploys to the `gh-pages` branch on every push to `main`.
 
-**Tech Stack:** Flutter (Dart), Firebase (`firebase_core`, `firebase_auth`, `cloud_firestore`), `google_sign_in`, `provider` for state management, `http` for TMDB calls, `cached_network_image`, `google_fonts`, `intl`.
+**Tech Stack:** Flutter Web (Dart), Firebase (`firebase_core`, `firebase_auth`, `cloud_firestore`), `provider` for state management, `http` for TMDB calls, `cached_network_image`, `google_fonts`, `intl`, GitHub Actions (`peaceiris/actions-gh-pages`).
 
 ## Global Constraints
 
-- Android only, package id `com.moudass.showtime`. No iOS, no Play Store listing (sideloaded APK).
+- Web only, no native mobile builds. Repo: `Mehdi-F/showtime` on GitHub. Deployed URL: `https://mehdi-f.github.io/showtime/`.
+- Every `flutter build web` invocation must pass `--base-href /showtime/` — a GitHub Pages project site is served from that subpath, and the app will fail to load its assets without it.
 - TMDB attribution string must appear somewhere in the UI: "This product uses the TMDB API but is not endorsed or certified by TMDB." (TMDB ToS requirement.)
 - TMDB data is never written to Firestore — Firestore holds only `type`, `status`, `addedAt`, `watchedEpisodes`/`watched`/`watchedAt`. Screens fetch TMDB metadata live by id every time they render.
 - Firestore doc id for a library entry is `"${type}_$tmdbId"` (e.g. `tv_1399`, `movie_550`) — TMDB ids are only unique within a media type, so the type prefix avoids a tv/movie id collision.
-- **Testing policy (per approved spec):** automated unit tests are written only for pure Dart logic with no I/O (JSON parsing/model mapping, the next-episode algorithm). Everything that touches Firebase, the network, or renders UI is verified manually on-device — no widget/integration test suite for this MVP.
-- No notifications, no ratings/stats/social features, no TV Time import — all explicitly out of scope per spec.
+- Firestore access is restricted to an email allowlist: `you@example.com`, `teammate@example.com`. Anyone can sign in via Google, but only these two get Firestore read/write — everyone else's Firestore calls are denied.
+- **Testing policy (per approved spec):** automated unit tests are written only for pure Dart logic with no I/O (JSON parsing/model mapping, the next-episode algorithm). Everything that touches Firebase, the network, or renders UI is verified manually in-browser — no widget/integration test suite for this MVP.
+- No notifications, no ratings/stats/social features, no TV Time import, no custom domain, no offline/PWA support — all explicitly out of scope per spec.
 
 ---
 
@@ -32,7 +34,7 @@ lib/
     up_next.dart             # nextUnwatchedEpisode() pure function
   services/
     tmdb_service.dart        # TMDB HTTP calls
-    auth_service.dart        # Google Sign-In + FirebaseAuth wrapper
+    auth_service.dart        # Firebase Auth Google sign-in wrapper (signInWithPopup)
     library_service.dart     # Firestore CRUD for the library
   providers/
     auth_provider.dart
@@ -55,6 +57,12 @@ test/
     library_item_test.dart
   logic/
     up_next_test.dart
+.github/
+  workflows/
+    deploy.yml                # build + deploy to gh-pages on push to main
+firestore.rules
+firebase.json
+.firebaserc
 ```
 
 ---
@@ -63,17 +71,17 @@ test/
 
 **Files:**
 - Create: `pubspec.yaml` (via `flutter create`, then edited)
-- Create: Flutter default project skeleton (`lib/main.dart`, `android/`, etc.)
+- Create: Flutter default web project skeleton (`lib/main.dart`, `web/`, etc.)
 
 **Interfaces:**
-- Produces: a runnable Flutter project with all MVP dependencies resolved.
+- Produces: a runnable Flutter web project with all MVP dependencies resolved.
 
-- [ ] **Step 1: Scaffold the Flutter project**
+- [ ] **Step 1: Scaffold the Flutter project (web platform only)**
 
 Run inside `C:\Users\Mehdi\StudioProjects\showtime` (the folder already contains `docs/` and a git repo — `flutter create` on a non-empty directory is safe, it only adds Flutter files):
 
 ```bash
-flutter create --org com.moudass --project-name showtime .
+flutter create --platforms web --org com.moudass --project-name showtime .
 ```
 
 - [ ] **Step 2: Add dependencies**
@@ -84,7 +92,6 @@ Edit `pubspec.yaml`, add under `dependencies:`:
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.3
-  google_sign_in: ^6.2.1
   provider: ^6.1.2
   http: ^1.2.2
   cached_network_image: ^3.4.1
@@ -105,7 +112,7 @@ Expected: `flutter analyze` reports "No issues found!".
 
 ```bash
 git add -A
-git commit -m "chore: scaffold Flutter project with MVP dependencies"
+git commit -m "chore: scaffold Flutter web project with MVP dependencies"
 ```
 
 ---
@@ -114,7 +121,6 @@ git commit -m "chore: scaffold Flutter project with MVP dependencies"
 
 **Files:**
 - Create: `lib/firebase_options.dart` (generated by FlutterFire CLI)
-- Modify: `android/app/build.gradle.kts` (Firebase plugin, applied by `flutterfire configure`)
 
 **Interfaces:**
 - Produces: `DefaultFirebaseOptions.currentPlatform` used by `Firebase.initializeApp()` in Task 10.
@@ -133,26 +139,20 @@ dart pub global activate flutterfire_cli
 flutterfire configure --project=showtime-mehdi
 ```
 
-When prompted for platforms, select **Android only**. This generates `lib/firebase_options.dart` and registers the app with package id `com.moudass.showtime` in Firebase.
+When prompted for platforms, select **Web only**. This generates `lib/firebase_options.dart` and registers a web app in Firebase.
 
 - [ ] **Step 3: Enable Google Sign-In in Firebase Console**
 
 In the Firebase Console → Authentication → Sign-in method → enable **Google** as a provider.
 
-- [ ] **Step 4: Register the debug SHA-1 fingerprint**
+- [ ] **Step 4: Add the GitHub Pages domain to authorized domains**
 
-```bash
-cd android
-./gradlew signingReport
-cd ..
-```
-
-Copy the `SHA1` value under the `debug` variant. In Firebase Console → Project settings → your Android app → "Add fingerprint", paste it in. This is required for Google Sign-In to work on a debug build.
+In Firebase Console → Authentication → Settings → Authorized domains → add `mehdi-f.github.io`. Without this, `signInWithPopup` will reject sign-in attempts from the deployed site (it works fine on `localhost` during local development without this step, since `localhost` is authorized by default).
 
 - [ ] **Step 5: Verify the app builds with Firebase wired in**
 
 ```bash
-flutter build apk --debug
+flutter build web --base-href /showtime/
 ```
 
 Expected: build succeeds with no Firebase-related errors.
@@ -160,8 +160,8 @@ Expected: build succeeds with no Firebase-related errors.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add lib/firebase_options.dart android/app/google-services.json android/app/build.gradle.kts
-git commit -m "chore: configure Firebase project and Google Sign-In"
+git add lib/firebase_options.dart
+git commit -m "chore: configure Firebase project for web"
 ```
 
 ---
@@ -953,50 +953,36 @@ git commit -m "feat: add pure next-unwatched-episode logic"
 
 ---
 
-### Task 8: AuthService (Google Sign-In)
+### Task 8: AuthService (Google Sign-In via Firebase Auth popup)
 
 **Files:**
 - Create: `lib/services/auth_service.dart`
 
 **Interfaces:**
 - Produces: `AuthService.authStateChanges` (`Stream<User?>`), `AuthService.signInWithGoogle()` (`Future<UserCredential?>`), `AuthService.signOut()` (`Future<void>`), `AuthService.currentUser` (`User?`).
-- Manual verification only (Firebase Auth + Google Sign-In require a real device/emulator with Play Services — no automated test per Global Constraints).
+- Manual verification only (Firebase Auth requires a real browser and the authorized-domain config from Task 2 — no automated test per Global Constraints).
 
 - [ ] **Step 1: Write `lib/services/auth_service.dart`**
 
+Flutter web's standard Google Sign-In path is `FirebaseAuth.signInWithPopup(GoogleAuthProvider())` — no separate `google_sign_in` package is needed on web.
+
 ```dart
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
 
-  AuthService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
-      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+  AuthService({FirebaseAuth? firebaseAuth}) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
   User? get currentUser => _firebaseAuth.currentUser;
 
-  Future<UserCredential?> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null; // user cancelled
-
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    return _firebaseAuth.signInWithCredential(credential);
+  Future<UserCredential?> signInWithGoogle() {
+    return _firebaseAuth.signInWithPopup(GoogleAuthProvider());
   }
 
-  Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _firebaseAuth.signOut();
-  }
+  Future<void> signOut() => _firebaseAuth.signOut();
 }
 ```
 
@@ -1008,15 +994,18 @@ class AuthService {
 
 ```bash
 git add lib/services/auth_service.dart
-git commit -m "feat: add AuthService wrapping Google Sign-In"
+git commit -m "feat: add AuthService using Firebase Auth Google popup sign-in"
 ```
 
 ---
 
-### Task 9: LibraryService (Firestore CRUD)
+### Task 9: LibraryService (Firestore CRUD) and security rules
 
 **Files:**
 - Create: `lib/services/library_service.dart`
+- Create: `firestore.rules`
+- Create: `firebase.json`
+- Create: `.firebaserc`
 
 **Interfaces:**
 - Consumes: `LibraryItem` from Task 6.
@@ -1095,7 +1084,7 @@ class LibraryService {
 }
 ```
 
-- [ ] **Step 2: Deploy open Firestore rules for the single-user MVP**
+- [ ] **Step 2: Write the email-allowlisted Firestore rules**
 
 Create `firestore.rules` at the project root:
 
@@ -1104,25 +1093,49 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/library/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email in ['you@example.com', 'teammate@example.com'];
     }
   }
 }
 ```
 
-```bash
-firebase deploy --only firestore:rules --project showtime-mehdi
+Create `firebase.json`:
+
+```json
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
 ```
 
-- [ ] **Step 3: Manual verification (deferred to Task 13/14)**
+Create `.firebaserc`:
 
-`LibraryService` is exercised end-to-end once `SearchScreen` (add to library) and `LibraryScreen` (read the stream) exist.
+```json
+{
+  "projects": {
+    "default": "showtime-mehdi"
+  }
+}
+```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Deploy the rules**
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+- [ ] **Step 4: Manual verification (deferred to Task 13/14)**
+
+`LibraryService` is exercised end-to-end once `SearchScreen` (add to library) and `LibraryScreen` (read the stream) exist. At that point, confirm both that an allowlisted account can read/write and that a non-allowlisted Google account's Firestore calls are denied (sign in with any other Google account and confirm the app fails to load/write the library rather than silently succeeding).
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add lib/services/library_service.dart firestore.rules firebase.json .firebaserc
-git commit -m "feat: add LibraryService with Firestore CRUD and security rules"
+git commit -m "feat: add LibraryService with Firestore CRUD and email-allowlisted security rules"
 ```
 
 ---
@@ -1262,7 +1275,7 @@ class AuthGate extends StatelessWidget {
 - [ ] **Step 4: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Expected: app builds and launches to the login screen (a placeholder is fine here — real `LoginScreen` lands in Task 11). No crash on startup.
@@ -1319,10 +1332,10 @@ class LoginScreen extends StatelessWidget {
 - [ ] **Step 2: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
-Golden path: tap "Sign in with Google" → Google account picker appears → select account → app navigates away from the login screen (to `HomeShell`, built in Task 12). Confirms `AuthService`, `AuthProvider`, and `AuthGate` from Tasks 8/10 work end-to-end.
+Golden path: tap "Sign in with Google" → a Google popup window appears → select the allowlisted account → popup closes → app navigates away from the login screen (to `HomeShell`, built in Task 12). Confirms `AuthService`, `AuthProvider`, and `AuthGate` from Tasks 8/10 work end-to-end on `localhost` (which is authorized by default, unlike the deployed domain which needs Task 2 Step 4 to already be done).
 
 - [ ] **Step 3: Commit**
 
@@ -1412,7 +1425,7 @@ class _HomeShellState extends State<HomeShell> {
 - [ ] **Step 3: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: after signing in, four bottom nav tabs appear and each shows its placeholder text when tapped.
@@ -1586,7 +1599,7 @@ class _SearchScreenState extends State<SearchScreen> {
 - [ ] **Step 3: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: Search tab → type "Game of Thrones" → results grid appears with posters → tap a result → snackbar "Added Game of Thrones" appears → confirm a new document shows up under `users/{uid}/library` in the Firebase Console.
@@ -1614,7 +1627,6 @@ git commit -m "feat: add search screen with add-to-library action"
 ```dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
@@ -1695,7 +1707,7 @@ class LibraryScreen extends StatelessWidget {
 - [ ] **Step 2: Manual verification (partial — full flow confirmed after Task 15/16)**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: Library tab shows the item added in Task 13 with correct poster/title resolved live from TMDB (not from Firestore). Tapping it will error until Tasks 15/16 land — that's expected at this point.
@@ -1869,7 +1881,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
 - [ ] **Step 2: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: from Library, tap a tracked show → season chips appear → episode list loads for the first season → tap a checkbox → it toggles and Firestore's `watchedEpisodes` map updates (check Firebase Console) → "Mark season watched" checks every episode in the current season and updates Firestore in one batch.
@@ -1973,7 +1985,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 - [ ] **Step 2: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: add a movie from Search → open it from Library → tap "Mark watched" → button flips to "Watched" → confirm `watched: true` and `watchedAt` are set on the Firestore doc → back out to Library, confirm the green checkmark overlay from Task 14 appears on the poster.
@@ -2077,7 +2089,7 @@ class UpNextScreen extends StatelessWidget {
 - [ ] **Step 2: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: track a show, mark its first episode watched from Show Detail → open Up Next tab → the show appears with its second episode listed as next → mark every aired episode watched → the show drops off Up Next entirely.
@@ -2176,7 +2188,7 @@ class CalendarScreen extends StatelessWidget {
 - [ ] **Step 2: Manual verification**
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run -d chrome --dart-define=TMDB_API_KEY=your_key_here
 ```
 
 Golden path: track a currently-airing show with a known upcoming episode → Calendar tab shows it with the correct air date, sorted soonest-first alongside any other tracked airing shows.
@@ -2190,7 +2202,7 @@ git commit -m "feat: add Calendar screen showing upcoming episode air dates"
 
 ---
 
-### Task 19: TMDB attribution and final release build
+### Task 19: TMDB attribution and local release verification
 
 **Files:**
 - Modify: `lib/screens/library_screen.dart` (add attribution footer)
@@ -2215,23 +2227,22 @@ In `lib/screens/library_screen.dart`, add a `bottomNavigationBar` (or a footer w
 
 (Add `import '../config/tmdb_config.dart';` to the top of the file.)
 
-- [ ] **Step 2: Full golden-path walkthrough on-device**
+- [ ] **Step 2: Full golden-path walkthrough in a release build**
 
 ```bash
-flutter run --release --dart-define=TMDB_API_KEY=your_key_here
+flutter build web --release --base-href /showtime/ --dart-define=TMDB_API_KEY=your_key_here
 ```
 
-Walk the entire loop once, end to end: sign in → search for a show → add it → mark a couple of episodes watched from Show Detail → confirm it appears correctly (or drops off) in Up Next → confirm it appears in Calendar if it has an upcoming episode → search for and add a movie → mark it watched from Movie Detail → confirm the watched checkmark shows in Library.
-
-- [ ] **Step 3: Build the release APK**
+Serve the build output locally to test it as it will actually run (a plain `flutter run` uses debug mode, which behaves slightly differently than the compiled release output):
 
 ```bash
-flutter build apk --release --dart-define=TMDB_API_KEY=your_key_here
+cd build/web
+python -m http.server 8000
 ```
 
-Expected: build succeeds, APK output at `build/app/outputs/flutter-apk/app-release.apk`. Install it on-device (`adb install`) and repeat the golden-path walkthrough once against the release build.
+Open `http://localhost:8000` in a browser (note: `signInWithPopup` will work here because `localhost` is authorized by default, per Task 2). Walk the entire loop once, end to end: sign in → search for a show → add it → mark a couple of episodes watched from Show Detail → confirm it appears correctly (or drops off) in Up Next → confirm it appears in Calendar if it has an upcoming episode → search for and add a movie → mark it watched from Movie Detail → confirm the watched checkmark shows in Library → confirm the TMDB attribution text is visible on the Library tab.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add lib/screens/library_screen.dart
@@ -2240,8 +2251,79 @@ git commit -m "feat: add TMDB attribution notice and finish MVP golden path"
 
 ---
 
+### Task 20: GitHub Actions deployment to GitHub Pages
+
+**Files:**
+- Create: `.github/workflows/deploy.yml`
+
+**Interfaces:**
+- Consumes: the full app from Tasks 1-19; the `TMDB_API_KEY` GitHub Actions repository secret (set manually, not committed).
+
+- [ ] **Step 1: Add the TMDB API key as a repository secret**
+
+In the GitHub repo (`Mehdi-F/showtime`) → Settings → Secrets and variables → Actions → New repository secret → name `TMDB_API_KEY`, value your TMDB key. This keeps the key out of the committed workflow file (it still ends up embedded in the compiled JS output, same accepted tradeoff as local `--dart-define` builds — see the spec's Architecture section).
+
+- [ ] **Step 2: Write `.github/workflows/deploy.yml`**
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter build web --release --base-href /showtime/ --dart-define=TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/web
+```
+
+- [ ] **Step 3: Push to `main` and verify the workflow runs**
+
+```bash
+git push origin master:main
+```
+
+(The local repo's default branch is `master`; the workflow triggers on `main`, matching the GitHub default branch convention — this pushes local `master` to the remote's `main`.)
+
+In the GitHub repo → Actions tab, confirm the "Deploy to GitHub Pages" workflow runs to completion. This creates a `gh-pages` branch with the built site.
+
+- [ ] **Step 4: Enable GitHub Pages**
+
+In the GitHub repo → Settings → Pages → Source: "Deploy from a branch" → Branch: `gh-pages` / `(root)` → Save.
+
+- [ ] **Step 5: Verify the deployed site**
+
+Visit `https://mehdi-f.github.io/showtime/`. Confirm the login screen loads, "Sign in with Google" opens a popup, and an allowlisted account can sign in and reach the four-tab home shell (this is the first real test of the Task 2 Step 4 authorized-domain config against the live domain, not `localhost`).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add .github/workflows/deploy.yml
+git commit -m "ci: deploy to GitHub Pages on push to main"
+```
+
+---
+
 ## Self-Review Notes
 
-- **Spec coverage:** Search+add (Task 13), mark episodes/movies watched incl. bulk season (Tasks 15/16), Up Next (Task 17), Calendar (Task 18), Google Sign-In (Tasks 8/10/11), Firestore data model with `type`-prefixed doc ids (Task 6/9), TMDB attribution (Task 19), Android-only/no-store build (Tasks 1, 19). Import explicitly dropped per spec — no task references it.
+- **Spec coverage:** Search+add (Task 13), mark episodes/movies watched incl. bulk season (Tasks 15/16), Up Next (Task 17), Calendar (Task 18), Google Sign-In via popup (Tasks 8/10/11), Firestore data model with `type`-prefixed doc ids (Task 6/9), email-allowlisted access control (Task 9), TMDB attribution (Task 19), web-only build with `--base-href /showtime/` (Tasks 1, 2, 19, 20), GitHub Actions deploy to GitHub Pages (Task 20), authorized-domain config for the live URL (Task 2 Step 4, verified live in Task 20 Step 5). Import explicitly dropped per spec — no task references it.
 - **Placeholder scan:** no TBD/TODO left in any step; the only "coming in Task N" text is literal placeholder UI copy for not-yet-built tabs, replaced by the referenced task itself, not a stand-in for missing plan content.
-- **Type consistency:** `EpisodeRef.key` (Task 4) matches the map keys used in `LibraryItem.watchedEpisodes` (Task 6), `LibraryService.markEpisodeWatched`/`markSeasonWatched` (Task 9), and `nextUnwatchedEpisode` (Task 7). `LibraryItem.buildDocId` (Task 6) is the single source of truth for doc ids, used identically in `LibraryService` (Task 9) and `LibraryScreen`/`ShowDetailScreen`/`MovieDetailScreen` navigation (Tasks 14-16).
+- **Type consistency:** `EpisodeRef.key` (Task 4) matches the map keys used in `LibraryItem.watchedEpisodes` (Task 6), `LibraryService.markEpisodeWatched`/`markSeasonWatched` (Task 9), and `nextUnwatchedEpisode` (Task 7). `LibraryItem.buildDocId` (Task 6) is the single source of truth for doc ids, used identically in `LibraryService` (Task 9) and `LibraryScreen`/`ShowDetailScreen`/`MovieDetailScreen` navigation (Tasks 14-16). `AuthService.signInWithGoogle()` (Task 8) returns `Future<UserCredential?>` and is called the same way from `AuthProvider` (Task 10) and `LoginScreen` (Task 11) regardless of the underlying popup vs. native-plugin mechanism, so no downstream task needed changes beyond Task 8 itself.
