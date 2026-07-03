@@ -42,6 +42,7 @@ class CalendarScreen extends StatelessWidget {
                   ..sort((a, b) {
                     final aDate = a.episode.airDate;
                     final bDate = b.episode.airDate;
+                    if (aDate == null && bDate == null) return 0;
                     if (aDate == null) return 1;
                     if (bDate == null) return -1;
                     return aDate.compareTo(bDate);
