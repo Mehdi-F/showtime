@@ -93,6 +93,46 @@ void main() {
 
       expect(details.nextEpisodeToAir, isNull);
     });
+
+    test('isEnded is true for Ended and Canceled status, false otherwise', () {
+      final ended = TvDetails.fromJson({
+        'id': 1,
+        'name': 'Ended Show',
+        'poster_path': null,
+        'seasons': <dynamic>[],
+        'status': 'Ended',
+      });
+      final canceled = TvDetails.fromJson({
+        'id': 2,
+        'name': 'Canceled Show',
+        'poster_path': null,
+        'seasons': <dynamic>[],
+        'status': 'Canceled',
+      });
+      final returning = TvDetails.fromJson({
+        'id': 3,
+        'name': 'Ongoing Show',
+        'poster_path': null,
+        'seasons': <dynamic>[],
+        'status': 'Returning Series',
+      });
+
+      expect(ended.isEnded, true);
+      expect(canceled.isEnded, true);
+      expect(returning.isEnded, false);
+    });
+
+    test('defaults status to Returning Series when missing', () {
+      final details = TvDetails.fromJson({
+        'id': 1,
+        'name': 'Untitled',
+        'poster_path': null,
+        'seasons': <dynamic>[],
+      });
+
+      expect(details.status, 'Returning Series');
+      expect(details.isEnded, false);
+    });
   });
 
   group('SeasonDetails', () {

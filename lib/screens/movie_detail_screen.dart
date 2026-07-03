@@ -19,11 +19,13 @@ class MovieDetailScreen extends StatefulWidget {
 
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _watched = false;
+  late bool _favorite;
 
   @override
   void initState() {
     super.initState();
     _watched = widget.libraryItem.watched;
+    _favorite = widget.libraryItem.favorite;
   }
 
   Future<void> _toggleWatched() async {
@@ -35,6 +37,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           tmdbId: widget.libraryItem.tmdbId,
           watched: newValue,
         );
+  }
+
+  Future<void> _toggleFavorite() async {
+    final uid = context.read<AuthProvider>().user!.uid;
+    final newValue = !_favorite;
+    setState(() => _favorite = newValue);
+    await context.read<LibraryService>().toggleFavorite(
+          uid: uid,
+          tmdbId: widget.libraryItem.tmdbId,
+          type: 'movie',
+          favorite: newValue,
+        );
+  }
+
+  Future<void> _unfollow() async {
+    final uid = context.read<AuthProvider>().user!.uid;
+    await context.read<LibraryService>().removeFromLibrary(
+          uid: uid,
+          tmdbId: widget.libraryItem.tmdbId,
+          type: 'movie',
+        );
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   @override
@@ -76,11 +100,38 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     Positioned(
                       top: 8,
                       left: 4,
+                      right: 4,
                       child: SafeArea(
                         bottom: false,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.of(context).maybePop(),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              onPressed: () => Navigator.of(context).maybePop(),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    _favorite ? Icons.favorite : Icons.favorite_border,
+                                    color: _favorite ? Colors.redAccent : Colors.white,
+                                  ),
+                                  onPressed: _toggleFavorite,
+                                ),
+                                PopupMenuButton<void>(
+                                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                                  color: AppColors.surface,
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      onTap: _unfollow,
+                                      child: const Text('Remove from Library'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),

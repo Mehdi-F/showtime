@@ -70,6 +70,7 @@ class TvDetails {
   final String? posterPath;
   final List<SeasonSummary> seasons;
   final NextEpisode? nextEpisodeToAir;
+  final String status; // TMDB raw value: "Returning Series" | "Ended" | "Canceled" | "In Production" | "Planned" | "Pilot"
 
   TvDetails({
     required this.id,
@@ -77,7 +78,10 @@ class TvDetails {
     required this.posterPath,
     required this.seasons,
     required this.nextEpisodeToAir,
+    required this.status,
   });
+
+  bool get isEnded => status == 'Ended' || status == 'Canceled';
 
   factory TvDetails.fromJson(Map<String, dynamic> json) => TvDetails(
         id: json['id'] as int,
@@ -91,6 +95,7 @@ class TvDetails {
         nextEpisodeToAir: json['next_episode_to_air'] != null
             ? NextEpisode.fromJson(json['next_episode_to_air'] as Map<String, dynamic>)
             : null,
+        status: json['status'] as String? ?? 'Returning Series',
       );
 }
 

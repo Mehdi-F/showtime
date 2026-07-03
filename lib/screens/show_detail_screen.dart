@@ -24,12 +24,36 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
   int _selectedSeason = 1;
   SeasonDetails? _seasonDetails;
   Map<String, bool> _watchedEpisodes = {};
+  late bool _favorite;
 
   @override
   void initState() {
     super.initState();
     _watchedEpisodes = Map.of(widget.libraryItem.watchedEpisodes);
+    _favorite = widget.libraryItem.favorite;
     _load();
+  }
+
+  Future<void> _toggleFavorite() async {
+    final uid = context.read<AuthProvider>().user!.uid;
+    final newValue = !_favorite;
+    setState(() => _favorite = newValue);
+    await context.read<LibraryService>().toggleFavorite(
+          uid: uid,
+          tmdbId: widget.libraryItem.tmdbId,
+          type: 'tv',
+          favorite: newValue,
+        );
+  }
+
+  Future<void> _unfollow() async {
+    final uid = context.read<AuthProvider>().user!.uid;
+    await context.read<LibraryService>().removeFromLibrary(
+          uid: uid,
+          tmdbId: widget.libraryItem.tmdbId,
+          type: 'tv',
+        );
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   Future<void> _load() async {
@@ -96,7 +120,14 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     return Scaffold(
       body: Column(
         children: [
-          _ShowBanner(title: details.name, posterPath: details.posterPath),
+          _ShowBanner(
+            title: details.name,
+            posterPath: details.posterPath,
+            isEnded: details.isEnded,
+            favorite: _favorite,
+            onToggleFavorite: _toggleFavorite,
+            onUnfollow: _unfollow,
+          ),
           SizedBox(
             height: 44,
             child: ListView(
@@ -182,8 +213,19 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
 class _ShowBanner extends StatelessWidget {
   final String title;
   final String? posterPath;
+  final bool isEnded;
+  final bool favorite;
+  final VoidCallback onToggleFavorite;
+  final VoidCallback onUnfollow;
 
-  const _ShowBanner({required this.title, required this.posterPath});
+  const _ShowBanner({
+    required this.title,
+    required this.posterPath,
+    required this.isEnded,
+    required this.favorite,
+    required this.onToggleFavorite,
+    required this.onUnfollow,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -211,11 +253,38 @@ class _ShowBanner extends StatelessWidget {
           Positioned(
             top: 8,
             left: 4,
+            right: 4,
             child: SafeArea(
               bottom: false,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).maybePop(),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          favorite ? Icons.favorite : Icons.favorite_border,
+                          color: favorite ? Colors.redAccent : Colors.white,
+                        ),
+                        onPressed: onToggleFavorite,
+                      ),
+                      PopupMenuButton<void>(
+                        icon: const Icon(Icons.more_vert, color: Colors.white),
+                        color: AppColors.surface,
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            onTap: onUnfollow,
+                            child: const Text('Remove from Library'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -223,15 +292,37 @@ class _ShowBanner extends StatelessWidget {
             left: 16,
             right: 16,
             bottom: 16,
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isEnded ? AppColors.surfaceVariant : AppColors.accent,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isEnded ? 'Terminée' : 'En cours',
+                    style: TextStyle(
+                      color: isEnded ? Colors.white : Colors.black,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

@@ -27,6 +27,29 @@ void main() {
     expect(restored.watchedEpisodes['s1e1'], true);
     expect(restored.watchedEpisodes['s1e2'], false);
     expect(restored.addedAt, addedAt);
+    expect(restored.favorite, false);
+    expect(restored.lastActivityAt, null);
+  });
+
+  test('round-trips favorite and lastActivityAt', () {
+    final lastActivityAt = DateTime.utc(2026, 7, 3);
+    final item = LibraryItem(
+      docId: 'tv_1399',
+      tmdbId: 1399,
+      type: 'tv',
+      status: 'watching',
+      addedAt: DateTime.utc(2026, 7, 1),
+      watchedEpisodes: const {},
+      watched: false,
+      watchedAt: null,
+      favorite: true,
+      lastActivityAt: lastActivityAt,
+    );
+
+    final restored = LibraryItem.fromMap(item.docId, item.toMap());
+
+    expect(restored.favorite, true);
+    expect(restored.lastActivityAt, lastActivityAt);
   });
 
   test('round-trips a movie item through toMap/fromMap', () {

@@ -40,6 +40,7 @@ class LibraryService {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
     return _libraryRef(uid).doc(docId).update({
       'watchedEpisodes.s${season}e$episode': watched,
+      'lastActivityAt': DateTime.now().toIso8601String(),
     });
   }
 
@@ -53,6 +54,7 @@ class LibraryService {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
     final updates = <String, dynamic>{
       for (final episode in episodeNumbers) 'watchedEpisodes.s${season}e$episode': watched,
+      'lastActivityAt': DateTime.now().toIso8601String(),
     };
     return _libraryRef(uid).doc(docId).update(updates);
   }
@@ -63,5 +65,20 @@ class LibraryService {
       'watched': watched,
       'watchedAt': watched ? DateTime.now().toIso8601String() : null,
     });
+  }
+
+  Future<void> removeFromLibrary({required String uid, required int tmdbId, required String type}) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: type);
+    return _libraryRef(uid).doc(docId).delete();
+  }
+
+  Future<void> toggleFavorite({
+    required String uid,
+    required int tmdbId,
+    required String type,
+    required bool favorite,
+  }) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: type);
+    return _libraryRef(uid).doc(docId).update({'favorite': favorite});
   }
 }

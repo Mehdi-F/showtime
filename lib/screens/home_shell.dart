@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'up_next_screen.dart';
-import 'calendar_screen.dart';
+import 'series_screen.dart';
+import 'films_screen.dart';
 import 'search_screen.dart';
-import 'library_screen.dart';
+import 'profile_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -15,10 +15,10 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
   static const _screens = [
-    UpNextScreen(),
-    CalendarScreen(),
+    SeriesScreen(),
+    FilmsScreen(),
     SearchScreen(),
-    LibraryScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -29,10 +29,10 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.play_circle_outline), label: 'Up Next'),
-          NavigationDestination(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
-          NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
-          NavigationDestination(icon: Icon(Icons.video_library_outlined), label: 'Library'),
+          NavigationDestination(icon: Icon(Icons.tv_outlined), label: 'Séries'),
+          NavigationDestination(icon: Icon(Icons.movie_outlined), label: 'Films'),
+          NavigationDestination(icon: Icon(Icons.search), label: 'Explorer'),
+          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
         ],
       ),
     );

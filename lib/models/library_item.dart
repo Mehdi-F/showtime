@@ -7,6 +7,8 @@ class LibraryItem {
   final Map<String, bool> watchedEpisodes; // tv only, key = "s{season}e{episode}"
   final bool watched; // movie only
   final DateTime? watchedAt; // movie only
+  final bool favorite;
+  final DateTime? lastActivityAt; // tv only, bumped on episode/season watch toggles
 
   LibraryItem({
     required this.docId,
@@ -17,6 +19,8 @@ class LibraryItem {
     required this.watchedEpisodes,
     required this.watched,
     required this.watchedAt,
+    this.favorite = false,
+    this.lastActivityAt,
   });
 
   static String buildDocId({required int tmdbId, required String type}) => '${type}_$tmdbId';
@@ -30,6 +34,9 @@ class LibraryItem {
         watchedEpisodes: Map<String, bool>.from(map['watchedEpisodes'] as Map? ?? {}),
         watched: map['watched'] as bool? ?? false,
         watchedAt: map['watchedAt'] != null ? DateTime.parse(map['watchedAt'] as String) : null,
+        favorite: map['favorite'] as bool? ?? false,
+        lastActivityAt:
+            map['lastActivityAt'] != null ? DateTime.parse(map['lastActivityAt'] as String) : null,
       );
 
   Map<String, dynamic> toMap() => {
@@ -40,5 +47,7 @@ class LibraryItem {
         'watchedEpisodes': watchedEpisodes,
         'watched': watched,
         'watchedAt': watchedAt?.toIso8601String(),
+        'favorite': favorite,
+        'lastActivityAt': lastActivityAt?.toIso8601String(),
       };
 }
