@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
@@ -72,6 +73,14 @@ class LibraryScreen extends StatelessWidget {
                 );
               },
             ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text(
+          TmdbConfig.attribution,
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }
