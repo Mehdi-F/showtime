@@ -4,7 +4,8 @@ import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
-import '../widgets/poster_tile.dart';
+import '../theme/app_theme.dart';
+import '../widgets/media_list_tile.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
 
@@ -30,15 +31,13 @@ class LibraryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Library')),
       body: items.isEmpty
-          ? const Center(child: Text('Nothing tracked yet — add shows from Search.'))
-          : GridView.builder(
-              padding: const EdgeInsets.all(12),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.55,
+          ? const Center(
+              child: Text(
+                'Nothing tracked yet — add shows from Search.',
+                style: TextStyle(color: AppColors.textSecondary),
               ),
+            )
+          : ListView.builder(
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final item = items[index];
@@ -46,21 +45,16 @@ class LibraryScreen extends StatelessWidget {
                   future: _resolveMeta(context, item),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const MediaListTile(posterPath: null, title: '…');
                     }
                     final (title, posterPath) = snapshot.data!;
-                    return PosterTile(
+                    return MediaListTile(
                       posterPath: posterPath,
                       title: title,
-                      overlay: item.type == 'movie' && item.watched
-                          ? const Align(
-                              alignment: Alignment.topRight,
-                              child: Padding(
-                                padding: EdgeInsets.all(4),
-                                child: Icon(Icons.check_circle, color: Colors.greenAccent),
-                              ),
-                            )
-                          : null,
+                      subtitle: item.type == 'tv' ? 'Series' : 'Film',
+                      trailing: item.type == 'movie' && item.watched
+                          ? const Icon(Icons.check_circle, color: Colors.greenAccent)
+                          : const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                       onTap: () {
                         Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => item.type == 'tv'

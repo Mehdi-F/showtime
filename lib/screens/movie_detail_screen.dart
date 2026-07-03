@@ -6,6 +6,7 @@ import '../models/library_item.dart';
 import '../providers/auth_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
+import '../theme/app_theme.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final LibraryItem libraryItem;
@@ -46,26 +47,68 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         }
         final movie = snapshot.data!;
         return Scaffold(
-          appBar: AppBar(title: Text(movie.title)),
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (movie.posterPath != null)
-                  SizedBox(
-                    width: 200,
-                    child: CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}${movie.posterPath}',
+          body: Column(
+            children: [
+              SizedBox(
+                height: 320,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (movie.posterPath != null)
+                      CachedNetworkImage(
+                        imageUrl: '${TmdbConfig.imageBaseUrl}${movie.posterPath}',
+                        fit: BoxFit.cover,
+                      )
+                    else
+                      Container(color: AppColors.surfaceVariant),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.1),
+                            Colors.black.withValues(alpha: 0.9),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _toggleWatched,
-                  icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
-                  label: Text(_watched ? 'Watched' : 'Mark watched'),
+                    Positioned(
+                      top: 8,
+                      left: 4,
+                      child: SafeArea(
+                        bottom: false,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.of(context).maybePop(),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                      child: Text(
+                        movie.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _toggleWatched,
+                icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
+                label: Text(_watched ? 'Watched' : 'Mark watched'),
+              ),
+            ],
           ),
         );
       },

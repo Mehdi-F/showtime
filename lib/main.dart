@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/library_service.dart';
 import 'services/tmdb_service.dart';
@@ -31,11 +31,7 @@ class ShowtimeApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Showtime',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          textTheme: GoogleFonts.interTextTheme(),
-          useMaterial3: true,
-        ),
+        theme: buildAppTheme(),
         home: const AuthGate(),
       ),
     );

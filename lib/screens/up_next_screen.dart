@@ -5,7 +5,8 @@ import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
 import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
-import '../widgets/poster_tile.dart';
+import '../theme/app_theme.dart';
+import '../widgets/media_list_tile.dart';
 
 class _UpNextRow {
   final String showTitle;
@@ -42,7 +43,12 @@ class UpNextScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Up Next')),
       body: tvItems.isEmpty
-          ? const Center(child: Text('Track a show from Search to see it here.'))
+          ? const Center(
+              child: Text(
+                'Track a show from Search to see it here.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            )
           : FutureBuilder<List<_UpNextRow?>>(
               future: Future.wait(tvItems.map((item) => _resolveRow(tmdb, item))),
               builder: (context, snapshot) {
@@ -51,19 +57,19 @@ class UpNextScreen extends StatelessWidget {
                 }
                 final rows = snapshot.data!.whereType<_UpNextRow>().toList();
                 if (rows.isEmpty) {
-                  return const Center(child: Text('All caught up.'));
+                  return const Center(
+                    child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)),
+                  );
                 }
                 return ListView.builder(
                   itemCount: rows.length,
                   itemBuilder: (context, index) {
                     final row = rows[index];
-                    return ListTile(
-                      leading: SizedBox(
-                        width: 48,
-                        child: PosterTile(posterPath: row.posterPath, title: ''),
-                      ),
-                      title: Text(row.showTitle),
-                      subtitle: Text('S${row.episode.seasonNumber}E${row.episode.episodeNumber} — ${row.episode.name}'),
+                    return MediaListTile(
+                      posterPath: row.posterPath,
+                      title: row.showTitle,
+                      subtitle:
+                          'S${row.episode.seasonNumber}E${row.episode.episodeNumber} — ${row.episode.name}',
                     );
                   },
                 );

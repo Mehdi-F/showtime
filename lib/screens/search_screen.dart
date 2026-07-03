@@ -4,7 +4,8 @@ import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
 import '../services/tmdb_service.dart';
 import '../services/library_service.dart';
-import '../widgets/poster_tile.dart';
+import '../theme/app_theme.dart';
+import '../widgets/media_list_tile.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -18,6 +19,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<TmdbSearchResult> _results = [];
   bool _loading = false;
   String? _error;
+  final Set<String> _added = {};
 
   Future<void> _runSearch(String query) async {
     if (query.trim().isEmpty) {
@@ -46,39 +48,50 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: TextField(
           controller: _controller,
-          decoration: const InputDecoration(hintText: 'Search shows or movies'),
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'Search shows or movies',
+            hintStyle: TextStyle(color: AppColors.textSecondary),
+            border: InputBorder.none,
+          ),
           onSubmitted: _runSearch,
         ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.55,
-                  ),
+              ? Center(
+                  child: Text(_error!, style: const TextStyle(color: AppColors.textSecondary)))
+              : ListView.builder(
                   itemCount: _results.length,
                   itemBuilder: (context, index) {
                     final result = _results[index];
-                    return PosterTile(
+                    final key = '${result.mediaType}_${result.id}';
+                    final added = _added.contains(key);
+                    return MediaListTile(
                       posterPath: result.posterPath,
                       title: result.year != null ? '${result.title} (${result.year})' : result.title,
-                      onTap: () async {
-                        await context.read<LibraryService>().addToLibrary(
-                              uid: uid,
-                              tmdbId: result.id,
-                              type: result.mediaType,
-                            );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(SnackBar(content: Text('Added ${result.title}')));
-                        }
-                      },
+                      subtitle: result.mediaType == 'tv' ? 'Series' : 'Film',
+                      trailing: IconButton(
+                        icon: Icon(
+                          added ? Icons.check_circle : Icons.add_circle_outline,
+                          color: added ? Colors.greenAccent : AppColors.accent,
+                        ),
+                        onPressed: added
+                            ? null
+                            : () async {
+                                await context.read<LibraryService>().addToLibrary(
+                                      uid: uid,
+                                      tmdbId: result.id,
+                                      type: result.mediaType,
+                                    );
+                                setState(() => _added.add(key));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Added ${result.title}')));
+                                }
+                              },
+                      ),
                     );
                   },
                 ),
