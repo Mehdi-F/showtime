@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
+import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
+import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/media_list_tile.dart';
 import '../widgets/scrollable_center.dart';
 import 'movie_detail_screen.dart';
 
@@ -32,7 +32,7 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -56,14 +56,29 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
         title: const Text('Films'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: 'À VOIR'), Tab(text: 'À VENIR')],
+          tabs: const [Tab(text: 'DÉCOUVRIR'), Tab(text: 'À VOIR'), Tab(text: 'À VENIR')],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
+          _DiscoverMoviesTab(
+            key: const ValueKey('discover-dated'),
+            followedMovieItems: movieItems,
+            tmdb: tmdb,
+            sortBy: 'primary_release_date.desc',
+            matches: (m) => m.releaseDate != null,
+            emptyMessage: 'Aucun film à découvrir pour le moment.',
+          ),
           _ToWatchTab(movieItems: movieItems, tmdb: tmdb, resolveRow: _resolveRow),
-          _UpcomingTab(movieItems: movieItems, tmdb: tmdb, resolveRow: _resolveRow),
+          _DiscoverMoviesTab(
+            key: const ValueKey('discover-undated'),
+            followedMovieItems: movieItems,
+            tmdb: tmdb,
+            sortBy: 'popularity.desc',
+            matches: (m) => m.releaseDate == null,
+            emptyMessage: 'Aucun film sans date de sortie trouvé.',
+          ),
         ],
       ),
     );
@@ -191,88 +206,148 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 }
 
-class _UpcomingTab extends StatefulWidget {
-  final List<LibraryItem> movieItems;
+/// Browses TMDB's general movie catalog (not the user's library) for movies
+/// that aren't followed yet, matching [matches] (e.g. "has a release date"
+/// or "has no release date yet"). Tapping a poster follows it and opens its
+/// detail screen.
+class _DiscoverMoviesTab extends StatefulWidget {
+  final List<LibraryItem> followedMovieItems;
   final TmdbService tmdb;
-  final Future<_MovieRow> Function(TmdbService, LibraryItem) resolveRow;
+  final String sortBy;
+  final bool Function(SimilarMedia) matches;
+  final String emptyMessage;
 
-  const _UpcomingTab({required this.movieItems, required this.tmdb, required this.resolveRow});
+  const _DiscoverMoviesTab({
+    super.key,
+    required this.followedMovieItems,
+    required this.tmdb,
+    required this.sortBy,
+    required this.matches,
+    required this.emptyMessage,
+  });
 
   @override
-  State<_UpcomingTab> createState() => _UpcomingTabState();
+  State<_DiscoverMoviesTab> createState() => _DiscoverMoviesTabState();
 }
 
-class _UpcomingTabState extends State<_UpcomingTab> {
-  late Future<List<_MovieRow>> _rowsFuture;
+class _DiscoverMoviesTabState extends State<_DiscoverMoviesTab> {
+  static const _maxPagesPerLoad = 10;
+  static const _minNewItemsPerLoad = 12;
+  static const _maxTmdbPage = 500;
+
+  final _scrollController = ScrollController();
+  final List<SimilarMedia> _items = [];
+  int _nextPage = 1;
+  bool _loading = false;
+  bool _exhausted = false;
 
   @override
   void initState() {
     super.initState();
-    _rowsFuture = _resolveAll();
+    _scrollController.addListener(_onScroll);
+    _loadMore();
   }
 
   @override
-  void didUpdateWidget(covariant _UpcomingTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _rowsFuture = _resolveAll();
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
   }
 
-  Future<List<_MovieRow>> _resolveAll() =>
-      Future.wait(widget.movieItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _exhausted) return;
+    setState(() => _loading = true);
+    var fetchedPages = 0;
+    var addedCount = 0;
+    while (fetchedPages < _maxPagesPerLoad && addedCount < _minNewItemsPerLoad) {
+      if (_nextPage > _maxTmdbPage) {
+        _exhausted = true;
+        break;
+      }
+      final results = await widget.tmdb.discoverMovies(page: _nextPage, sortBy: widget.sortBy);
+      fetchedPages++;
+      if (results.isEmpty) {
+        _exhausted = true;
+        break;
+      }
+      _nextPage++;
+      final matching = results.where(widget.matches).toList();
+      _items.addAll(matching);
+      addedCount += matching.length;
+    }
+    if (mounted) setState(() => _loading = false);
+  }
 
   Future<void> _refresh() async {
-    final future = _resolveAll();
-    setState(() => _rowsFuture = future);
-    await future;
+    setState(() {
+      _items.clear();
+      _nextPage = 1;
+      _exhausted = false;
+    });
+    await _loadMore();
+  }
+
+  Future<void> _follow(SimilarMedia media) async {
+    final uid = context.read<AuthProvider>().user!.uid;
+    final item = await context.read<LibraryService>().addToLibrary(
+          uid: uid,
+          tmdbId: media.id,
+          type: 'movie',
+        );
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => MovieDetailScreen(libraryItem: item),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(onRefresh: _refresh, child: _buildBody());
-  }
+    final followedIds = widget.followedMovieItems.map((i) => i.tmdbId).toSet();
+    final visible = _items.where((m) => !followedIds.contains(m.id)).toList();
 
-  Widget _buildBody() {
-    final dateFormat = DateFormat.yMMMd();
-    if (widget.movieItems.isEmpty) {
-      return const ScrollableCenter(
-        child: Text('Track a movie from Explorer to see upcoming releases.',
-            style: TextStyle(color: AppColors.textSecondary)),
-      );
-    }
-    return FutureBuilder<List<_MovieRow>>(
-      future: _rowsFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const ScrollableCenter(child: CircularProgressIndicator());
-        }
-        final now = DateTime.now();
-        final rows = snapshot.data!.where((r) => r.details.releaseDate?.isAfter(now) ?? false).toList()
-          ..sort((a, b) => a.details.releaseDate!.compareTo(b.details.releaseDate!));
-        if (rows.isEmpty) {
-          return const ScrollableCenter(
-              child: Text('No upcoming releases tracked.', style: TextStyle(color: AppColors.textSecondary)));
-        }
-        return ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: rows.length,
-          itemBuilder: (context, index) {
-            final row = rows[index];
-            return MediaListTile(
-              posterPath: row.details.posterPath,
-              title: row.details.title,
-              trailing: Text(
-                dateFormat.format(row.details.releaseDate!),
-                style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: 12),
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: visible.isEmpty
+          ? ScrollableCenter(
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : Text(widget.emptyMessage, style: const TextStyle(color: AppColors.textSecondary)),
+            )
+          : GridView.builder(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(2),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.67,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
               ),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => MovieDetailScreen(libraryItem: row.item),
-                ));
+              itemCount: visible.length,
+              itemBuilder: (context, index) {
+                final media = visible[index];
+                return GestureDetector(
+                  onTap: () => _follow(media),
+                  child: media.posterPath != null
+                      ? CachedNetworkImage(
+                          imageUrl: '${TmdbConfig.imageBaseUrl}${media.posterPath}',
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          color: AppColors.surfaceVariant,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                        ),
+                );
               },
-            );
-          },
-        );
-      },
+            ),
     );
   }
 }

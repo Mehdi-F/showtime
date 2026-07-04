@@ -155,14 +155,24 @@ class SimilarMedia {
   final String type; // "tv" | "movie"
   final String title;
   final String? posterPath;
+  final DateTime? releaseDate;
 
-  SimilarMedia({required this.id, required this.type, required this.title, required this.posterPath});
+  SimilarMedia({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.posterPath,
+    this.releaseDate,
+  });
 
   factory SimilarMedia.fromJson(Map<String, dynamic> json, String type) => SimilarMedia(
         id: json['id'] as int,
         type: type,
         title: (type == 'tv' ? json['name'] : json['title']) as String,
         posterPath: json['poster_path'] as String?,
+        releaseDate: json['release_date'] != null && (json['release_date'] as String).isNotEmpty
+            ? DateTime.parse(json['release_date'] as String)
+            : null,
       );
 }
 

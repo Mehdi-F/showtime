@@ -90,4 +90,22 @@ class TmdbService {
         .map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType))
         .toList();
   }
+
+  Future<List<SimilarMedia>> discoverMovies({required int page, required String sortBy}) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/discover/movie').replace(queryParameters: {
+      'api_key': TmdbConfig.apiKey,
+      'sort_by': sortBy,
+      'page': '$page',
+      'include_adult': 'false',
+      'include_video': 'false',
+      'vote_count.gte': '10',
+    });
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB discover movies failed: ${response.statusCode}');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = body['results'] as List<dynamic>? ?? [];
+    return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, 'movie')).toList();
+  }
 }
