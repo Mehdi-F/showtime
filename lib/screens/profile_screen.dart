@@ -164,11 +164,12 @@ class ProfileScreen extends StatelessWidget {
                 onEdit: () => _editDisplayName(context, displayName),
                 onSignOut: () => context.read<AuthProvider>().signOut(),
               ),
-              _StatsRow(seriesCount: series.length, filmsCount: films.length, episodesWatched: episodesWatched),
               const SizedBox(height: 8),
+              _StatsRow(seriesCount: series.length, filmsCount: films.length, episodesWatched: episodesWatched),
+              const Divider(height: 33, indent: 16, endIndent: 16),
               const _SectionHeader(title: 'Statistiques'),
               SizedBox(
-                height: 110,
+                height: 120,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -178,10 +179,11 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              const Divider(height: 33, indent: 16, endIndent: 16),
               const _SectionHeader(title: 'Listes'),
               SizedBox(
-                height: 110,
+                height: 120,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -196,11 +198,13 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              const Divider(height: 33, indent: 16, endIndent: 16),
               _CarouselSection(title: 'Séries', items: series),
               _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true),
               _CarouselSection(title: 'Films', items: films),
               _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
@@ -209,7 +213,7 @@ class ProfileScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
           ),
         );
@@ -395,7 +399,7 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -420,7 +424,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       width: 260,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.surfaceVariant),
         borderRadius: BorderRadius.circular(8),
@@ -521,7 +525,7 @@ class _ListCard extends StatelessWidget {
       child: Container(
         width: 140,
         margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(8),
@@ -531,10 +535,10 @@ class _ListCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             const Icon(Icons.playlist_play, color: AppColors.accent),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(list.name,
                 maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text('${list.items.length} élément(s)',
                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
           ],
@@ -558,7 +562,7 @@ class _CarouselSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -620,6 +624,7 @@ class _CarouselSection extends StatelessWidget {
             },
           ),
         ),
+        const SizedBox(height: 12),
       ],
     );
   }

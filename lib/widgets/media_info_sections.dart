@@ -30,18 +30,18 @@ class InfoCard extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Informations', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           if (subtitleParts.isNotEmpty)
             Text(subtitleParts.join(' • '),
                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           if (voteAverage > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 8),
               child: Row(
                 children: [
                   const Icon(Icons.star, color: AppColors.accent, size: 16),
@@ -53,11 +53,11 @@ class InfoCard extends StatelessWidget {
             ),
           if (overview.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.only(top: 16),
               child: Text(overview, style: const TextStyle(fontSize: 14, height: 1.4)),
             ),
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: 16),
             child: Row(
               children: [
                 if (runtimeMinutes > 0) ...[
@@ -71,8 +71,12 @@ class InfoCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 6),
             child: Text(addedCaption, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 20),
+            child: Divider(height: 1),
           ),
         ],
       ),
@@ -96,7 +100,7 @@ class CastRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Text('Distribution', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             ),
             SizedBox(
@@ -145,6 +149,10 @@ class CastRow extends StatelessWidget {
                 },
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
+              child: Divider(height: 1),
+            ),
           ],
         );
       },
@@ -170,7 +178,7 @@ class SimilarRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             ),
             SizedBox(
@@ -209,6 +217,7 @@ class SimilarRow extends StatelessWidget {
                 },
               ),
             ),
+            const SizedBox(height: 16),
           ],
         );
       },
