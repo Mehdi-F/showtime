@@ -91,8 +91,12 @@ class TmdbService {
         .toList();
   }
 
-  Future<List<SimilarMedia>> discoverMovies({required int page, required String sortBy}) async {
-    final uri = Uri.parse('${TmdbConfig.baseUrl}/discover/movie').replace(queryParameters: {
+  Future<List<SimilarMedia>> discoverMedia({
+    required String mediaType,
+    required int page,
+    required String sortBy,
+  }) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/discover/$mediaType').replace(queryParameters: {
       'api_key': TmdbConfig.apiKey,
       'sort_by': sortBy,
       'page': '$page',
@@ -102,10 +106,31 @@ class TmdbService {
     });
     final response = await _client.get(uri);
     if (response.statusCode != 200) {
-      throw Exception('TMDB discover movies failed: ${response.statusCode}');
+      throw Exception('TMDB discover $mediaType failed: ${response.statusCode}');
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final results = body['results'] as List<dynamic>? ?? [];
-    return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, 'movie')).toList();
+    return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
+  }
+
+  Future<List<SimilarMedia>> getTrending(String mediaType) => _getListEndpoint('trending/$mediaType/week', mediaType);
+
+  Future<List<SimilarMedia>> getPopular(String mediaType, {int page = 1}) =>
+      _getListEndpoint('$mediaType/popular', mediaType, page: page);
+
+  Future<List<SimilarMedia>> getTopRatedTv({int page = 1}) => _getListEndpoint('tv/top_rated', 'tv', page: page);
+
+  Future<List<SimilarMedia>> _getListEndpoint(String path, String mediaType, {int page = 1}) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/$path').replace(queryParameters: {
+      'api_key': TmdbConfig.apiKey,
+      'page': '$page',
+    });
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB $path failed: ${response.statusCode}');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = body['results'] as List<dynamic>? ?? [];
+    return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
   }
 }

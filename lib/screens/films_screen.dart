@@ -9,8 +9,11 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import 'movie_detail_screen.dart';
+
+enum _ViewMode { grid, list }
 
 class _MovieRow {
   final LibraryItem item;
@@ -26,20 +29,8 @@ class FilmsScreen extends StatefulWidget {
   State<FilmsScreen> createState() => _FilmsScreenState();
 }
 
-class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _FilmsScreenState extends State<FilmsScreen> {
+  _ViewMode _viewMode = _ViewMode.grid;
 
   Future<_MovieRow> _resolveRow(TmdbService tmdb, LibraryItem item) async {
     final details = await tmdb.getMovieDetails(item.tmdbId);
@@ -54,33 +45,17 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: const Text('Films'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [Tab(text: 'DÉCOUVRIR'), Tab(text: 'À VOIR'), Tab(text: 'À VENIR')],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _DiscoverMoviesTab(
-            key: const ValueKey('discover-dated'),
-            followedMovieItems: movieItems,
-            tmdb: tmdb,
-            sortBy: 'primary_release_date.desc',
-            matches: (m) => m.releaseDate != null,
-            emptyMessage: 'Aucun film à découvrir pour le moment.',
-          ),
-          _ToWatchTab(movieItems: movieItems, tmdb: tmdb, resolveRow: _resolveRow),
-          _DiscoverMoviesTab(
-            key: const ValueKey('discover-undated'),
-            followedMovieItems: movieItems,
-            tmdb: tmdb,
-            sortBy: 'popularity.desc',
-            matches: (m) => m.releaseDate == null,
-            emptyMessage: 'Aucun film sans date de sortie trouvé.',
+        actions: [
+          IconButton(
+            icon: Icon(_viewMode == _ViewMode.grid ? Icons.view_list : Icons.grid_view),
+            tooltip: 'Changer la vue',
+            onPressed: () => setState(() {
+              _viewMode = _viewMode == _ViewMode.grid ? _ViewMode.list : _ViewMode.grid;
+            }),
           ),
         ],
       ),
+      body: _ToWatchTab(movieItems: movieItems, tmdb: tmdb, resolveRow: _resolveRow, viewMode: _viewMode),
     );
   }
 }
@@ -89,8 +64,14 @@ class _ToWatchTab extends StatefulWidget {
   final List<LibraryItem> movieItems;
   final TmdbService tmdb;
   final Future<_MovieRow> Function(TmdbService, LibraryItem) resolveRow;
+  final _ViewMode viewMode;
 
-  const _ToWatchTab({required this.movieItems, required this.tmdb, required this.resolveRow});
+  const _ToWatchTab({
+    required this.movieItems,
+    required this.tmdb,
+    required this.resolveRow,
+    required this.viewMode,
+  });
 
   @override
   State<_ToWatchTab> createState() => _ToWatchTabState();
@@ -140,6 +121,15 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     }
   }
 
+  Future<void> _toggleWatched(LibraryItem item, bool newValue) {
+    final uid = context.read<AuthProvider>().user!.uid;
+    return context.read<LibraryService>().markMovieWatched(
+          uid: uid,
+          tmdbId: item.tmdbId,
+          watched: newValue,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(onRefresh: _refresh, child: _buildBody());
@@ -169,185 +159,115 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
         final visible = rows.take(_visibleCount).toList();
-        return GridView.builder(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(2),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.67,
-            crossAxisSpacing: 2,
-            mainAxisSpacing: 2,
-          ),
-          itemCount: visible.length,
-          itemBuilder: (context, index) {
-            final row = visible[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => MovieDetailScreen(libraryItem: row.item),
-                ));
-              },
-              child: row.details.posterPath != null
-                  ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      color: AppColors.surfaceVariant,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.movie, color: AppColors.textSecondary),
-                    ),
-            );
+        return widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible);
+      },
+    );
+  }
+
+  Widget _buildGrid(List<_MovieRow> visible) {
+    return GridView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(2),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 0.67,
+        crossAxisSpacing: 2,
+        mainAxisSpacing: 2,
+      ),
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final row = visible[index];
+        return GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => MovieDetailScreen(libraryItem: row.item),
+            ));
           },
+          child: row.details.posterPath != null
+              ? CachedNetworkImage(
+                  imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  color: AppColors.surfaceVariant,
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                ),
         );
       },
     );
   }
-}
 
-/// Browses TMDB's general movie catalog (not the user's library) for movies
-/// that aren't followed yet, matching [matches] (e.g. "has a release date"
-/// or "has no release date yet"). Tapping a poster follows it and opens its
-/// detail screen.
-class _DiscoverMoviesTab extends StatefulWidget {
-  final List<LibraryItem> followedMovieItems;
-  final TmdbService tmdb;
-  final String sortBy;
-  final bool Function(SimilarMedia) matches;
-  final String emptyMessage;
-
-  const _DiscoverMoviesTab({
-    super.key,
-    required this.followedMovieItems,
-    required this.tmdb,
-    required this.sortBy,
-    required this.matches,
-    required this.emptyMessage,
-  });
-
-  @override
-  State<_DiscoverMoviesTab> createState() => _DiscoverMoviesTabState();
-}
-
-class _DiscoverMoviesTabState extends State<_DiscoverMoviesTab> {
-  static const _maxPagesPerLoad = 10;
-  static const _minNewItemsPerLoad = 12;
-  static const _maxTmdbPage = 500;
-
-  final _scrollController = ScrollController();
-  final List<SimilarMedia> _items = [];
-  int _nextPage = 1;
-  bool _loading = false;
-  bool _exhausted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-    _loadMore();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
-      _loadMore();
-    }
-  }
-
-  Future<void> _loadMore() async {
-    if (_loading || _exhausted) return;
-    setState(() => _loading = true);
-    var fetchedPages = 0;
-    var addedCount = 0;
-    while (fetchedPages < _maxPagesPerLoad && addedCount < _minNewItemsPerLoad) {
-      if (_nextPage > _maxTmdbPage) {
-        _exhausted = true;
-        break;
-      }
-      final results = await widget.tmdb.discoverMovies(page: _nextPage, sortBy: widget.sortBy);
-      fetchedPages++;
-      if (results.isEmpty) {
-        _exhausted = true;
-        break;
-      }
-      _nextPage++;
-      final matching = results.where(widget.matches).toList();
-      _items.addAll(matching);
-      addedCount += matching.length;
-    }
-    if (mounted) setState(() => _loading = false);
-  }
-
-  Future<void> _refresh() async {
-    setState(() {
-      _items.clear();
-      _nextPage = 1;
-      _exhausted = false;
-    });
-    await _loadMore();
-  }
-
-  Future<void> _follow(SimilarMedia media) async {
-    final uid = context.read<AuthProvider>().user!.uid;
-    final item = await context.read<LibraryService>().addToLibrary(
-          uid: uid,
-          tmdbId: media.id,
-          type: 'movie',
-        );
-    if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => MovieDetailScreen(libraryItem: item),
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final followedIds = widget.followedMovieItems.map((i) => i.tmdbId).toSet();
-    final visible = _items.where((m) => !followedIds.contains(m.id)).toList();
-
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: visible.isEmpty
-          ? ScrollableCenter(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : Text(widget.emptyMessage, style: const TextStyle(color: AppColors.textSecondary)),
-            )
-          : GridView.builder(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(2),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.67,
-                crossAxisSpacing: 2,
-                mainAxisSpacing: 2,
-              ),
-              itemCount: visible.length,
-              itemBuilder: (context, index) {
-                final media = visible[index];
-                return GestureDetector(
-                  onTap: () => _follow(media),
-                  child: media.posterPath != null
-                      ? CachedNetworkImage(
-                          imageUrl: '${TmdbConfig.imageBaseUrl}${media.posterPath}',
-                          fit: BoxFit.cover,
-                        )
-                      : Container(
-                          color: AppColors.surfaceVariant,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.movie, color: AppColors.textSecondary),
-                        ),
-                );
-              },
+  Widget _buildList(List<_MovieRow> visible) {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final row = visible[index];
+        final parts = <String>[
+          if (row.details.runtime > 0) '${row.details.runtime ~/ 60} h ${row.details.runtime % 60} m',
+          if (row.details.genres.isNotEmpty) row.details.genres.join(', '),
+        ];
+        return InkWell(
+          onTap: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => MovieDetailScreen(libraryItem: row.item),
+            ));
+          },
+          child: Container(
+            color: AppColors.surface,
+            margin: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: SizedBox(
+                    width: 56,
+                    height: 78,
+                    child: row.details.posterPath != null
+                        ? CachedNetworkImage(
+                            imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: AppColors.surfaceVariant,
+                            child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(row.details.title,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      if (parts.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(parts.join(' • '),
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                RoundCheck(
+                  checked: false,
+                  onTap: () => _toggleWatched(row.item, true),
+                ),
+              ],
             ),
+          ),
+        );
+      },
     );
   }
 }

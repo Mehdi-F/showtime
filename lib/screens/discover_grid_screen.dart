@@ -1,0 +1,103 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/tmdb_models.dart';
+import '../services/tmdb_service.dart';
+import '../widgets/discover_poster_tile.dart';
+import '../widgets/scrollable_center.dart';
+
+/// Full paginated browse grid over TMDB's general catalog for a media type,
+/// sorted by popularity. Reached from the Explorer "Parcourir tout" buttons.
+class DiscoverGridScreen extends StatefulWidget {
+  final String mediaType; // 'tv' | 'movie'
+  final String title;
+
+  const DiscoverGridScreen({super.key, required this.mediaType, required this.title});
+
+  @override
+  State<DiscoverGridScreen> createState() => _DiscoverGridScreenState();
+}
+
+class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
+  final _scrollController = ScrollController();
+  final List<SimilarMedia> _items = [];
+  int _nextPage = 1;
+  bool _loading = false;
+  bool _exhausted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _loadMore();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _exhausted) return;
+    setState(() => _loading = true);
+    final tmdb = context.read<TmdbService>();
+    final results = await tmdb.discoverMedia(
+      mediaType: widget.mediaType,
+      page: _nextPage,
+      sortBy: 'popularity.desc',
+    );
+    if (results.isEmpty) {
+      _exhausted = true;
+    } else {
+      _nextPage++;
+      _items.addAll(results);
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _items.clear();
+      _nextPage = 1;
+      _exhausted = false;
+    });
+    await _loadMore();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: _items.isEmpty
+            ? ScrollableCenter(
+                child: _loading
+                    ? const CircularProgressIndicator()
+                    : const Text('Aucun résultat.'),
+              )
+            : GridView.builder(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(2),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.67,
+                  crossAxisSpacing: 2,
+                  mainAxisSpacing: 2,
+                ),
+                itemCount: _items.length,
+                itemBuilder: (context, index) =>
+                    DiscoverPosterTile(media: _items[index], showFollowBadge: false),
+              ),
+      ),
+    );
+  }
+}
