@@ -31,15 +31,21 @@ const _frMonthsShort = [
   'NOV.',
   'DÉC.'
 ];
+const _frWeekdays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
 
-String _dayGroupLabel(DateTime date) {
+int _daysUntil(DateTime date) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final target = DateTime(date.year, date.month, date.day);
-  final diff = target.difference(today).inDays;
+  return target.difference(today).inDays;
+}
+
+String _dayGroupLabel(DateTime date) {
+  final diff = _daysUntil(date);
   if (diff == 0) return "AUJOURD'HUI";
   if (diff == -1) return 'HIER';
   if (diff == 1) return 'DEMAIN';
+  if (diff > 1 && diff <= 6) return _frWeekdays[date.weekday - 1];
   return '${date.day} ${_frMonthsShort[date.month - 1]}';
 }
 
@@ -537,8 +543,10 @@ class _UpcomingTabState extends State<_UpcomingTab> {
               itemCount: groupRows.length,
               itemBuilder: (context, index) {
                 final row = groupRows[index];
+                final date = row.episode.airDate;
                 return _SeriesProgressCard(
                   posterPath: row.posterPath,
+                  daysUntil: date != null ? _daysUntil(date) : null,
                   onTap: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
                 );
@@ -714,11 +722,39 @@ class _SeriesProgressCard extends StatelessWidget {
   final VoidCallback onTap;
   final double? progress;
   final Color? barColor;
+  final int? daysUntil;
 
-  const _SeriesProgressCard({required this.posterPath, required this.onTap, this.progress, this.barColor});
+  const _SeriesProgressCard({
+    required this.posterPath,
+    required this.onTap,
+    this.progress,
+    this.barColor,
+    this.daysUntil,
+  });
+
+  Widget? _buildDayBadge() {
+    final days = daysUntil;
+    if (days == null || days == 0) return null;
+    if (days < 0) {
+      return const Text('HIER',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$days',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20, height: 1)),
+        Text(days == 1 ? 'JOUR' : 'JOURS',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 9)),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final dayBadge = _buildDayBadge();
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -736,6 +772,12 @@ class _SeriesProgressCard extends StatelessWidget {
                     child: const Icon(Icons.tv, color: AppColors.textSecondary),
                   ),
           ),
+          if (dayBadge != null)
+            Positioned(
+              left: 6,
+              bottom: progress != null ? 12 : 6,
+              child: dayBadge,
+            ),
           if (progress != null && barColor != null)
             Positioned(
               left: 0,
