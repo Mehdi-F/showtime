@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/add_to_list_sheet.dart';
 import '../widgets/round_check.dart';
 
 class ShowDetailScreen extends StatefulWidget {
@@ -127,6 +128,11 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
             favorite: _favorite,
             onToggleFavorite: _toggleFavorite,
             onUnfollow: _unfollow,
+            onAddToList: () => showAddToListSheet(
+              context,
+              tmdbId: widget.libraryItem.tmdbId,
+              type: 'tv',
+            ),
           ),
           SizedBox(
             height: 44,
@@ -217,6 +223,7 @@ class _ShowBanner extends StatelessWidget {
   final bool favorite;
   final VoidCallback onToggleFavorite;
   final VoidCallback onUnfollow;
+  final VoidCallback onAddToList;
 
   const _ShowBanner({
     required this.title,
@@ -225,6 +232,7 @@ class _ShowBanner extends StatelessWidget {
     required this.favorite,
     required this.onToggleFavorite,
     required this.onUnfollow,
+    required this.onAddToList,
   });
 
   @override
@@ -276,6 +284,10 @@ class _ShowBanner extends StatelessWidget {
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         color: AppColors.surface,
                         itemBuilder: (context) => [
+                          PopupMenuItem(
+                            onTap: onAddToList,
+                            child: const Text('Ajouter à une liste'),
+                          ),
                           PopupMenuItem(
                             onTap: onUnfollow,
                             child: const Text('Remove from Library'),

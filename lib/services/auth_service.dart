@@ -14,4 +14,9 @@ class AuthService {
   }
 
   Future<void> signOut() => _firebaseAuth.signOut();
+
+  Future<void> updateDisplayName(String name) async {
+    await _firebaseAuth.currentUser?.updateDisplayName(name);
+    await _firebaseAuth.currentUser?.reload();
+  }
 }

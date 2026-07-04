@@ -5,9 +5,11 @@ import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/library_service.dart';
+import 'services/lists_service.dart';
 import 'services/tmdb_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/library_provider.dart';
+import 'providers/lists_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_shell.dart';
 
@@ -26,8 +28,10 @@ class ShowtimeApp extends StatelessWidget {
       providers: [
         Provider(create: (_) => TmdbService()),
         Provider(create: (_) => LibraryService()),
+        Provider(create: (_) => ListsService()),
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
         ChangeNotifierProvider(create: (context) => LibraryProvider(context.read<LibraryService>())),
+        ChangeNotifierProvider(create: (context) => ListsProvider(context.read<ListsService>())),
       ],
       child: MaterialApp(
         title: 'Showtime',
@@ -48,6 +52,7 @@ class AuthGate extends StatelessWidget {
       return const LoginScreen();
     }
     context.read<LibraryProvider>().watch(user.uid);
+    context.read<ListsProvider>().watch(user.uid);
     return const HomeShell();
   }
 }
