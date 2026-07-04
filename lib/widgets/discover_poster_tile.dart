@@ -12,8 +12,8 @@ import '../screens/show_detail_screen.dart';
 import '../screens/movie_detail_screen.dart';
 
 /// A poster tile for browsing TMDB's general catalog (not yet in the user's
-/// library). Tapping the poster follows the title (if needed) and opens its
-/// detail screen; tapping the badge follows it without navigating away.
+/// library). Tapping the poster opens a preview of its detail screen without
+/// following it; tapping the badge follows it without navigating away.
 class DiscoverPosterTile extends StatelessWidget {
   final SimilarMedia media;
   final double? width;
@@ -43,23 +43,22 @@ class DiscoverPosterTile extends StatelessWidget {
       await context.read<LibraryService>().addToLibrary(uid: uid, tmdbId: media.id, type: media.type);
     }
 
-    Future<void> openOrFollow() async {
-      LibraryItem item;
+    // Just viewing a title should never add it to the library — only the
+    // follow badge (or an in-detail action) does that.
+    void openDetail() {
       if (existing != null) {
-        item = existing;
+        final item = existing;
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) =>
+              media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
+        ));
       } else {
-        final uid = context.read<AuthProvider>().user!.uid;
-        item = await context.read<LibraryService>().addToLibrary(
-              uid: uid,
-              tmdbId: media.id,
-              type: media.type,
-            );
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => media.type == 'tv'
+              ? ShowDetailScreen.preview(tmdbId: media.id)
+              : MovieDetailScreen.preview(tmdbId: media.id),
+        ));
       }
-      if (!context.mounted) return;
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) =>
-            media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
-      ));
     }
 
     final poster = ClipRRect(
@@ -80,7 +79,7 @@ class DiscoverPosterTile extends StatelessWidget {
     );
 
     return GestureDetector(
-      onTap: openOrFollow,
+      onTap: openDetail,
       child: SizedBox(
         width: width,
         height: height,

@@ -12,29 +12,45 @@ import '../theme/app_theme.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
+import 'movie_detail_screen.dart';
 
 class ShowDetailScreen extends StatefulWidget {
-  final LibraryItem libraryItem;
+  final LibraryItem? libraryItem;
+  final int? previewTmdbId;
 
-  const ShowDetailScreen({super.key, required this.libraryItem});
+  const ShowDetailScreen({super.key, required LibraryItem libraryItem})
+      : libraryItem = libraryItem,
+        previewTmdbId = null;
+
+  /// Shows a series' details without adding it to the library. Use when the
+  /// user is just browsing (e.g. Explorer, recommendations) — following only
+  /// happens when they tap "Suivre" or an action that requires it (marking
+  /// an episode watched, favoriting, etc).
+  const ShowDetailScreen.preview({super.key, required int tmdbId})
+      : libraryItem = null,
+        previewTmdbId = tmdbId;
+
+  int get tmdbId => libraryItem?.tmdbId ?? previewTmdbId!;
 
   @override
   State<ShowDetailScreen> createState() => _ShowDetailScreenState();
 }
 
 class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerProviderStateMixin {
+  LibraryItem? _libraryItem;
   TvDetails? _details;
   int _selectedSeason = 1;
   SeasonDetails? _seasonDetails;
   Map<String, bool> _watchedEpisodes = {};
-  late bool _favorite;
+  bool _favorite = false;
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _watchedEpisodes = Map.of(widget.libraryItem.watchedEpisodes);
-    _favorite = widget.libraryItem.favorite;
+    _libraryItem = widget.libraryItem;
+    _watchedEpisodes = Map.of(widget.libraryItem?.watchedEpisodes ?? {});
+    _favorite = widget.libraryItem?.favorite ?? false;
     _tabController = TabController(length: 2, vsync: this);
     _load();
   }
@@ -45,23 +61,39 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     super.dispose();
   }
 
-  Future<void> _toggleFavorite() async {
+  Future<LibraryItem> _ensureFollowed() async {
+    final current = _libraryItem;
+    if (current != null) return current;
     final uid = context.read<AuthProvider>().user!.uid;
+    final item = await context.read<LibraryService>().addToLibrary(
+          uid: uid,
+          tmdbId: widget.tmdbId,
+          type: 'tv',
+        );
+    if (mounted) setState(() => _libraryItem = item);
+    return item;
+  }
+
+  Future<void> _toggleFavorite() async {
+    final item = await _ensureFollowed();
     final newValue = !_favorite;
     setState(() => _favorite = newValue);
+    final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().toggleFavorite(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           type: 'tv',
           favorite: newValue,
         );
   }
 
   Future<void> _unfollow() async {
+    final item = _libraryItem;
+    if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().removeFromLibrary(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           type: 'tv',
         );
     if (mounted) Navigator.of(context).maybePop();
@@ -69,7 +101,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 
   Future<void> _load() async {
     final tmdb = context.read<TmdbService>();
-    final details = await tmdb.getTvDetails(widget.libraryItem.tmdbId);
+    final details = await tmdb.getTvDetails(widget.tmdbId);
     setState(() {
       _details = details;
       _selectedSeason = details.seasons.isNotEmpty ? details.seasons.first.seasonNumber : 1;
@@ -79,7 +111,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 
   Future<void> _loadSeason(int seasonNumber) async {
     final tmdb = context.read<TmdbService>();
-    final season = await tmdb.getSeasonDetails(widget.libraryItem.tmdbId, seasonNumber);
+    final season = await tmdb.getSeasonDetails(widget.tmdbId, seasonNumber);
     setState(() {
       _selectedSeason = seasonNumber;
       _seasonDetails = season;
@@ -87,12 +119,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   }
 
   Future<void> _toggleEpisode(EpisodeRef ep) async {
-    final uid = context.read<AuthProvider>().user!.uid;
+    final item = await _ensureFollowed();
     final newValue = !(_watchedEpisodes[ep.key] ?? false);
     setState(() => _watchedEpisodes[ep.key] = newValue);
+    final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().markEpisodeWatched(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           season: ep.seasonNumber,
           episode: ep.episodeNumber,
           watched: newValue,
@@ -102,15 +135,16 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Future<void> _markSeasonWatched(bool watched) async {
     final season = _seasonDetails;
     if (season == null) return;
-    final uid = context.read<AuthProvider>().user!.uid;
+    final item = await _ensureFollowed();
     setState(() {
       for (final ep in season.episodes) {
         _watchedEpisodes[ep.key] = watched;
       }
     });
+    final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().markSeasonWatched(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           season: _selectedSeason,
           episodeNumbers: season.episodes.map((e) => e.episodeNumber).toList(),
           watched: watched,
@@ -122,21 +156,20 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         .read<LibraryProvider>()
         .items
         .where((i) => i.tmdbId == media.id && i.type == media.type);
-    LibraryItem item;
-    if (matches.isNotEmpty) {
-      item = matches.first;
-    } else {
-      final uid = context.read<AuthProvider>().user!.uid;
-      item = await context.read<LibraryService>().addToLibrary(
-            uid: uid,
-            tmdbId: media.id,
-            type: media.type,
-          );
-    }
     if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ShowDetailScreen(libraryItem: item),
-    ));
+    if (matches.isNotEmpty) {
+      final item = matches.first;
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) =>
+            media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
+      ));
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => media.type == 'tv'
+            ? ShowDetailScreen.preview(tmdbId: media.id)
+            : MovieDetailScreen.preview(tmdbId: media.id),
+      ));
+    }
   }
 
   String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
@@ -154,6 +187,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       yearRange = '${details.firstAirYear}';
     }
 
+    final libraryItem = _libraryItem;
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
@@ -163,12 +198,14 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           voteAverage: details.voteAverage,
           overview: details.overview,
           runtimeMinutes: details.episodeRunTime,
-          addedCaption: 'Ajoutée à votre bibliothèque le ${_formatDate(widget.libraryItem.addedAt)}',
+          addedCaption: libraryItem != null
+              ? 'Ajoutée à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
+              : 'Pas encore suivie',
         ),
-        CastRow(future: tmdb.getTvCredits(widget.libraryItem.tmdbId)),
+        CastRow(future: tmdb.getTvCredits(widget.tmdbId)),
         SimilarRow(
           title: 'Les utilisateurs ont également regardé',
-          future: tmdb.getSimilarTv(widget.libraryItem.tmdbId),
+          future: tmdb.getSimilarTv(widget.tmdbId),
           onTap: _openSimilar,
         ),
       ],
@@ -286,11 +323,15 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             posterPath: details.posterPath,
             isEnded: details.isEnded,
             favorite: _favorite,
+            followed: _libraryItem != null,
             onToggleFavorite: _toggleFavorite,
             onUnfollow: _unfollow,
+            onFollow: () async {
+              await _ensureFollowed();
+            },
             onAddToList: () => showAddToListSheet(
               context,
-              tmdbId: widget.libraryItem.tmdbId,
+              tmdbId: widget.tmdbId,
               type: 'tv',
             ),
           ),
@@ -319,8 +360,10 @@ class _ShowBanner extends StatelessWidget {
   final String? posterPath;
   final bool isEnded;
   final bool favorite;
+  final bool followed;
   final VoidCallback onToggleFavorite;
   final VoidCallback onUnfollow;
+  final Future<void> Function() onFollow;
   final VoidCallback onAddToList;
 
   const _ShowBanner({
@@ -328,8 +371,10 @@ class _ShowBanner extends StatelessWidget {
     required this.posterPath,
     required this.isEnded,
     required this.favorite,
+    required this.followed,
     required this.onToggleFavorite,
     required this.onUnfollow,
+    required this.onFollow,
     required this.onAddToList,
   });
 
@@ -371,27 +416,36 @@ class _ShowBanner extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      IconButton(
-                        icon: Icon(
-                          favorite ? Icons.favorite : Icons.favorite_border,
-                          color: favorite ? Colors.redAccent : Colors.white,
+                      if (followed)
+                        IconButton(
+                          icon: Icon(
+                            favorite ? Icons.favorite : Icons.favorite_border,
+                            color: favorite ? Colors.redAccent : Colors.white,
+                          ),
+                          onPressed: onToggleFavorite,
+                        )
+                      else
+                        TextButton.icon(
+                          onPressed: onFollow,
+                          icon: const Icon(Icons.add, color: Colors.black),
+                          label: const Text('Suivre', style: TextStyle(color: Colors.black)),
+                          style: TextButton.styleFrom(backgroundColor: AppColors.accent),
                         ),
-                        onPressed: onToggleFavorite,
-                      ),
-                      PopupMenuButton<void>(
-                        icon: const Icon(Icons.more_vert, color: Colors.white),
-                        color: AppColors.surface,
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            onTap: onAddToList,
-                            child: const Text('Ajouter à une liste'),
-                          ),
-                          PopupMenuItem(
-                            onTap: onUnfollow,
-                            child: const Text('Remove from Library'),
-                          ),
-                        ],
-                      ),
+                      if (followed)
+                        PopupMenuButton<void>(
+                          icon: const Icon(Icons.more_vert, color: Colors.white),
+                          color: AppColors.surface,
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              onTap: onAddToList,
+                              child: const Text('Ajouter à une liste'),
+                            ),
+                            PopupMenuItem(
+                              onTap: onUnfollow,
+                              child: const Text('Remove from Library'),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ],

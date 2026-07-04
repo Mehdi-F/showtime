@@ -11,55 +11,87 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/media_info_sections.dart';
+import 'show_detail_screen.dart';
 
 class MovieDetailScreen extends StatefulWidget {
-  final LibraryItem libraryItem;
+  final LibraryItem? libraryItem;
+  final int? previewTmdbId;
 
-  const MovieDetailScreen({super.key, required this.libraryItem});
+  const MovieDetailScreen({super.key, required LibraryItem libraryItem})
+      : libraryItem = libraryItem,
+        previewTmdbId = null;
+
+  /// Shows a movie's details without adding it to the library. Use when the
+  /// user is just browsing (e.g. Explorer, recommendations) — following only
+  /// happens when they tap "Suivre" or an action that requires it.
+  const MovieDetailScreen.preview({super.key, required int tmdbId})
+      : libraryItem = null,
+        previewTmdbId = tmdbId;
+
+  int get tmdbId => libraryItem?.tmdbId ?? previewTmdbId!;
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
 }
 
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
+  LibraryItem? _libraryItem;
   bool _watched = false;
-  late bool _favorite;
+  bool _favorite = false;
 
   @override
   void initState() {
     super.initState();
-    _watched = widget.libraryItem.watched;
-    _favorite = widget.libraryItem.favorite;
+    _libraryItem = widget.libraryItem;
+    _watched = widget.libraryItem?.watched ?? false;
+    _favorite = widget.libraryItem?.favorite ?? false;
+  }
+
+  Future<LibraryItem> _ensureFollowed() async {
+    final current = _libraryItem;
+    if (current != null) return current;
+    final uid = context.read<AuthProvider>().user!.uid;
+    final item = await context.read<LibraryService>().addToLibrary(
+          uid: uid,
+          tmdbId: widget.tmdbId,
+          type: 'movie',
+        );
+    if (mounted) setState(() => _libraryItem = item);
+    return item;
   }
 
   Future<void> _toggleWatched() async {
-    final uid = context.read<AuthProvider>().user!.uid;
+    final item = await _ensureFollowed();
     final newValue = !_watched;
     setState(() => _watched = newValue);
+    final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().markMovieWatched(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           watched: newValue,
         );
   }
 
   Future<void> _toggleFavorite() async {
-    final uid = context.read<AuthProvider>().user!.uid;
+    final item = await _ensureFollowed();
     final newValue = !_favorite;
     setState(() => _favorite = newValue);
+    final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().toggleFavorite(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           type: 'movie',
           favorite: newValue,
         );
   }
 
   Future<void> _unfollow() async {
+    final item = _libraryItem;
+    if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().removeFromLibrary(
           uid: uid,
-          tmdbId: widget.libraryItem.tmdbId,
+          tmdbId: item.tmdbId,
           type: 'movie',
         );
     if (mounted) Navigator.of(context).maybePop();
@@ -70,21 +102,20 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         .read<LibraryProvider>()
         .items
         .where((i) => i.tmdbId == media.id && i.type == media.type);
-    LibraryItem item;
-    if (matches.isNotEmpty) {
-      item = matches.first;
-    } else {
-      final uid = context.read<AuthProvider>().user!.uid;
-      item = await context.read<LibraryService>().addToLibrary(
-            uid: uid,
-            tmdbId: media.id,
-            type: media.type,
-          );
-    }
     if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => MovieDetailScreen(libraryItem: item),
-    ));
+    if (matches.isNotEmpty) {
+      final item = matches.first;
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) =>
+            media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
+      ));
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => media.type == 'tv'
+            ? ShowDetailScreen.preview(tmdbId: media.id)
+            : MovieDetailScreen.preview(tmdbId: media.id),
+      ));
+    }
   }
 
   String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
@@ -92,13 +123,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: context.read<TmdbService>().getMovieDetails(widget.libraryItem.tmdbId),
+      future: context.read<TmdbService>().getMovieDetails(widget.tmdbId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         final movie = snapshot.data!;
         final tmdb = context.read<TmdbService>();
+        final followed = _libraryItem != null;
         return Scaffold(
           body: ListView(
             children: [
@@ -141,31 +173,33 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             ),
                             Row(
                               children: [
-                                IconButton(
-                                  icon: Icon(
-                                    _favorite ? Icons.favorite : Icons.favorite_border,
-                                    color: _favorite ? Colors.redAccent : Colors.white,
+                                if (followed)
+                                  IconButton(
+                                    icon: Icon(
+                                      _favorite ? Icons.favorite : Icons.favorite_border,
+                                      color: _favorite ? Colors.redAccent : Colors.white,
+                                    ),
+                                    onPressed: _toggleFavorite,
                                   ),
-                                  onPressed: _toggleFavorite,
-                                ),
-                                PopupMenuButton<void>(
-                                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                                  color: AppColors.surface,
-                                  itemBuilder: (context) => [
-                                    PopupMenuItem(
-                                      onTap: () => showAddToListSheet(
-                                        context,
-                                        tmdbId: widget.libraryItem.tmdbId,
-                                        type: 'movie',
+                                if (followed)
+                                  PopupMenuButton<void>(
+                                    icon: const Icon(Icons.more_vert, color: Colors.white),
+                                    color: AppColors.surface,
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        onTap: () => showAddToListSheet(
+                                          context,
+                                          tmdbId: widget.tmdbId,
+                                          type: 'movie',
+                                        ),
+                                        child: const Text('Ajouter à une liste'),
                                       ),
-                                      child: const Text('Ajouter à une liste'),
-                                    ),
-                                    PopupMenuItem(
-                                      onTap: _unfollow,
-                                      child: const Text('Remove from Library'),
-                                    ),
-                                  ],
-                                ),
+                                      PopupMenuItem(
+                                        onTap: _unfollow,
+                                        child: const Text('Remove from Library'),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
                           ],
@@ -192,11 +226,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ),
               const SizedBox(height: 24),
               Center(
-                child: FilledButton.icon(
-                  onPressed: _toggleWatched,
-                  icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
-                  label: Text(_watched ? 'Watched' : 'Mark watched'),
-                ),
+                child: followed
+                    ? FilledButton.icon(
+                        onPressed: _toggleWatched,
+                        icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
+                        label: Text(_watched ? 'Watched' : 'Mark watched'),
+                      )
+                    : FilledButton.icon(
+                        onPressed: _ensureFollowed,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Suivre'),
+                      ),
               ),
               InfoCard(
                 yearRange: movie.releaseDate?.year.toString(),
@@ -204,12 +244,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 voteAverage: movie.voteAverage,
                 overview: movie.overview,
                 runtimeMinutes: movie.runtime,
-                addedCaption: 'Ajouté à votre bibliothèque le ${_formatDate(widget.libraryItem.addedAt)}',
+                addedCaption: followed
+                    ? 'Ajouté à votre bibliothèque le ${_formatDate(_libraryItem!.addedAt)}'
+                    : 'Pas encore suivi',
               ),
-              CastRow(future: tmdb.getMovieCredits(widget.libraryItem.tmdbId)),
+              CastRow(future: tmdb.getMovieCredits(widget.tmdbId)),
               SimilarRow(
                 title: 'Les utilisateurs ont également regardé',
-                future: tmdb.getSimilarMovies(widget.libraryItem.tmdbId),
+                future: tmdb.getSimilarMovies(widget.tmdbId),
                 onTap: _openSimilar,
               ),
               const SizedBox(height: 16),
