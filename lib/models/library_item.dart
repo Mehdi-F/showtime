@@ -9,6 +9,7 @@ class LibraryItem {
   final DateTime? watchedAt; // movie only
   final bool favorite;
   final DateTime? lastActivityAt; // tv only, bumped on episode/season watch toggles
+  final bool skipGapPrompt; // tv only, "never ask again" for the previous-episodes dialog
 
   LibraryItem({
     required this.docId,
@@ -21,7 +22,22 @@ class LibraryItem {
     required this.watchedAt,
     this.favorite = false,
     this.lastActivityAt,
+    this.skipGapPrompt = false,
   });
+
+  LibraryItem copyWith({bool? skipGapPrompt}) => LibraryItem(
+        docId: docId,
+        tmdbId: tmdbId,
+        type: type,
+        status: status,
+        addedAt: addedAt,
+        watchedEpisodes: watchedEpisodes,
+        watched: watched,
+        watchedAt: watchedAt,
+        favorite: favorite,
+        lastActivityAt: lastActivityAt,
+        skipGapPrompt: skipGapPrompt ?? this.skipGapPrompt,
+      );
 
   static String buildDocId({required int tmdbId, required String type}) => '${type}_$tmdbId';
 
@@ -37,6 +53,7 @@ class LibraryItem {
         favorite: map['favorite'] as bool? ?? false,
         lastActivityAt:
             map['lastActivityAt'] != null ? DateTime.parse(map['lastActivityAt'] as String) : null,
+        skipGapPrompt: map['skipGapPrompt'] as bool? ?? false,
       );
 
   Map<String, dynamic> toMap() => {
@@ -49,5 +66,6 @@ class LibraryItem {
         'watchedAt': watchedAt?.toIso8601String(),
         'favorite': favorite,
         'lastActivityAt': lastActivityAt?.toIso8601String(),
+        'skipGapPrompt': skipGapPrompt,
       };
 }

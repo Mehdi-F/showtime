@@ -63,12 +63,18 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
   }
 
   Future<void> _refresh() async {
+    final tmdb = context.read<TmdbService>();
+    final results = await tmdb.discoverMedia(
+      mediaType: widget.mediaType,
+      page: 1,
+      sortBy: 'popularity.desc',
+    );
+    if (!mounted) return;
     setState(() {
-      _items.clear();
-      _nextPage = 1;
-      _exhausted = false;
+      final existingIds = _items.map((m) => m.id).toSet();
+      final newOnes = results.where((m) => !existingIds.contains(m.id)).toList();
+      _items.insertAll(0, newOnes);
     });
-    await _loadMore();
   }
 
   @override

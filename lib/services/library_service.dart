@@ -73,6 +73,11 @@ class LibraryService {
     return _libraryRef(uid).doc(docId).delete();
   }
 
+  Future<void> setSkipGapPrompt({required String uid, required int tmdbId, required bool skip}) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    return _libraryRef(uid).doc(docId).update({'skipGapPrompt': skip});
+  }
+
   Future<void> toggleFavorite({
     required String uid,
     required int tmdbId,

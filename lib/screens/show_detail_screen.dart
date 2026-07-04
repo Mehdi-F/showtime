@@ -14,6 +14,8 @@ import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
 import 'movie_detail_screen.dart';
 
+enum _GapPromptChoice { yes, no, never }
+
 class ShowDetailScreen extends StatefulWidget {
   final LibraryItem? libraryItem;
   final int? previewTmdbId;
@@ -121,15 +123,92 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Future<void> _toggleEpisode(EpisodeRef ep) async {
     final item = await _ensureFollowed();
     final newValue = !(_watchedEpisodes[ep.key] ?? false);
-    setState(() => _watchedEpisodes[ep.key] = newValue);
     final uid = context.read<AuthProvider>().user!.uid;
-    await context.read<LibraryService>().markEpisodeWatched(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          season: ep.seasonNumber,
-          episode: ep.episodeNumber,
-          watched: newValue,
-        );
+    final library = context.read<LibraryService>();
+
+    if (newValue && !item.skipGapPrompt) {
+      final season = _seasonDetails;
+      if (season != null) {
+        final earlierUnwatched = season.episodes
+            .where((e) => e.episodeNumber < ep.episodeNumber && !(_watchedEpisodes[e.key] ?? false))
+            .toList();
+        if (earlierUnwatched.isNotEmpty) {
+          final choice = await _askMarkPreviousEpisodes();
+          if (!mounted) return;
+          if (choice == _GapPromptChoice.never) {
+            await library.setSkipGapPrompt(uid: uid, tmdbId: item.tmdbId, skip: true);
+            if (mounted) setState(() => _libraryItem = item.copyWith(skipGapPrompt: true));
+          } else if (choice == _GapPromptChoice.yes) {
+            setState(() {
+              for (final e in earlierUnwatched) {
+                _watchedEpisodes[e.key] = true;
+              }
+              _watchedEpisodes[ep.key] = true;
+            });
+            await library.markSeasonWatched(
+              uid: uid,
+              tmdbId: item.tmdbId,
+              season: ep.seasonNumber,
+              episodeNumbers: [...earlierUnwatched.map((e) => e.episodeNumber), ep.episodeNumber],
+              watched: true,
+            );
+            return;
+          }
+        }
+      }
+    }
+
+    setState(() => _watchedEpisodes[ep.key] = newValue);
+    await library.markEpisodeWatched(
+      uid: uid,
+      tmdbId: item.tmdbId,
+      season: ep.seasonNumber,
+      episode: ep.episodeNumber,
+      watched: newValue,
+    );
+  }
+
+  Future<_GapPromptChoice?> _askMarkPreviousEpisodes() {
+    return showDialog<_GapPromptChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Marquer les épisodes précédents ?'),
+        content: const Text('Voulez-vous marquer tous les épisodes précédents comme vus ?'),
+        actions: [
+          SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(_GapPromptChoice.yes),
+                    child: const Text('OUI'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(_GapPromptChoice.no),
+                    child: const Text('NON'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(_GapPromptChoice.never),
+                    child: const Text('JAMAIS POUR CETTE SÉRIE'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _markSeasonWatched(bool watched) async {
