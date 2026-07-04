@@ -11,6 +11,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/media_info_sections.dart';
+import '../widgets/episode_detail_sheet.dart';
 import '../widgets/round_check.dart';
 import 'movie_detail_screen.dart';
 
@@ -368,13 +369,35 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                     final ep = seasonEpisodes[index];
                     final watched = _watchedEpisodes[ep.key] ?? false;
                     return ListTile(
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: SizedBox(
+                          width: 64,
+                          height: 40,
+                          child: ep.stillPath != null
+                              ? CachedNetworkImage(
+                                  imageUrl: '${TmdbConfig.imageBaseUrl}${ep.stillPath}',
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  color: AppColors.surfaceVariant,
+                                  child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 18),
+                                ),
+                        ),
+                      ),
                       title: Text('${ep.episodeNumber}. ${ep.name}',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: ep.airDate != null ? Text(formatFrDate(ep.airDate!)) : null,
                       trailing: RoundCheck(
                         checked: watched,
                         onTap: () => _toggleEpisode(ep),
                       ),
-                      onTap: () => _toggleEpisode(ep),
+                      onTap: () => showEpisodeDetailSheet(
+                        context,
+                        episode: ep,
+                        watched: watched,
+                        onToggleWatched: () => _toggleEpisode(ep),
+                      ),
                     );
                   },
                 ),

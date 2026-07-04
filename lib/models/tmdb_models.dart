@@ -181,12 +181,16 @@ class EpisodeRef {
   final int episodeNumber;
   final String name;
   final DateTime? airDate;
+  final String overview;
+  final String? stillPath;
 
   EpisodeRef({
     required this.seasonNumber,
     required this.episodeNumber,
     required this.name,
     required this.airDate,
+    required this.overview,
+    required this.stillPath,
   });
 
   String get key => 's${seasonNumber}e$episodeNumber';
@@ -196,6 +200,8 @@ class EpisodeRef {
         episodeNumber: json['episode_number'] as int,
         name: json['name'] as String,
         airDate: json['air_date'] != null ? DateTime.parse(json['air_date'] as String) : null,
+        overview: json['overview'] as String? ?? '',
+        stillPath: json['still_path'] as String?,
       );
 }
 
