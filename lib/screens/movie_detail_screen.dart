@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/add_to_list_sheet.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final LibraryItem libraryItem;
@@ -123,6 +124,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                   icon: const Icon(Icons.more_vert, color: Colors.white),
                                   color: AppColors.surface,
                                   itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      onTap: () => showAddToListSheet(
+                                        context,
+                                        tmdbId: widget.libraryItem.tmdbId,
+                                        type: 'movie',
+                                      ),
+                                      child: const Text('Ajouter à une liste'),
+                                    ),
                                     PopupMenuItem(
                                       onTap: _unfollow,
                                       child: const Text('Remove from Library'),

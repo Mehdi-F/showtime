@@ -68,35 +68,45 @@ class TvDetails {
   final int id;
   final String name;
   final String? posterPath;
+  final String? backdropPath;
   final List<SeasonSummary> seasons;
   final NextEpisode? nextEpisodeToAir;
   final String status; // TMDB raw value: "Returning Series" | "Ended" | "Canceled" | "In Production" | "Planned" | "Pilot"
+  final int episodeRunTime; // average episode duration in minutes
 
   TvDetails({
     required this.id,
     required this.name,
     required this.posterPath,
+    required this.backdropPath,
     required this.seasons,
     required this.nextEpisodeToAir,
     required this.status,
+    required this.episodeRunTime,
   });
 
   bool get isEnded => status == 'Ended' || status == 'Canceled';
 
-  factory TvDetails.fromJson(Map<String, dynamic> json) => TvDetails(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        posterPath: json['poster_path'] as String?,
-        seasons: (json['seasons'] as List<dynamic>? ?? [])
-            // TMDB includes a "Specials" entry as season_number 0 — skip it, MVP only tracks numbered seasons.
-            .map((s) => SeasonSummary.fromJson(s as Map<String, dynamic>))
-            .where((s) => s.seasonNumber > 0)
-            .toList(),
-        nextEpisodeToAir: json['next_episode_to_air'] != null
-            ? NextEpisode.fromJson(json['next_episode_to_air'] as Map<String, dynamic>)
-            : null,
-        status: json['status'] as String? ?? 'Returning Series',
-      );
+  factory TvDetails.fromJson(Map<String, dynamic> json) {
+    final runTimes = (json['episode_run_time'] as List<dynamic>? ?? []).cast<int>();
+    return TvDetails(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      posterPath: json['poster_path'] as String?,
+      backdropPath: json['backdrop_path'] as String?,
+      seasons: (json['seasons'] as List<dynamic>? ?? [])
+          // TMDB includes a "Specials" entry as season_number 0 — skip it, MVP only tracks numbered seasons.
+          .map((s) => SeasonSummary.fromJson(s as Map<String, dynamic>))
+          .where((s) => s.seasonNumber > 0)
+          .toList(),
+      nextEpisodeToAir: json['next_episode_to_air'] != null
+          ? NextEpisode.fromJson(json['next_episode_to_air'] as Map<String, dynamic>)
+          : null,
+      status: json['status'] as String? ?? 'Returning Series',
+      episodeRunTime:
+          runTimes.isNotEmpty ? (runTimes.reduce((a, b) => a + b) / runTimes.length).round() : 45,
+    );
+  }
 }
 
 class EpisodeRef {
@@ -141,22 +151,28 @@ class MovieDetails {
   final int id;
   final String title;
   final String? posterPath;
+  final String? backdropPath;
   final DateTime? releaseDate;
+  final int runtime; // minutes, 0 if unknown
 
   MovieDetails({
     required this.id,
     required this.title,
     required this.posterPath,
+    required this.backdropPath,
     required this.releaseDate,
+    required this.runtime,
   });
 
   factory MovieDetails.fromJson(Map<String, dynamic> json) => MovieDetails(
         id: json['id'] as int,
         title: json['title'] as String,
         posterPath: json['poster_path'] as String?,
+        backdropPath: json['backdrop_path'] as String?,
         releaseDate:
             json['release_date'] != null && (json['release_date'] as String).isNotEmpty
                 ? DateTime.parse(json['release_date'] as String)
                 : null,
+        runtime: json['runtime'] as int? ?? 0,
       );
 }
