@@ -56,6 +56,8 @@ class NextEpisode {
     required this.airDate,
   });
 
+  String get key => 's${seasonNumber}e$episodeNumber';
+
   factory NextEpisode.fromJson(Map<String, dynamic> json) => NextEpisode(
         seasonNumber: json['season_number'] as int,
         episodeNumber: json['episode_number'] as int,
