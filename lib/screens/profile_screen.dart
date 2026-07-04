@@ -298,12 +298,21 @@ class _ProfileHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.background, width: 3),
-                  color: AppColors.surfaceVariant,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: photoUrl != null
-                    ? CachedNetworkImage(imageUrl: photoUrl!, fit: BoxFit.cover)
-                    : const Icon(Icons.person, color: AppColors.textSecondary, size: 40),
+                child: ClipOval(
+                  child: photoUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: photoUrl!,
+                          fit: BoxFit.cover,
+                          width: avatarSize,
+                          height: avatarSize,
+                        )
+                      : Container(
+                          color: AppColors.surfaceVariant,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.person, color: AppColors.textSecondary, size: 40),
+                        ),
+                ),
               ),
               const SizedBox(width: 12),
               Padding(
