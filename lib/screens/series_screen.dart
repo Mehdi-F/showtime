@@ -11,6 +11,7 @@ import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/round_check.dart';
+import '../widgets/scrollable_center.dart';
 import 'show_detail_screen.dart';
 
 const _staleAfter = Duration(days: 14);
@@ -148,12 +149,40 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
   }
 }
 
-class _ToWatchTab extends StatelessWidget {
+class _ToWatchTab extends StatefulWidget {
   final List<LibraryItem> tvItems;
   final TmdbService tmdb;
   final Future<_ShowEpisodesData> Function(TmdbService, LibraryItem) resolveRow;
 
   const _ToWatchTab({required this.tvItems, required this.tmdb, required this.resolveRow});
+
+  @override
+  State<_ToWatchTab> createState() => _ToWatchTabState();
+}
+
+class _ToWatchTabState extends State<_ToWatchTab> {
+  late Future<List<_ShowEpisodesData>> _dataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataFuture = _resolveAll();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ToWatchTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _dataFuture = _resolveAll();
+  }
+
+  Future<List<_ShowEpisodesData>> _resolveAll() =>
+      Future.wait(widget.tvItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+
+  Future<void> _refresh() async {
+    final future = _resolveAll();
+    setState(() => _dataFuture = future);
+    await future;
+  }
 
   Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
     final uid = context.read<AuthProvider>().user!.uid;
@@ -168,17 +197,21 @@ class _ToWatchTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (tvItems.isEmpty) {
-      return const Center(
+    return RefreshIndicator(onRefresh: _refresh, child: _buildBody(context));
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (widget.tvItems.isEmpty) {
+      return const ScrollableCenter(
         child: Text('Track a show from Explorer to see it here.',
             style: TextStyle(color: AppColors.textSecondary)),
       );
     }
     return FutureBuilder<List<_ShowEpisodesData>>(
-      future: Future.wait(tvItems.map((item) => resolveRow(tmdb, item))),
+      future: _dataFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const ScrollableCenter(child: CircularProgressIndicator());
         }
         final data = snapshot.data!;
         final now = DateTime.now();
@@ -212,10 +245,12 @@ class _ToWatchTab extends StatelessWidget {
         });
 
         if (historyTop.isEmpty && active.isEmpty && stale.isEmpty) {
-          return const Center(child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
+          return const ScrollableCenter(
+              child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
 
         return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: [
             if (historyTop.isNotEmpty) ..._historySection(context, historyTop),
@@ -288,12 +323,40 @@ class _ToWatchTab extends StatelessWidget {
   }
 }
 
-class _UpcomingTab extends StatelessWidget {
+class _UpcomingTab extends StatefulWidget {
   final List<LibraryItem> tvItems;
   final TmdbService tmdb;
   final Future<_CalendarRow?> Function(TmdbService, LibraryItem) resolveRow;
 
   const _UpcomingTab({required this.tvItems, required this.tmdb, required this.resolveRow});
+
+  @override
+  State<_UpcomingTab> createState() => _UpcomingTabState();
+}
+
+class _UpcomingTabState extends State<_UpcomingTab> {
+  late Future<List<_CalendarRow?>> _rowsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _rowsFuture = _resolveAll();
+  }
+
+  @override
+  void didUpdateWidget(covariant _UpcomingTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _rowsFuture = _resolveAll();
+  }
+
+  Future<List<_CalendarRow?>> _resolveAll() =>
+      Future.wait(widget.tvItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+
+  Future<void> _refresh() async {
+    final future = _resolveAll();
+    setState(() => _rowsFuture = future);
+    await future;
+  }
 
   Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
     final uid = context.read<AuthProvider>().user!.uid;
@@ -308,17 +371,21 @@ class _UpcomingTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (tvItems.isEmpty) {
-      return const Center(
+    return RefreshIndicator(onRefresh: _refresh, child: _buildBody(context));
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (widget.tvItems.isEmpty) {
+      return const ScrollableCenter(
         child: Text('Track a show from Explorer to see upcoming episodes.',
             style: TextStyle(color: AppColors.textSecondary)),
       );
     }
     return FutureBuilder<List<_CalendarRow?>>(
-      future: Future.wait(tvItems.map((item) => resolveRow(tmdb, item))),
+      future: _rowsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const ScrollableCenter(child: CircularProgressIndicator());
         }
         final rows = snapshot.data!.whereType<_CalendarRow>().toList()
           ..sort((a, b) {
@@ -330,7 +397,7 @@ class _UpcomingTab extends StatelessWidget {
             return aDate.compareTo(bDate);
           });
         if (rows.isEmpty) {
-          return const Center(
+          return const ScrollableCenter(
               child: Text('No upcoming episodes scheduled.', style: TextStyle(color: AppColors.textSecondary)));
         }
 
@@ -369,7 +436,11 @@ class _UpcomingTab extends StatelessWidget {
           ));
         }
 
-        return ListView(padding: const EdgeInsets.only(top: 8, bottom: 16), children: children);
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(top: 8, bottom: 16),
+          children: children,
+        );
       },
     );
   }

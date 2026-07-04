@@ -9,6 +9,7 @@ import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/media_list_tile.dart';
+import '../widgets/scrollable_center.dart';
 import 'movie_detail_screen.dart';
 
 class _MovieRow {
@@ -112,6 +113,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   Future<List<_MovieRow>> _resolveAll() =>
       Future.wait(widget.movieItems.map((item) => widget.resolveRow(widget.tmdb, item)));
 
+  Future<void> _refresh() async {
+    final future = _resolveAll();
+    setState(() => _rowsFuture = future);
+    await future;
+  }
+
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
       setState(() => _visibleCount += _pageSize);
@@ -120,16 +127,21 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   @override
   Widget build(BuildContext context) {
+    return RefreshIndicator(onRefresh: _refresh, child: _buildBody());
+  }
+
+  Widget _buildBody() {
     if (widget.movieItems.isEmpty) {
-      return const Center(
-          child: Text('Track a movie from Explorer to see it here.',
-              style: TextStyle(color: AppColors.textSecondary)));
+      return const ScrollableCenter(
+        child: Text('Track a movie from Explorer to see it here.',
+            style: TextStyle(color: AppColors.textSecondary)),
+      );
     }
     return FutureBuilder<List<_MovieRow>>(
       future: _rowsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const ScrollableCenter(child: CircularProgressIndicator());
         }
         final rows = snapshot.data!.where((r) => !r.item.watched).toList()
           ..sort((a, b) {
@@ -138,11 +150,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             return dateB.compareTo(dateA);
           });
         if (rows.isEmpty) {
-          return const Center(child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
+          return const ScrollableCenter(
+              child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
         final visible = rows.take(_visibleCount).toList();
         return GridView.builder(
           controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(2),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -177,7 +191,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 }
 
-class _UpcomingTab extends StatelessWidget {
+class _UpcomingTab extends StatefulWidget {
   final List<LibraryItem> movieItems;
   final TmdbService tmdb;
   final Future<_MovieRow> Function(TmdbService, LibraryItem) resolveRow;
@@ -185,27 +199,61 @@ class _UpcomingTab extends StatelessWidget {
   const _UpcomingTab({required this.movieItems, required this.tmdb, required this.resolveRow});
 
   @override
+  State<_UpcomingTab> createState() => _UpcomingTabState();
+}
+
+class _UpcomingTabState extends State<_UpcomingTab> {
+  late Future<List<_MovieRow>> _rowsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _rowsFuture = _resolveAll();
+  }
+
+  @override
+  void didUpdateWidget(covariant _UpcomingTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _rowsFuture = _resolveAll();
+  }
+
+  Future<List<_MovieRow>> _resolveAll() =>
+      Future.wait(widget.movieItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+
+  Future<void> _refresh() async {
+    final future = _resolveAll();
+    setState(() => _rowsFuture = future);
+    await future;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return RefreshIndicator(onRefresh: _refresh, child: _buildBody());
+  }
+
+  Widget _buildBody() {
     final dateFormat = DateFormat.yMMMd();
-    if (movieItems.isEmpty) {
-      return const Center(
-          child: Text('Track a movie from Explorer to see upcoming releases.',
-              style: TextStyle(color: AppColors.textSecondary)));
+    if (widget.movieItems.isEmpty) {
+      return const ScrollableCenter(
+        child: Text('Track a movie from Explorer to see upcoming releases.',
+            style: TextStyle(color: AppColors.textSecondary)),
+      );
     }
     return FutureBuilder<List<_MovieRow>>(
-      future: Future.wait(movieItems.map((item) => resolveRow(tmdb, item))),
+      future: _rowsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const ScrollableCenter(child: CircularProgressIndicator());
         }
         final now = DateTime.now();
         final rows = snapshot.data!.where((r) => r.details.releaseDate?.isAfter(now) ?? false).toList()
           ..sort((a, b) => a.details.releaseDate!.compareTo(b.details.releaseDate!));
         if (rows.isEmpty) {
-          return const Center(
+          return const ScrollableCenter(
               child: Text('No upcoming releases tracked.', style: TextStyle(color: AppColors.textSecondary)));
         }
         return ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
           itemCount: rows.length,
           itemBuilder: (context, index) {
             final row = rows[index];
