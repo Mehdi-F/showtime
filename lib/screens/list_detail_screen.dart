@@ -67,14 +67,15 @@ class ListDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lists = context.watch<ListsProvider>().lists;
-    WatchList? list;
+    WatchList? maybeList;
     for (final l in lists) {
-      if (l.id == listId) list = l;
+      if (l.id == listId) maybeList = l;
     }
 
-    if (list == null) {
+    if (maybeList == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final list = maybeList;
 
     final tmdb = context.read<TmdbService>();
     final libraryItems = context.watch<LibraryProvider>().items;
@@ -112,10 +113,11 @@ class ListDetailScreen extends StatelessWidget {
               itemCount: list.items.length,
               itemBuilder: (context, index) {
                 final ref = list.items[index];
-                LibraryItem? libraryItem;
+                LibraryItem? maybeLibraryItem;
                 for (final i in libraryItems) {
-                  if (i.tmdbId == ref.tmdbId && i.type == ref.type) libraryItem = i;
+                  if (i.tmdbId == ref.tmdbId && i.type == ref.type) maybeLibraryItem = i;
                 }
+                final libraryItem = maybeLibraryItem;
 
                 return FutureBuilder<dynamic>(
                   future: ref.type == 'tv' ? tmdb.getTvDetails(ref.tmdbId) : tmdb.getMovieDetails(ref.tmdbId),
