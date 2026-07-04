@@ -5,10 +5,12 @@ import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
+import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_to_list_sheet.dart';
+import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
 
 class ShowDetailScreen extends StatefulWidget {
@@ -20,19 +22,27 @@ class ShowDetailScreen extends StatefulWidget {
   State<ShowDetailScreen> createState() => _ShowDetailScreenState();
 }
 
-class _ShowDetailScreenState extends State<ShowDetailScreen> {
+class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerProviderStateMixin {
   TvDetails? _details;
   int _selectedSeason = 1;
   SeasonDetails? _seasonDetails;
   Map<String, bool> _watchedEpisodes = {};
   late bool _favorite;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _watchedEpisodes = Map.of(widget.libraryItem.watchedEpisodes);
     _favorite = widget.libraryItem.favorite;
+    _tabController = TabController(length: 2, vsync: this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _toggleFavorite() async {
@@ -107,6 +117,156 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
         );
   }
 
+  Future<void> _openSimilar(SimilarMedia media) async {
+    final matches = context
+        .read<LibraryProvider>()
+        .items
+        .where((i) => i.tmdbId == media.id && i.type == media.type);
+    LibraryItem item;
+    if (matches.isNotEmpty) {
+      item = matches.first;
+    } else {
+      final uid = context.read<AuthProvider>().user!.uid;
+      item = await context.read<LibraryService>().addToLibrary(
+            uid: uid,
+            tmdbId: media.id,
+            type: media.type,
+          );
+    }
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ShowDetailScreen(libraryItem: item),
+    ));
+  }
+
+  String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
+
+  Widget _buildAboutTab(TvDetails details) {
+    final tmdb = context.read<TmdbService>();
+    final String? yearRange;
+    if (details.firstAirYear == null) {
+      yearRange = null;
+    } else if (!details.isEnded) {
+      yearRange = '${details.firstAirYear} - présent';
+    } else if (details.lastAirYear != null && details.lastAirYear != details.firstAirYear) {
+      yearRange = '${details.firstAirYear} - ${details.lastAirYear}';
+    } else {
+      yearRange = '${details.firstAirYear}';
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        InfoCard(
+          yearRange: yearRange,
+          genres: details.genres,
+          voteAverage: details.voteAverage,
+          overview: details.overview,
+          runtimeMinutes: details.episodeRunTime,
+          addedCaption: 'Ajoutée à votre bibliothèque le ${_formatDate(widget.libraryItem.addedAt)}',
+        ),
+        CastRow(future: tmdb.getTvCredits(widget.libraryItem.tmdbId)),
+        SimilarRow(
+          title: 'Les utilisateurs ont également regardé',
+          future: tmdb.getSimilarTv(widget.libraryItem.tmdbId),
+          onTap: _openSimilar,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEpisodesTab(TvDetails details, List<EpisodeRef> seasonEpisodes, int watchedCount, double progress) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: [
+              ...details.seasons.map((s) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ChoiceChip(
+                      label: Text(s.name),
+                      selected: _selectedSeason == s.seasonNumber,
+                      onSelected: (_) => _loadSeason(s.seasonNumber),
+                    ),
+                  )),
+              if (details.hasSpecials)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ChoiceChip(
+                    label: const Text('Spéciaux'),
+                    selected: _selectedSeason == 0,
+                    onSelected: (_) => _loadSeason(0),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (seasonEpisodes.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      backgroundColor: AppColors.surfaceVariant,
+                      valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('$watchedCount/${seasonEpisodes.length}',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => _markSeasonWatched(true),
+                child: const Text('Mark season watched'),
+              ),
+              TextButton(
+                onPressed: () => _markSeasonWatched(false),
+                child: const Text('Mark season unwatched'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _seasonDetails == null
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.separated(
+                  itemCount: seasonEpisodes.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final ep = seasonEpisodes[index];
+                    final watched = _watchedEpisodes[ep.key] ?? false;
+                    return ListTile(
+                      title: Text('${ep.episodeNumber}. ${ep.name}',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: RoundCheck(
+                        checked: watched,
+                        onTap: () => _toggleEpisode(ep),
+                      ),
+                      onTap: () => _toggleEpisode(ep),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final details = _details;
@@ -134,81 +294,19 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
               type: 'tv',
             ),
           ),
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              children: details.seasons
-                  .map((s) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ChoiceChip(
-                          label: Text(s.name),
-                          selected: _selectedSeason == s.seasonNumber,
-                          onSelected: (_) => _loadSeason(s.seasonNumber),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          if (seasonEpisodes.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 4,
-                        backgroundColor: AppColors.surfaceVariant,
-                        valueColor: const AlwaysStoppedAnimation(AppColors.accent),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('$watchedCount/${seasonEpisodes.length}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                ],
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => _markSeasonWatched(true),
-                  child: const Text('Mark season watched'),
-                ),
-                TextButton(
-                  onPressed: () => _markSeasonWatched(false),
-                  child: const Text('Mark season unwatched'),
-                ),
-              ],
-            ),
+          TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.accent,
+            tabs: const [Tab(text: 'À PROPOS'), Tab(text: 'ÉPISODES')],
           ),
           Expanded(
-            child: _seasonDetails == null
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    itemCount: seasonEpisodes.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final ep = seasonEpisodes[index];
-                      final watched = _watchedEpisodes[ep.key] ?? false;
-                      return ListTile(
-                        title: Text('${ep.episodeNumber}. ${ep.name}',
-                            style: const TextStyle(fontWeight: FontWeight.w600)),
-                        trailing: RoundCheck(
-                          checked: watched,
-                          onTap: () => _toggleEpisode(ep),
-                        ),
-                        onTap: () => _toggleEpisode(ep),
-                      );
-                    },
-                  ),
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAboutTab(details),
+                _buildEpisodesTab(details, seasonEpisodes, watchedCount, progress),
+              ],
+            ),
           ),
         ],
       ),

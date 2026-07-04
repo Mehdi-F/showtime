@@ -3,11 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
+import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
+import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_to_list_sheet.dart';
+import '../widgets/media_info_sections.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final LibraryItem libraryItem;
@@ -62,6 +65,30 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     if (mounted) Navigator.of(context).maybePop();
   }
 
+  Future<void> _openSimilar(SimilarMedia media) async {
+    final matches = context
+        .read<LibraryProvider>()
+        .items
+        .where((i) => i.tmdbId == media.id && i.type == media.type);
+    LibraryItem item;
+    if (matches.isNotEmpty) {
+      item = matches.first;
+    } else {
+      final uid = context.read<AuthProvider>().user!.uid;
+      item = await context.read<LibraryService>().addToLibrary(
+            uid: uid,
+            tmdbId: media.id,
+            type: media.type,
+          );
+    }
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => MovieDetailScreen(libraryItem: item),
+    ));
+  }
+
+  String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -71,8 +98,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         final movie = snapshot.data!;
+        final tmdb = context.read<TmdbService>();
         return Scaffold(
-          body: Column(
+          body: ListView(
             children: [
               SizedBox(
                 height: 320,
@@ -163,11 +191,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _toggleWatched,
-                icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
-                label: Text(_watched ? 'Watched' : 'Mark watched'),
+              Center(
+                child: FilledButton.icon(
+                  onPressed: _toggleWatched,
+                  icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
+                  label: Text(_watched ? 'Watched' : 'Mark watched'),
+                ),
               ),
+              InfoCard(
+                yearRange: movie.releaseDate?.year.toString(),
+                genres: movie.genres,
+                voteAverage: movie.voteAverage,
+                overview: movie.overview,
+                runtimeMinutes: movie.runtime,
+                addedCaption: 'Ajouté à votre bibliothèque le ${_formatDate(widget.libraryItem.addedAt)}',
+              ),
+              CastRow(future: tmdb.getMovieCredits(widget.libraryItem.tmdbId)),
+              SimilarRow(
+                title: 'Les utilisateurs ont également regardé',
+                future: tmdb.getSimilarMovies(widget.libraryItem.tmdbId),
+                onTap: _openSimilar,
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         );

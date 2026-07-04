@@ -15,7 +15,7 @@ class LibraryService {
         );
   }
 
-  Future<void> addToLibrary({required String uid, required int tmdbId, required String type}) {
+  Future<LibraryItem> addToLibrary({required String uid, required int tmdbId, required String type}) async {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: type);
     final item = LibraryItem(
       docId: docId,
@@ -27,7 +27,8 @@ class LibraryService {
       watched: false,
       watchedAt: null,
     );
-    return _libraryRef(uid).doc(docId).set(item.toMap());
+    await _libraryRef(uid).doc(docId).set(item.toMap());
+    return item;
   }
 
   Future<void> markEpisodeWatched({

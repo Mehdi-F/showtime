@@ -56,4 +56,38 @@ class TmdbService {
     }
     return MovieDetails.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
+
+  Future<List<CastMember>> getTvCredits(int id) => _getCredits('tv', id);
+
+  Future<List<CastMember>> getMovieCredits(int id) => _getCredits('movie', id);
+
+  Future<List<CastMember>> _getCredits(String mediaType, int id) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/$mediaType/$id/credits')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB $mediaType credits failed: ${response.statusCode}');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final cast = body['cast'] as List<dynamic>? ?? [];
+    return cast.take(12).map((c) => CastMember.fromJson(c as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<SimilarMedia>> getSimilarTv(int id) => _getSimilar('tv', id);
+
+  Future<List<SimilarMedia>> getSimilarMovies(int id) => _getSimilar('movie', id);
+
+  Future<List<SimilarMedia>> _getSimilar(String mediaType, int id) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/$mediaType/$id/recommendations')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB $mediaType recommendations failed: ${response.statusCode}');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = body['results'] as List<dynamic>? ?? [];
+    return results
+        .map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType))
+        .toList();
+  }
 }

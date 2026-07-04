@@ -73,6 +73,12 @@ class TvDetails {
   final NextEpisode? nextEpisodeToAir;
   final String status; // TMDB raw value: "Returning Series" | "Ended" | "Canceled" | "In Production" | "Planned" | "Pilot"
   final int episodeRunTime; // average episode duration in minutes
+  final List<String> genres;
+  final String overview;
+  final double voteAverage;
+  final int? firstAirYear;
+  final int? lastAirYear;
+  final int specialsEpisodeCount; // 0 if the show has no season 0
 
   TvDetails({
     required this.id,
@@ -83,30 +89,79 @@ class TvDetails {
     required this.nextEpisodeToAir,
     required this.status,
     required this.episodeRunTime,
+    required this.genres,
+    required this.overview,
+    required this.voteAverage,
+    required this.firstAirYear,
+    required this.lastAirYear,
+    required this.specialsEpisodeCount,
   });
 
   bool get isEnded => status == 'Ended' || status == 'Canceled';
+  bool get hasSpecials => specialsEpisodeCount > 0;
 
   factory TvDetails.fromJson(Map<String, dynamic> json) {
     final runTimes = (json['episode_run_time'] as List<dynamic>? ?? []).cast<int>();
+    final rawSeasons = (json['seasons'] as List<dynamic>? ?? [])
+        .map((s) => SeasonSummary.fromJson(s as Map<String, dynamic>))
+        .toList();
+    final specials = rawSeasons.where((s) => s.seasonNumber == 0).toList();
+    final firstAirDate = json['first_air_date'] as String?;
+    final lastAirDate = json['last_air_date'] as String?;
     return TvDetails(
       id: json['id'] as int,
       name: json['name'] as String,
       posterPath: json['poster_path'] as String?,
       backdropPath: json['backdrop_path'] as String?,
-      seasons: (json['seasons'] as List<dynamic>? ?? [])
-          // TMDB includes a "Specials" entry as season_number 0 — skip it, MVP only tracks numbered seasons.
-          .map((s) => SeasonSummary.fromJson(s as Map<String, dynamic>))
-          .where((s) => s.seasonNumber > 0)
-          .toList(),
+      seasons: rawSeasons.where((s) => s.seasonNumber > 0).toList(),
       nextEpisodeToAir: json['next_episode_to_air'] != null
           ? NextEpisode.fromJson(json['next_episode_to_air'] as Map<String, dynamic>)
           : null,
       status: json['status'] as String? ?? 'Returning Series',
       episodeRunTime:
           runTimes.isNotEmpty ? (runTimes.reduce((a, b) => a + b) / runTimes.length).round() : 45,
+      genres: (json['genres'] as List<dynamic>? ?? [])
+          .map((g) => (g as Map<String, dynamic>)['name'] as String)
+          .toList(),
+      overview: json['overview'] as String? ?? '',
+      voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
+      firstAirYear:
+          (firstAirDate != null && firstAirDate.length >= 4) ? int.parse(firstAirDate.substring(0, 4)) : null,
+      lastAirYear:
+          (lastAirDate != null && lastAirDate.length >= 4) ? int.parse(lastAirDate.substring(0, 4)) : null,
+      specialsEpisodeCount: specials.isEmpty ? 0 : specials.first.episodeCount,
     );
   }
+}
+
+class CastMember {
+  final String name;
+  final String character;
+  final String? profilePath;
+
+  CastMember({required this.name, required this.character, required this.profilePath});
+
+  factory CastMember.fromJson(Map<String, dynamic> json) => CastMember(
+        name: json['name'] as String,
+        character: json['character'] as String? ?? '',
+        profilePath: json['profile_path'] as String?,
+      );
+}
+
+class SimilarMedia {
+  final int id;
+  final String type; // "tv" | "movie"
+  final String title;
+  final String? posterPath;
+
+  SimilarMedia({required this.id, required this.type, required this.title, required this.posterPath});
+
+  factory SimilarMedia.fromJson(Map<String, dynamic> json, String type) => SimilarMedia(
+        id: json['id'] as int,
+        type: type,
+        title: (type == 'tv' ? json['name'] : json['title']) as String,
+        posterPath: json['poster_path'] as String?,
+      );
 }
 
 class EpisodeRef {
@@ -154,6 +209,9 @@ class MovieDetails {
   final String? backdropPath;
   final DateTime? releaseDate;
   final int runtime; // minutes, 0 if unknown
+  final List<String> genres;
+  final String overview;
+  final double voteAverage;
 
   MovieDetails({
     required this.id,
@@ -162,6 +220,9 @@ class MovieDetails {
     required this.backdropPath,
     required this.releaseDate,
     required this.runtime,
+    required this.genres,
+    required this.overview,
+    required this.voteAverage,
   });
 
   factory MovieDetails.fromJson(Map<String, dynamic> json) => MovieDetails(
@@ -174,5 +235,10 @@ class MovieDetails {
                 ? DateTime.parse(json['release_date'] as String)
                 : null,
         runtime: json['runtime'] as int? ?? 0,
+        genres: (json['genres'] as List<dynamic>? ?? [])
+            .map((g) => (g as Map<String, dynamic>)['name'] as String)
+            .toList(),
+        overview: json['overview'] as String? ?? '',
+        voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
       );
 }
