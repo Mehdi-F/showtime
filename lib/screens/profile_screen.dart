@@ -20,6 +20,7 @@ class _ResolvedItem {
   final String? posterPath;
   final String? backdropPath;
   final int runtimeMinutes; // per episode (tv) or per movie
+  final int totalEpisodeCount; // tv only, 0 for movies
 
   _ResolvedItem({
     required this.item,
@@ -27,9 +28,15 @@ class _ResolvedItem {
     required this.posterPath,
     required this.backdropPath,
     required this.runtimeMinutes,
+    this.totalEpisodeCount = 0,
   });
 
   int get watchedEpisodesCount => item.watchedEpisodes.values.where((w) => w).length;
+
+  /// A movie is "watched" via its own flag; a series is "watched" once every
+  /// released episode has been checked off.
+  bool get isWatched =>
+      item.type == 'movie' ? item.watched : (totalEpisodeCount > 0 && watchedEpisodesCount >= totalEpisodeCount);
 
   DateTime get recency => item.lastActivityAt ?? item.watchedAt ?? item.addedAt;
 }
@@ -51,12 +58,14 @@ class ProfileScreen extends StatelessWidget {
   Future<_ResolvedItem> _resolve(TmdbService tmdb, LibraryItem item) async {
     if (item.type == 'tv') {
       final details = await tmdb.getTvDetails(item.tmdbId);
+      final totalEpisodeCount = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
       return _ResolvedItem(
         item: item,
         title: details.name,
         posterPath: details.posterPath,
         backdropPath: details.backdropPath,
         runtimeMinutes: details.episodeRunTime,
+        totalEpisodeCount: totalEpisodeCount,
       );
     } else {
       final details = await tmdb.getMovieDetails(item.tmdbId);
@@ -165,7 +174,11 @@ class ProfileScreen extends StatelessWidget {
                 onSignOut: () => context.read<AuthProvider>().signOut(),
               ),
               const SizedBox(height: 8),
-              _StatsRow(seriesCount: series.length, filmsCount: films.length, episodesWatched: episodesWatched),
+              _StatsRow(
+                seriesCount: series.where((r) => r.isWatched).length,
+                filmsCount: films.where((r) => r.isWatched).length,
+                episodesWatched: episodesWatched,
+              ),
               const Divider(height: 33, indent: 16, endIndent: 16),
               const _SectionHeader(title: 'Statistiques'),
               SizedBox(
@@ -362,9 +375,9 @@ class _StatsRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Expanded(child: _StatColumn(value: seriesCount, label: 'séries')),
+          Expanded(child: _StatColumn(value: seriesCount, label: 'séries vues')),
           const SizedBox(height: 40, child: VerticalDivider(width: 1)),
-          Expanded(child: _StatColumn(value: filmsCount, label: 'films')),
+          Expanded(child: _StatColumn(value: filmsCount, label: 'films vus')),
           const SizedBox(height: 40, child: VerticalDivider(width: 1)),
           Expanded(child: _StatColumn(value: episodesWatched, label: 'épisodes vus')),
         ],
