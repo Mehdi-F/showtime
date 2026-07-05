@@ -34,6 +34,21 @@ const _frMonthsShort = [
 ];
 const _frWeekdays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
 
+/// Runs `action` over `items` with at most `concurrency` in flight at once.
+Future<void> _forEachBounded<T>(List<T> items, int concurrency, Future<void> Function(T item) action) async {
+  var index = 0;
+  Future<void> worker() async {
+    while (true) {
+      final current = index;
+      if (current >= items.length) return;
+      index++;
+      await action(items[current]);
+    }
+  }
+
+  await Future.wait(List.generate(concurrency, (_) => worker()));
+}
+
 int _daysUntil(DateTime date) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
@@ -166,11 +181,12 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
 
   Future<_ShowEpisodesData> _resolveShowEpisodes(TmdbService tmdb, LibraryItem item) async {
     final details = await tmdb.getTvDetails(item.tmdbId);
-    final allEpisodes = <EpisodeRef>[];
-    for (final season in details.seasons) {
-      final seasonDetails = await tmdb.getSeasonDetails(item.tmdbId, season.seasonNumber);
-      allEpisodes.addAll(seasonDetails.episodes);
-    }
+    final episodesBySeason = List<List<EpisodeRef>?>.filled(details.seasons.length, null);
+    await _forEachBounded(List.generate(details.seasons.length, (i) => i), 4, (i) async {
+      final seasonDetails = await tmdb.getSeasonDetails(item.tmdbId, details.seasons[i].seasonNumber);
+      episodesBySeason[i] = seasonDetails.episodes;
+    });
+    final allEpisodes = <EpisodeRef>[for (final episodes in episodesBySeason) ...episodes!];
     final now = DateTime.now();
     final next = nextUnwatchedEpisode(episodesInOrder: allEpisodes, watchedEpisodes: item.watchedEpisodes, now: now);
     final unwatchedCount = allEpisodes.where((e) {
@@ -269,8 +285,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     super.dispose();
   }
 
-  Future<List<_ShowEpisodesData>> _resolveAll() =>
-      Future.wait(widget.tvItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+  Future<List<_ShowEpisodesData>> _resolveAll() async {
+    final results = List<_ShowEpisodesData?>.filled(widget.tvItems.length, null);
+    await _forEachBounded(List.generate(widget.tvItems.length, (i) => i), 5, (i) async {
+      results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+    });
+    return results.cast<_ShowEpisodesData>();
+  }
 
   Future<void> _refresh() async {
     final future = _resolveAll();
@@ -507,8 +528,13 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     _rowsFuture = _resolveAll();
   }
 
-  Future<List<_CalendarRow?>> _resolveAll() =>
-      Future.wait(widget.tvItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+  Future<List<_CalendarRow?>> _resolveAll() async {
+    final results = List<_CalendarRow?>.filled(widget.tvItems.length, null);
+    await _forEachBounded(List.generate(widget.tvItems.length, (i) => i), 8, (i) async {
+      results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+    });
+    return results;
+  }
 
   Future<void> _refresh() async {
     final future = _resolveAll();
