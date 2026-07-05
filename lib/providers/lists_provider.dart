@@ -7,12 +7,15 @@ class ListsProvider extends ChangeNotifier {
   final ListsService _listsService;
   StreamSubscription<List<WatchList>>? _subscription;
   List<WatchList> _lists = [];
+  String? _uid;
 
   ListsProvider(this._listsService);
 
   List<WatchList> get lists => _lists;
 
   void watch(String uid) {
+    if (_uid == uid) return;
+    _uid = uid;
     _subscription?.cancel();
     _subscription = _listsService.watchLists(uid).listen((lists) {
       _lists = lists;
