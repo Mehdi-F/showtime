@@ -117,35 +117,18 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
   }
 
   Future<void> _loadViewMode() async {
-    String? saved;
-    String debugInfo;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      saved = prefs.getString(_prefsKey);
-      debugInfo = 'DEBUG Séries initState: lu="${saved ?? "rien"}"';
-    } catch (e) {
-      debugInfo = 'DEBUG Séries initState: ERREUR $e';
-    }
-    if (!mounted) return;
-    if (saved == _ViewMode.grid.name) {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_prefsKey);
+    if (mounted && saved == _ViewMode.grid.name) {
       setState(() => _viewMode = _ViewMode.grid);
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(debugInfo), duration: const Duration(seconds: 4)));
   }
 
   Future<void> _toggleViewMode() async {
     final newMode = _viewMode == _ViewMode.list ? _ViewMode.grid : _ViewMode.list;
     setState(() => _viewMode = newMode);
-    String debugInfo;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefsKey, newMode.name);
-      debugInfo = 'DEBUG Séries toggle: sauvegardé "${newMode.name}"';
-    } catch (e) {
-      debugInfo = 'DEBUG Séries toggle: ERREUR $e';
-    }
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(debugInfo), duration: const Duration(seconds: 4)));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, newMode.name);
   }
 
   @override
