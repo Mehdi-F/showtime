@@ -11,6 +11,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/media_info_sections.dart';
+import '../widgets/round_check.dart';
 import 'show_detail_screen.dart';
 
 class MovieDetailScreen extends StatefulWidget {
@@ -63,7 +64,25 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Future<void> _toggleWatched() async {
     final item = await _ensureFollowed();
     final newValue = !_watched;
-    setState(() => _watched = newValue);
+    final now = DateTime.now();
+    setState(() {
+      _watched = newValue;
+      _libraryItem = LibraryItem(
+        docId: item.docId,
+        tmdbId: item.tmdbId,
+        type: item.type,
+        status: item.status,
+        addedAt: item.addedAt,
+        watchedEpisodes: item.watchedEpisodes,
+        watched: newValue,
+        watchedAt: newValue ? now : null,
+        favorite: item.favorite,
+        lastActivityAt: item.lastActivityAt,
+        skipGapPrompt: item.skipGapPrompt,
+        episodeRewatchCounts: item.episodeRewatchCounts,
+        episodeWatchedAt: item.episodeWatchedAt,
+      );
+    });
     final uid = context.read<AuthProvider>().user!.uid;
     await context.read<LibraryService>().markMovieWatched(
           uid: uid,
@@ -120,6 +139,76 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
+  Widget _buildWatchedCard() {
+    final watchedAt = _libraryItem?.watchedAt;
+    return GestureDetector(
+      onTap: _toggleWatched,
+      child: Container(
+        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_watched ? 'Vu' : 'Pas encore vu',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Text(
+                    _watched && watchedAt != null
+                        ? 'Vu le ${_formatDate(watchedAt)}'
+                        : 'Marquez-le comme vu une fois terminé.',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            RoundCheck(checked: _watched, onTap: _toggleWatched),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(MovieDetails movie) {
+    final tmdb = context.read<TmdbService>();
+    final libraryItem = _libraryItem;
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text('VISIONNAGE',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _buildWatchedCard(),
+        ),
+        InfoCard(
+          yearRange: movie.releaseDate?.year.toString(),
+          genres: movie.genres,
+          voteAverage: movie.voteAverage,
+          overview: movie.overview,
+          runtimeMinutes: movie.runtime,
+          addedCaption: libraryItem != null
+              ? 'Ajouté à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
+              : 'Pas encore suivi',
+        ),
+        CastRow(future: tmdb.getMovieCredits(widget.tmdbId)),
+        SimilarRow(
+          title: 'Les utilisateurs ont également regardé',
+          future: tmdb.getSimilarMovies(widget.tmdbId),
+          onTap: _openSimilar,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -129,136 +218,171 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         final movie = snapshot.data!;
-        final tmdb = context.read<TmdbService>();
-        final followed = _libraryItem != null;
         return Scaffold(
-          body: ListView(
+          body: Column(
             children: [
-              SizedBox(
-                height: 320,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (movie.posterPath != null)
-                      CachedNetworkImage(
-                        imageUrl: '${TmdbConfig.imageBaseUrl}${movie.posterPath}',
-                        fit: BoxFit.cover,
-                      )
-                    else
-                      Container(color: AppColors.surfaceVariant),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.1),
-                            Colors.black.withValues(alpha: 0.9),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      left: 4,
-                      right: 4,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
-                              onPressed: () => Navigator.of(context).maybePop(),
-                            ),
-                            Row(
-                              children: [
-                                if (followed)
-                                  IconButton(
-                                    icon: Icon(
-                                      _favorite ? Icons.favorite : Icons.favorite_border,
-                                      color: _favorite ? Colors.redAccent : Colors.white,
-                                    ),
-                                    onPressed: _toggleFavorite,
-                                  ),
-                                if (followed)
-                                  PopupMenuButton<void>(
-                                    icon: const Icon(Icons.more_vert, color: Colors.white),
-                                    color: AppColors.surface,
-                                    itemBuilder: (context) => [
-                                      PopupMenuItem(
-                                        onTap: () => showAddToListSheet(
-                                          context,
-                                          tmdbId: widget.tmdbId,
-                                          type: 'movie',
-                                        ),
-                                        child: const Text('Ajouter à une liste'),
-                                      ),
-                                      PopupMenuItem(
-                                        onTap: _unfollow,
-                                        child: const Text('Remove from Library'),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 16,
-                      child: Text(
-                        movie.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+              _MovieBanner(
+                title: movie.title,
+                posterPath: movie.posterPath,
+                watched: _watched,
+                favorite: _favorite,
+                followed: _libraryItem != null,
+                onToggleFavorite: _toggleFavorite,
+                onUnfollow: _unfollow,
+                onFollow: () async {
+                  await _ensureFollowed();
+                },
+                onAddToList: () => showAddToListSheet(
+                  context,
+                  tmdbId: widget.tmdbId,
+                  type: 'movie',
                 ),
               ),
-              const SizedBox(height: 24),
-              Center(
-                child: followed
-                    ? FilledButton.icon(
-                        onPressed: _toggleWatched,
-                        icon: Icon(_watched ? Icons.check_circle : Icons.check_circle_outline),
-                        label: Text(_watched ? 'Watched' : 'Mark watched'),
-                      )
-                    : FilledButton.icon(
-                        onPressed: _ensureFollowed,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Suivre'),
-                      ),
-              ),
-              InfoCard(
-                yearRange: movie.releaseDate?.year.toString(),
-                genres: movie.genres,
-                voteAverage: movie.voteAverage,
-                overview: movie.overview,
-                runtimeMinutes: movie.runtime,
-                addedCaption: followed
-                    ? 'Ajouté à votre bibliothèque le ${_formatDate(_libraryItem!.addedAt)}'
-                    : 'Pas encore suivi',
-              ),
-              CastRow(future: tmdb.getMovieCredits(widget.tmdbId)),
-              SimilarRow(
-                title: 'Les utilisateurs ont également regardé',
-                future: tmdb.getSimilarMovies(widget.tmdbId),
-                onTap: _openSimilar,
-              ),
-              const SizedBox(height: 16),
+              Expanded(child: _buildBody(movie)),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _MovieBanner extends StatelessWidget {
+  final String title;
+  final String? posterPath;
+  final bool watched;
+  final bool favorite;
+  final bool followed;
+  final VoidCallback onToggleFavorite;
+  final VoidCallback onUnfollow;
+  final Future<void> Function() onFollow;
+  final VoidCallback onAddToList;
+
+  const _MovieBanner({
+    required this.title,
+    required this.posterPath,
+    required this.watched,
+    required this.favorite,
+    required this.followed,
+    required this.onToggleFavorite,
+    required this.onUnfollow,
+    required this.onFollow,
+    required this.onAddToList,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 220,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (posterPath != null)
+            CachedNetworkImage(
+              imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+              fit: BoxFit.cover,
+            )
+          else
+            Container(color: AppColors.surfaceVariant),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black.withValues(alpha: 0.1), Colors.black.withValues(alpha: 0.85)],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            left: 4,
+            right: 4,
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  Row(
+                    children: [
+                      if (followed)
+                        IconButton(
+                          icon: Icon(
+                            favorite ? Icons.favorite : Icons.favorite_border,
+                            color: favorite ? Colors.redAccent : Colors.white,
+                          ),
+                          onPressed: onToggleFavorite,
+                        )
+                      else
+                        TextButton.icon(
+                          onPressed: onFollow,
+                          icon: const Icon(Icons.add, color: Colors.black),
+                          label: const Text('Suivre', style: TextStyle(color: Colors.black)),
+                          style: TextButton.styleFrom(backgroundColor: AppColors.accent),
+                        ),
+                      if (followed)
+                        PopupMenuButton<void>(
+                          icon: const Icon(Icons.more_vert, color: Colors.white),
+                          color: AppColors.surface,
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              onTap: onAddToList,
+                              child: const Text('Ajouter à une liste'),
+                            ),
+                            PopupMenuItem(
+                              onTap: onUnfollow,
+                              child: const Text('Remove from Library'),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: watched ? Colors.green : AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    watched ? 'Vu' : 'Non vu',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
