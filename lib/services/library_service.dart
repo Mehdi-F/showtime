@@ -132,6 +132,16 @@ class LibraryService {
     });
   }
 
+  /// Increments the rewatch counter for a movie and bumps its watched date,
+  /// used when re-checking an already-watched movie ("+1 Revue").
+  Future<void> incrementMovieRewatch({required String uid, required int tmdbId}) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'movie');
+    return _libraryRef(uid).doc(docId).update({
+      'movieRewatchCount': FieldValue.increment(1),
+      'watchedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   Future<void> removeFromLibrary({required String uid, required int tmdbId, required String type}) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: type);
     return _libraryRef(uid).doc(docId).delete();

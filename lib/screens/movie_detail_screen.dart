@@ -14,6 +14,8 @@ import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
 import 'show_detail_screen.dart';
 
+enum _RewatchChoice { notWatched, rewatch }
+
 class MovieDetailScreen extends StatefulWidget {
   final LibraryItem? libraryItem;
   final int? previewTmdbId;
@@ -39,6 +41,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   LibraryItem? _libraryItem;
   bool _watched = false;
   bool _favorite = false;
+  int _rewatchCount = 0;
 
   @override
   void initState() {
@@ -46,6 +49,53 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _libraryItem = widget.libraryItem;
     _watched = widget.libraryItem?.watched ?? false;
     _favorite = widget.libraryItem?.favorite ?? false;
+    _rewatchCount = widget.libraryItem?.movieRewatchCount ?? 0;
+  }
+
+  LibraryItem _withUpdates(LibraryItem item, {required bool watched, required DateTime? watchedAt}) =>
+      LibraryItem(
+        docId: item.docId,
+        tmdbId: item.tmdbId,
+        type: item.type,
+        status: item.status,
+        addedAt: item.addedAt,
+        watchedEpisodes: item.watchedEpisodes,
+        watched: watched,
+        watchedAt: watchedAt,
+        favorite: item.favorite,
+        lastActivityAt: item.lastActivityAt,
+        skipGapPrompt: item.skipGapPrompt,
+        episodeRewatchCounts: item.episodeRewatchCounts,
+        episodeWatchedAt: item.episodeWatchedAt,
+        movieRewatchCount: _rewatchCount,
+      );
+
+  Future<_RewatchChoice?> _askRewatchChoice() {
+    return showDialog<_RewatchChoice>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Marquer comme...'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(_RewatchChoice.notWatched),
+            child: const Row(children: [
+              Icon(Icons.visibility_off_outlined, color: AppColors.textSecondary),
+              SizedBox(width: 12),
+              Text('Pas vu'),
+            ]),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(_RewatchChoice.rewatch),
+            child: const Row(children: [
+              Icon(Icons.replay, color: AppColors.accent),
+              SizedBox(width: 12),
+              Text('+1 Revu'),
+            ]),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<LibraryItem> _ensureFollowed() async {
@@ -63,32 +113,37 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   Future<void> _toggleWatched() async {
     final item = await _ensureFollowed();
-    final newValue = !_watched;
+    final uid = context.read<AuthProvider>().user!.uid;
+    final library = context.read<LibraryService>();
+
+    if (_watched) {
+      final choice = await _askRewatchChoice();
+      if (!mounted || choice == null) return;
+      if (choice == _RewatchChoice.rewatch) {
+        await library.incrementMovieRewatch(uid: uid, tmdbId: item.tmdbId);
+        final now = DateTime.now();
+        if (mounted) {
+          setState(() {
+            _rewatchCount++;
+            _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
+          });
+        }
+        return;
+      }
+      setState(() {
+        _watched = false;
+        _libraryItem = _withUpdates(item, watched: false, watchedAt: null);
+      });
+      await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: false);
+      return;
+    }
+
     final now = DateTime.now();
     setState(() {
-      _watched = newValue;
-      _libraryItem = LibraryItem(
-        docId: item.docId,
-        tmdbId: item.tmdbId,
-        type: item.type,
-        status: item.status,
-        addedAt: item.addedAt,
-        watchedEpisodes: item.watchedEpisodes,
-        watched: newValue,
-        watchedAt: newValue ? now : null,
-        favorite: item.favorite,
-        lastActivityAt: item.lastActivityAt,
-        skipGapPrompt: item.skipGapPrompt,
-        episodeRewatchCounts: item.episodeRewatchCounts,
-        episodeWatchedAt: item.episodeWatchedAt,
-      );
+      _watched = true;
+      _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
     });
-    final uid = context.read<AuthProvider>().user!.uid;
-    await context.read<LibraryService>().markMovieWatched(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          watched: newValue,
-        );
+    await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: true);
   }
 
   Future<void> _toggleFavorite() async {
@@ -158,7 +213,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   const SizedBox(height: 4),
                   Text(
                     _watched && watchedAt != null
-                        ? 'Vu le ${_formatDate(watchedAt)}'
+                        ? [
+                            'Vu le ${_formatDate(watchedAt)}',
+                            if (_rewatchCount > 0) '+$_rewatchCount revu${_rewatchCount > 1 ? "s" : ""}',
+                          ].join(' · ')
                         : 'Marquez-le comme vu une fois terminé.',
                     style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                   ),
