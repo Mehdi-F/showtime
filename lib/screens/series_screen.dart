@@ -247,6 +247,9 @@ class _ToWatchTab extends StatefulWidget {
 
 class _ToWatchTabState extends State<_ToWatchTab> {
   late Future<List<_ShowEpisodesData>> _dataFuture;
+  final _scrollController = ScrollController();
+  final _historyKey = GlobalKey();
+  bool _autoScrolledPastHistory = false;
 
   @override
   void initState() {
@@ -260,13 +263,36 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     _dataFuture = _resolveAll();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<List<_ShowEpisodesData>> _resolveAll() =>
       Future.wait(widget.tvItems.map((item) => widget.resolveRow(widget.tmdb, item)));
 
   Future<void> _refresh() async {
     final future = _resolveAll();
-    setState(() => _dataFuture = future);
+    setState(() {
+      _dataFuture = future;
+      _autoScrolledPastHistory = false;
+    });
     await future;
+  }
+
+  /// The list opens scrolled past the watch history so "À voir" is the first
+  /// thing visible — history is still there, just a scroll-up away.
+  void _autoScrollPastHistoryOnce() {
+    if (_autoScrolledPastHistory) return;
+    _autoScrolledPastHistory = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final height = _historyKey.currentContext?.size?.height;
+      if (height != null && height > 0) {
+        _scrollController.jumpTo(height.clamp(0, _scrollController.position.maxScrollExtent));
+      }
+    });
   }
 
   Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
@@ -328,12 +354,18 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
 
+        final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
+        if (showHistory) {
+          _autoScrollPastHistoryOnce();
+        }
+
         return ListView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: widget.viewMode == _ViewMode.list
               ? [
-                  if (history.isNotEmpty) ..._historySection(context, history),
+                  if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
                   if (active.isNotEmpty) ..._activeSection(context, active),
                   if (stale.isNotEmpty) ..._staleSection(context, stale),
                 ]
