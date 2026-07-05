@@ -43,6 +43,11 @@ class DiscoverPosterTile extends StatelessWidget {
       await context.read<LibraryService>().addToLibrary(uid: uid, tmdbId: media.id, type: media.type);
     }
 
+    Future<void> unfollow() async {
+      final uid = context.read<AuthProvider>().user!.uid;
+      await context.read<LibraryService>().removeFromLibrary(uid: uid, tmdbId: media.id, type: media.type);
+    }
+
     // Just viewing a title should never add it to the library — only the
     // follow badge (or an in-detail action) does that.
     void openDetail() {
@@ -92,7 +97,7 @@ class DiscoverPosterTile extends StatelessWidget {
                 top: 6,
                 right: 6,
                 child: GestureDetector(
-                  onTap: followed ? null : follow,
+                  onTap: followed ? unfollow : follow,
                   child: Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
