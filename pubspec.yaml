@@ -45,6 +45,7 @@ dependencies:
   shared_preferences: ^2.3.2
   file_picker: ^8.1.2
   archive: ^3.6.1
+  confetti: ^0.8.0
   csv: ^6.0.0
 
 dev_dependencies:

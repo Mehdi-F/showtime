@@ -84,6 +84,36 @@ class LibraryService {
     return _libraryRef(uid).doc(docId).update(updates);
   }
 
+  /// Sets an arbitrary set of episodes (possibly spanning multiple seasons)
+  /// watched/unwatched in a single write. Used by the "mark all" action.
+  Future<void> setEpisodesWatched({
+    required String uid,
+    required int tmdbId,
+    required List<String> episodeKeys,
+    required bool watched,
+  }) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final updates = <String, dynamic>{
+      for (final key in episodeKeys) 'watchedEpisodes.$key': watched,
+      'lastActivityAt': DateTime.now().toIso8601String(),
+    };
+    return _libraryRef(uid).doc(docId).update(updates);
+  }
+
+  /// Increments the rewatch counter for the given episodes by 1 each.
+  Future<void> incrementRewatch({
+    required String uid,
+    required int tmdbId,
+    required List<String> episodeKeys,
+  }) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final updates = <String, dynamic>{
+      for (final key in episodeKeys) 'episodeRewatchCounts.$key': FieldValue.increment(1),
+      'lastActivityAt': DateTime.now().toIso8601String(),
+    };
+    return _libraryRef(uid).doc(docId).update(updates);
+  }
+
   Future<void> markMovieWatched({required String uid, required int tmdbId, required bool watched}) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'movie');
     return _libraryRef(uid).doc(docId).update({
