@@ -41,18 +41,35 @@ class _FilmsScreenState extends State<FilmsScreen> {
   }
 
   Future<void> _loadViewMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_prefsKey);
-    if (mounted && saved == _ViewMode.list.name) {
+    String? saved;
+    String debugInfo;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      saved = prefs.getString(_prefsKey);
+      debugInfo = 'DEBUG Films initState: lu="${saved ?? "rien"}"';
+    } catch (e) {
+      debugInfo = 'DEBUG Films initState: ERREUR $e';
+    }
+    if (!mounted) return;
+    if (saved == _ViewMode.list.name) {
       setState(() => _viewMode = _ViewMode.list);
     }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(debugInfo), duration: const Duration(seconds: 4)));
   }
 
   Future<void> _toggleViewMode() async {
     final newMode = _viewMode == _ViewMode.grid ? _ViewMode.list : _ViewMode.grid;
     setState(() => _viewMode = newMode);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, newMode.name);
+    String debugInfo;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, newMode.name);
+      debugInfo = 'DEBUG Films toggle: sauvegardé "${newMode.name}"';
+    } catch (e) {
+      debugInfo = 'DEBUG Films toggle: ERREUR $e';
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(debugInfo), duration: const Duration(seconds: 4)));
   }
 
   Future<_MovieRow> _resolveRow(TmdbService tmdb, LibraryItem item) async {
