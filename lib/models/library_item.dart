@@ -11,6 +11,7 @@ class LibraryItem {
   final DateTime? lastActivityAt; // tv only, bumped on episode/season watch toggles
   final bool skipGapPrompt; // tv only, "never ask again" for the previous-episodes dialog
   final Map<String, int> episodeRewatchCounts; // tv only, key = "s{season}e{episode}"
+  final Map<String, DateTime> episodeWatchedAt; // tv only, key = "s{season}e{episode}"
 
   LibraryItem({
     required this.docId,
@@ -25,6 +26,7 @@ class LibraryItem {
     this.lastActivityAt,
     this.skipGapPrompt = false,
     this.episodeRewatchCounts = const {},
+    this.episodeWatchedAt = const {},
   });
 
   LibraryItem copyWith({bool? skipGapPrompt}) => LibraryItem(
@@ -40,6 +42,7 @@ class LibraryItem {
         lastActivityAt: lastActivityAt,
         skipGapPrompt: skipGapPrompt ?? this.skipGapPrompt,
         episodeRewatchCounts: episodeRewatchCounts,
+        episodeWatchedAt: episodeWatchedAt,
       );
 
   static String buildDocId({required int tmdbId, required String type}) => '${type}_$tmdbId';
@@ -59,6 +62,8 @@ class LibraryItem {
         skipGapPrompt: map['skipGapPrompt'] as bool? ?? false,
         episodeRewatchCounts: (map['episodeRewatchCounts'] as Map? ?? {})
             .map((k, v) => MapEntry(k as String, (v as num).toInt())),
+        episodeWatchedAt: (map['episodeWatchedAt'] as Map? ?? {})
+            .map((k, v) => MapEntry(k as String, DateTime.parse(v as String))),
       );
 
   Map<String, dynamic> toMap() => {
@@ -73,5 +78,6 @@ class LibraryItem {
         'lastActivityAt': lastActivityAt?.toIso8601String(),
         'skipGapPrompt': skipGapPrompt,
         'episodeRewatchCounts': episodeRewatchCounts,
+        'episodeWatchedAt': episodeWatchedAt.map((k, v) => MapEntry(k, v.toIso8601String())),
       };
 }

@@ -56,9 +56,9 @@ class _ShowEpisodesData {
   final String? posterPath;
   final EpisodeRef? nextEpisode;
   final int extraUnwatched;
-  final EpisodeRef? lastWatchedEpisode;
   final int totalEpisodeCount;
   final bool isEnded;
+  final List<EpisodeRef> allEpisodes;
 
   _ShowEpisodesData({
     required this.item,
@@ -66,12 +66,39 @@ class _ShowEpisodesData {
     required this.posterPath,
     required this.nextEpisode,
     required this.extraUnwatched,
-    required this.lastWatchedEpisode,
     required this.totalEpisodeCount,
     required this.isEnded,
+    required this.allEpisodes,
   });
 
   int get watchedEpisodesCount => item.watchedEpisodes.values.where((w) => w).length;
+}
+
+class _HistoryEntry {
+  final _ShowEpisodesData show;
+  final EpisodeRef episode;
+  final DateTime watchedAt;
+
+  _HistoryEntry({required this.show, required this.episode, required this.watchedAt});
+}
+
+/// Flattens every show's individually-timestamped watched episodes into one
+/// chronological list (oldest first), most recent 200 kept.
+List<_HistoryEntry> _buildHistory(List<_ShowEpisodesData> data) {
+  final entries = <_HistoryEntry>[];
+  for (final d in data) {
+    for (final ep in d.allEpisodes) {
+      final watchedAt = d.item.episodeWatchedAt[ep.key];
+      if (watchedAt != null) {
+        entries.add(_HistoryEntry(show: d, episode: ep, watchedAt: watchedAt));
+      }
+    }
+  }
+  entries.sort((a, b) => a.watchedAt.compareTo(b.watchedAt));
+  if (entries.length > 200) {
+    return entries.sublist(entries.length - 200);
+  }
+  return entries;
 }
 
 class _ProgressInfo {
@@ -151,19 +178,15 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
       if (e.airDate != null && e.airDate!.isAfter(now)) return false;
       return true;
     }).length;
-    EpisodeRef? lastWatched;
-    for (final ep in allEpisodes) {
-      if (item.watchedEpisodes[ep.key] == true) lastWatched = ep;
-    }
     return _ShowEpisodesData(
       item: item,
       showTitle: details.name,
       posterPath: details.posterPath,
       nextEpisode: next,
       extraUnwatched: next == null ? 0 : unwatchedCount - 1,
-      lastWatchedEpisode: lastWatched,
       totalEpisodeCount: allEpisodes.length,
       isEnded: details.isEnded,
+      allEpisodes: allEpisodes,
     );
   }
 
@@ -278,13 +301,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         final data = snapshot.data!;
         final now = DateTime.now();
 
-        final history = data.where((d) => d.lastWatchedEpisode != null).toList()
-          ..sort((a, b) {
-            final aTime = a.item.lastActivityAt ?? a.item.addedAt;
-            final bTime = b.item.lastActivityAt ?? b.item.addedAt;
-            return bTime.compareTo(aTime);
-          });
-        final historyTop = history.take(5).toList();
+        final history = _buildHistory(data);
 
         final withNext = data.where((d) => d.nextEpisode != null).toList();
         final active = <_ShowEpisodesData>[];
@@ -306,7 +323,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           return bDate.compareTo(aDate);
         });
 
-        if (historyTop.isEmpty && active.isEmpty && stale.isEmpty) {
+        if (history.isEmpty && active.isEmpty && stale.isEmpty) {
           return const ScrollableCenter(
               child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
@@ -316,12 +333,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: widget.viewMode == _ViewMode.list
               ? [
-                  if (historyTop.isNotEmpty) ..._historySection(context, historyTop),
+                  if (history.isNotEmpty) ..._historySection(context, history),
                   if (active.isNotEmpty) ..._activeSection(context, active),
                   if (stale.isNotEmpty) ..._staleSection(context, stale),
                 ]
               : [
-                  if (historyTop.isNotEmpty) _buildCardSection(context, 'HISTORIQUE DE VISIONNAGE', historyTop),
                   if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
                   if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
                 ],
@@ -369,22 +385,26 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                 color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
       );
 
-  List<Widget> _historySection(BuildContext context, List<_ShowEpisodesData> rows) {
+  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries) {
     return [
       _sectionHeader('HISTORIQUE DE VISIONNAGE'),
-      ...rows.map((d) {
-        final ep = d.lastWatchedEpisode!;
-        return _EpisodeCard(
-          posterPath: d.posterPath,
-          showTitle: d.showTitle,
-          seasonNumber: ep.seasonNumber,
-          episodeNumber: ep.episodeNumber,
-          episodeTitle: ep.name,
-          watched: true,
-          dimmed: true,
-          onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, false),
-          onTapShow: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+      ...entries.map((h) {
+        final ep = h.episode;
+        final d = h.show;
+        return Opacity(
+          opacity: 0.6,
+          child: _EpisodeCard(
+            posterPath: d.posterPath,
+            showTitle: d.showTitle,
+            seasonNumber: ep.seasonNumber,
+            episodeNumber: ep.episodeNumber,
+            episodeTitle: ep.name,
+            watched: true,
+            dimmed: true,
+            onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, false),
+            onTapShow: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+          ),
         );
       }),
     ];

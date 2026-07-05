@@ -63,8 +63,10 @@ class LibraryService {
     required bool watched,
   }) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final key = 's${season}e$episode';
     return _libraryRef(uid).doc(docId).update({
-      'watchedEpisodes.s${season}e$episode': watched,
+      'watchedEpisodes.$key': watched,
+      'episodeWatchedAt.$key': watched ? DateTime.now().toIso8601String() : FieldValue.delete(),
       'lastActivityAt': DateTime.now().toIso8601String(),
     });
   }
@@ -77,9 +79,12 @@ class LibraryService {
     required bool watched,
   }) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final now = DateTime.now().toIso8601String();
     final updates = <String, dynamic>{
       for (final episode in episodeNumbers) 'watchedEpisodes.s${season}e$episode': watched,
-      'lastActivityAt': DateTime.now().toIso8601String(),
+      for (final episode in episodeNumbers)
+        'episodeWatchedAt.s${season}e$episode': watched ? now : FieldValue.delete(),
+      'lastActivityAt': now,
     };
     return _libraryRef(uid).doc(docId).update(updates);
   }
@@ -93,23 +98,28 @@ class LibraryService {
     required bool watched,
   }) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final now = DateTime.now().toIso8601String();
     final updates = <String, dynamic>{
       for (final key in episodeKeys) 'watchedEpisodes.$key': watched,
-      'lastActivityAt': DateTime.now().toIso8601String(),
+      for (final key in episodeKeys) 'episodeWatchedAt.$key': watched ? now : FieldValue.delete(),
+      'lastActivityAt': now,
     };
     return _libraryRef(uid).doc(docId).update(updates);
   }
 
-  /// Increments the rewatch counter for the given episodes by 1 each.
+  /// Increments the rewatch counter for the given episodes by 1 each, and
+  /// bumps them back to the top of the watch history.
   Future<void> incrementRewatch({
     required String uid,
     required int tmdbId,
     required List<String> episodeKeys,
   }) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final now = DateTime.now().toIso8601String();
     final updates = <String, dynamic>{
       for (final key in episodeKeys) 'episodeRewatchCounts.$key': FieldValue.increment(1),
-      'lastActivityAt': DateTime.now().toIso8601String(),
+      for (final key in episodeKeys) 'episodeWatchedAt.$key': now,
+      'lastActivityAt': now,
     };
     return _libraryRef(uid).doc(docId).update(updates);
   }
