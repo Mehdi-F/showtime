@@ -31,6 +31,30 @@ class LibraryService {
     return item;
   }
 
+  /// Creates a tv LibraryItem with a pre-populated watched-episodes map and
+  /// favorite flag in a single write. Used by the TV Time import — assumes
+  /// the show isn't already in the library (callers must dedupe first).
+  Future<void> importTvShow({
+    required String uid,
+    required int tmdbId,
+    required Map<String, bool> watchedEpisodes,
+    required bool favorite,
+  }) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final item = LibraryItem(
+      docId: docId,
+      tmdbId: tmdbId,
+      type: 'tv',
+      status: 'watching',
+      addedAt: DateTime.now(),
+      watchedEpisodes: watchedEpisodes,
+      watched: false,
+      watchedAt: null,
+      favorite: favorite,
+    );
+    return _libraryRef(uid).doc(docId).set(item.toMap());
+  }
+
   Future<void> markEpisodeWatched({
     required String uid,
     required int tmdbId,

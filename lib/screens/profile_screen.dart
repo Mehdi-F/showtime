@@ -10,6 +10,7 @@ import '../providers/lists_provider.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
@@ -172,6 +173,9 @@ class ProfileScreen extends StatelessWidget {
                 displayName: displayName,
                 onEdit: () => _editDisplayName(context, displayName),
                 onSignOut: () => context.read<AuthProvider>().signOut(),
+                onImport: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const ImportTvTimeScreen(),
+                )),
               ),
               const SizedBox(height: 8),
               _StatsRow(
@@ -241,6 +245,7 @@ class _ProfileHeader extends StatelessWidget {
   final String displayName;
   final VoidCallback onEdit;
   final VoidCallback onSignOut;
+  final VoidCallback onImport;
 
   const _ProfileHeader({
     required this.backdropPath,
@@ -248,6 +253,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.displayName,
     required this.onEdit,
     required this.onSignOut,
+    required this.onImport,
   });
 
   @override
@@ -292,6 +298,7 @@ class _ProfileHeader extends StatelessWidget {
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         color: AppColors.surface,
                         itemBuilder: (context) => [
+                          PopupMenuItem(onTap: onImport, child: const Text('Importer depuis TV Time')),
                           PopupMenuItem(onTap: onSignOut, child: const Text('Se déconnecter')),
                         ],
                       ),
