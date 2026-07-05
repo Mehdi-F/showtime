@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
@@ -30,7 +31,29 @@ class FilmsScreen extends StatefulWidget {
 }
 
 class _FilmsScreenState extends State<FilmsScreen> {
+  static const _prefsKey = 'films_view_mode';
   _ViewMode _viewMode = _ViewMode.grid;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadViewMode();
+  }
+
+  Future<void> _loadViewMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_prefsKey);
+    if (mounted && saved == _ViewMode.list.name) {
+      setState(() => _viewMode = _ViewMode.list);
+    }
+  }
+
+  Future<void> _toggleViewMode() async {
+    final newMode = _viewMode == _ViewMode.grid ? _ViewMode.list : _ViewMode.grid;
+    setState(() => _viewMode = newMode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, newMode.name);
+  }
 
   Future<_MovieRow> _resolveRow(TmdbService tmdb, LibraryItem item) async {
     final details = await tmdb.getMovieDetails(item.tmdbId);
@@ -49,9 +72,7 @@ class _FilmsScreenState extends State<FilmsScreen> {
           IconButton(
             icon: Icon(_viewMode == _ViewMode.grid ? Icons.view_list : Icons.grid_view),
             tooltip: 'Changer la vue',
-            onPressed: () => setState(() {
-              _viewMode = _viewMode == _ViewMode.grid ? _ViewMode.list : _ViewMode.grid;
-            }),
+            onPressed: _toggleViewMode,
           ),
         ],
       ),

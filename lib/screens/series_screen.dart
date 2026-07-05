@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
 import '../logic/up_next.dart';
 import '../models/library_item.dart';
@@ -104,6 +105,7 @@ class SeriesScreen extends StatefulWidget {
 }
 
 class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderStateMixin {
+  static const _prefsKey = 'series_view_mode';
   late final TabController _tabController;
   _ViewMode _viewMode = _ViewMode.list;
 
@@ -111,6 +113,22 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadViewMode();
+  }
+
+  Future<void> _loadViewMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_prefsKey);
+    if (mounted && saved == _ViewMode.grid.name) {
+      setState(() => _viewMode = _ViewMode.grid);
+    }
+  }
+
+  Future<void> _toggleViewMode() async {
+    final newMode = _viewMode == _ViewMode.list ? _ViewMode.grid : _ViewMode.list;
+    setState(() => _viewMode = newMode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, newMode.name);
   }
 
   @override
@@ -168,9 +186,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
           IconButton(
             icon: Icon(_viewMode == _ViewMode.list ? Icons.grid_view : Icons.view_list),
             tooltip: 'Changer la vue',
-            onPressed: () => setState(() {
-              _viewMode = _viewMode == _ViewMode.list ? _ViewMode.grid : _ViewMode.list;
-            }),
+            onPressed: _toggleViewMode,
           ),
         ],
         bottom: TabBar(
