@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../config/tmdb_config.dart';
@@ -7,10 +8,12 @@ import '../models/watch_list.dart';
 import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/lists_provider.dart';
+import '../services/link_service.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import 'import_tvtime_screen.dart';
+import 'linked_library_screen.dart';
 import 'list_detail_screen.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
@@ -183,6 +186,12 @@ class ProfileScreen extends StatelessWidget {
                 filmsCount: films.where((r) => r.isWatched).length,
                 episodesWatched: episodesWatched,
               ),
+              const Divider(height: 33, indent: 16, endIndent: 16),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Text('Compte partagé', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              ),
+              const _LinkedAccountSection(),
               const Divider(height: 33, indent: 16, endIndent: 16),
               const _SectionHeader(title: 'Statistiques'),
               SizedBox(
@@ -646,6 +655,138 @@ class _CarouselSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+class _LinkedAccountSection extends StatefulWidget {
+  const _LinkedAccountSection();
+
+  @override
+  State<_LinkedAccountSection> createState() => _LinkedAccountSectionState();
+}
+
+class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _copyUid(String uid) async {
+    await Clipboard.setData(ClipboardData(text: uid));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID copié')));
+    }
+  }
+
+  Future<void> _link(String uid) async {
+    final partnerUid = _controller.text.trim();
+    if (partnerUid.isEmpty || partnerUid == uid) return;
+    await context.read<LinkService>().setLinkedUid(uid: uid, linkedUid: partnerUid);
+    _controller.clear();
+  }
+
+  Future<void> _unlink(String uid) => context.read<LinkService>().setLinkedUid(uid: uid, linkedUid: null);
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = context.read<AuthProvider>().user!.uid;
+    final linkService = context.read<LinkService>();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Mon ID : $uid',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy, size: 18),
+                tooltip: 'Copier',
+                onPressed: () => _copyUid(uid),
+              ),
+            ],
+          ),
+          StreamBuilder<String?>(
+            stream: linkService.watchOwnLinkedUid(uid),
+            builder: (context, snapshot) {
+              final linkedUid = snapshot.data;
+              if (linkedUid == null || linkedUid.isEmpty) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        decoration: const InputDecoration(hintText: "ID de l'autre compte"),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(onPressed: () => _link(uid), child: const Text('Lier')),
+                  ],
+                );
+              }
+              return FutureBuilder<Map<String, dynamic>?>(
+                future: linkService.getProfile(linkedUid),
+                builder: (context, profileSnapshot) {
+                  final profile = profileSnapshot.data;
+                  final partnerName =
+                      profile?['displayName'] as String? ?? profile?['email'] as String? ?? linkedUid;
+                  final mutual = profile != null && profile['linkedUid'] == uid;
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration:
+                        BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                mutual
+                                    ? 'Lié avec $partnerName'
+                                    : 'En attente que $partnerName vous ajoute aussi',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              if (mutual)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) =>
+                                          LinkedLibraryScreen(partnerUid: linkedUid, partnerName: partnerName),
+                                    )),
+                                    child: const Text('Voir sa bibliothèque',
+                                        style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.link_off, size: 18),
+                          tooltip: 'Délier',
+                          onPressed: () => _unlink(uid),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

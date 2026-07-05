@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/library_service.dart';
+import 'services/link_service.dart';
 import 'services/lists_service.dart';
 import 'services/tmdb_service.dart';
 import 'providers/auth_provider.dart';
@@ -31,6 +32,7 @@ class ShowtimeApp extends StatelessWidget {
         Provider(create: (_) => TmdbService()),
         Provider(create: (_) => LibraryService()),
         Provider(create: (_) => ListsService()),
+        Provider(create: (_) => LinkService()),
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
         ChangeNotifierProvider(create: (context) => LibraryProvider(context.read<LibraryService>())),
         ChangeNotifierProvider(create: (context) => ListsProvider(context.read<ListsService>())),
@@ -55,6 +57,7 @@ class AuthGate extends StatelessWidget {
     }
     context.read<LibraryProvider>().watch(user.uid);
     context.read<ListsProvider>().watch(user.uid);
+    context.read<LinkService>().ensureProfile(uid: user.uid, displayName: user.displayName, email: user.email);
     return const HomeShell();
   }
 }
