@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
+import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
 import '../services/library_service.dart';
 import '../theme/app_theme.dart';
@@ -30,6 +31,12 @@ class _SearchScreenState extends State<SearchScreen> {
   late Future<List<SimilarMedia>> _trendingMovies;
   late Future<List<SimilarMedia>> _popularMovies;
 
+  /// Which shows/movies were already followed as of the last discover load.
+  /// A snapshot rather than a live watch — so following something from this
+  /// screen keeps it visible (highlighted) until the next reload/refresh,
+  /// instead of yanking it out of the row immediately.
+  Set<String> _followedSnapshot = {};
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +45,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _loadDiscover() {
     final tmdb = context.read<TmdbService>();
+    _followedSnapshot =
+        context.read<LibraryProvider>().items.map((i) => '${i.type}_${i.tmdbId}').toSet();
     _topRatedTv = tmdb.getTopRatedTv();
     _trendingTv = tmdb.getTrending('tv');
     _popularTv = tmdb.getPopular('tv');
@@ -141,9 +150,9 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           const SizedBox(height: 8),
-          _CategoryRow(title: 'Meilleures séries pour vous', future: _topRatedTv),
-          _CategoryRow(title: 'Séries tendance', future: _trendingTv),
-          _CategoryRow(title: 'Populaire dans votre pays', future: _popularTv),
+          _CategoryRow(title: 'Meilleures séries pour vous', future: _topRatedTv, excludeKeys: _followedSnapshot),
+          _CategoryRow(title: 'Séries tendance', future: _trendingTv, excludeKeys: _followedSnapshot),
+          _CategoryRow(title: 'Populaire dans votre pays', future: _popularTv, excludeKeys: _followedSnapshot),
           _BrowseAllButton(
             icon: Icons.tv,
             label: 'PARCOURIR TOUTES LES SÉRIES',
@@ -151,8 +160,8 @@ class _SearchScreenState extends State<SearchScreen> {
             screenTitle: 'Toutes les séries',
           ),
           const SizedBox(height: 16),
-          _CategoryRow(title: 'Films tendance', future: _trendingMovies),
-          _CategoryRow(title: 'Films populaires', future: _popularMovies),
+          _CategoryRow(title: 'Films tendance', future: _trendingMovies, excludeKeys: _followedSnapshot),
+          _CategoryRow(title: 'Films populaires', future: _popularMovies, excludeKeys: _followedSnapshot),
           _BrowseAllButton(
             icon: Icons.movie,
             label: 'PARCOURIR TOUS LES FILMS',
@@ -168,15 +177,17 @@ class _SearchScreenState extends State<SearchScreen> {
 class _CategoryRow extends StatelessWidget {
   final String title;
   final Future<List<SimilarMedia>> future;
+  final Set<String> excludeKeys;
 
-  const _CategoryRow({required this.title, required this.future});
+  const _CategoryRow({required this.title, required this.future, required this.excludeKeys});
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<SimilarMedia>>(
       future: future,
       builder: (context, snapshot) {
-        final items = snapshot.data ?? const [];
+        final items =
+            (snapshot.data ?? const []).where((m) => !excludeKeys.contains('${m.type}_${m.id}')).toList();
         if (items.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

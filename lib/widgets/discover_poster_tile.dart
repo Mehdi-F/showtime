@@ -96,11 +96,12 @@ class DiscoverPosterTile extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
-                      color: Colors.black54,
+                      color: followed ? AppColors.accent : Colors.black54,
                       border: Border.all(color: AppColors.accent),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(followed ? Icons.check : Icons.add, color: AppColors.accent, size: 16),
+                    child: Icon(followed ? Icons.check : Icons.add,
+                        color: followed ? Colors.black : AppColors.accent, size: 16),
                   ),
                 ),
               ),
