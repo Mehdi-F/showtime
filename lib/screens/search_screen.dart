@@ -24,21 +24,30 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _error;
   final Set<String> _added = {};
 
-  late final Future<List<SimilarMedia>> _topRatedTv;
-  late final Future<List<SimilarMedia>> _trendingTv;
-  late final Future<List<SimilarMedia>> _popularTv;
-  late final Future<List<SimilarMedia>> _trendingMovies;
-  late final Future<List<SimilarMedia>> _popularMovies;
+  late Future<List<SimilarMedia>> _topRatedTv;
+  late Future<List<SimilarMedia>> _trendingTv;
+  late Future<List<SimilarMedia>> _popularTv;
+  late Future<List<SimilarMedia>> _trendingMovies;
+  late Future<List<SimilarMedia>> _popularMovies;
 
   @override
   void initState() {
     super.initState();
+    _loadDiscover();
+  }
+
+  void _loadDiscover() {
     final tmdb = context.read<TmdbService>();
     _topRatedTv = tmdb.getTopRatedTv();
     _trendingTv = tmdb.getTrending('tv');
     _popularTv = tmdb.getPopular('tv');
     _trendingMovies = tmdb.getTrending('movie');
     _popularMovies = tmdb.getPopular('movie');
+  }
+
+  Future<void> _refreshDiscover() async {
+    setState(_loadDiscover);
+    await Future.wait([_topRatedTv, _trendingTv, _popularTv, _trendingMovies, _popularMovies]);
   }
 
   Future<void> _runSearch(String query) async {
@@ -125,29 +134,33 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildDiscover() {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        const SizedBox(height: 8),
-        _CategoryRow(title: 'Meilleures séries pour vous', future: _topRatedTv),
-        _CategoryRow(title: 'Séries tendance', future: _trendingTv),
-        _CategoryRow(title: 'Populaire dans votre pays', future: _popularTv),
-        _BrowseAllButton(
-          icon: Icons.tv,
-          label: 'PARCOURIR TOUTES LES SÉRIES',
-          mediaType: 'tv',
-          screenTitle: 'Toutes les séries',
-        ),
-        const SizedBox(height: 16),
-        _CategoryRow(title: 'Films tendance', future: _trendingMovies),
-        _CategoryRow(title: 'Films populaires', future: _popularMovies),
-        _BrowseAllButton(
-          icon: Icons.movie,
-          label: 'PARCOURIR TOUS LES FILMS',
-          mediaType: 'movie',
-          screenTitle: 'Tous les films',
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _refreshDiscover,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          const SizedBox(height: 8),
+          _CategoryRow(title: 'Meilleures séries pour vous', future: _topRatedTv),
+          _CategoryRow(title: 'Séries tendance', future: _trendingTv),
+          _CategoryRow(title: 'Populaire dans votre pays', future: _popularTv),
+          _BrowseAllButton(
+            icon: Icons.tv,
+            label: 'PARCOURIR TOUTES LES SÉRIES',
+            mediaType: 'tv',
+            screenTitle: 'Toutes les séries',
+          ),
+          const SizedBox(height: 16),
+          _CategoryRow(title: 'Films tendance', future: _trendingMovies),
+          _CategoryRow(title: 'Films populaires', future: _popularMovies),
+          _BrowseAllButton(
+            icon: Icons.movie,
+            label: 'PARCOURIR TOUS LES FILMS',
+            mediaType: 'movie',
+            screenTitle: 'Tous les films',
+          ),
+        ],
+      ),
     );
   }
 }
