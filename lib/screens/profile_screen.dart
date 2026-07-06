@@ -688,18 +688,28 @@ class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
 
     setState(() => _linking = true);
     final linkService = context.read<LinkService>();
-    final partnerUid = await linkService.findUidByEmail(email);
-    if (!mounted) return;
-    setState(() => _linking = false);
+    try {
+      final partnerUid = await linkService.findUidByEmail(email);
+      if (!mounted) return;
 
-    if (partnerUid == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aucun compte trouvé avec cet email — l'autre personne doit d'abord ouvrir l'app.")),
-      );
-      return;
+      if (partnerUid == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Aucun compte trouvé avec cet email — l'autre personne doit d'abord ouvrir l'app.")),
+        );
+        return;
+      }
+      await linkService.setLinkedUid(uid: uid, linkedUid: partnerUid);
+      _controller.clear();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Échec de la liaison. Réessayez.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _linking = false);
     }
-    await linkService.setLinkedUid(uid: uid, linkedUid: partnerUid);
-    _controller.clear();
   }
 
   Future<void> _unlink(String uid) => context.read<LinkService>().setLinkedUid(uid: uid, linkedUid: null);
