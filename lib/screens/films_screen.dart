@@ -164,7 +164,16 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(onRefresh: _refresh, child: _buildBody());
+    return Stack(
+      children: [
+        Positioned.fill(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody())),
+        Positioned(
+          top: 12,
+          right: 16,
+          child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+        ),
+      ],
+    );
   }
 
   Widget _buildBody() {
@@ -202,17 +211,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('À VOIR',
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-          ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
-        ],
-      ),
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text('À VOIR',
+          style: TextStyle(
+              color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
     );
   }
 

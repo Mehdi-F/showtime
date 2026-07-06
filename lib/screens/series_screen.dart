@@ -342,18 +342,14 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
-            ],
-          ),
+        Positioned.fill(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
+        Positioned(
+          top: 12,
+          right: 16,
+          child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
         ),
-        Expanded(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
       ],
     );
   }
@@ -587,18 +583,14 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
-            ],
-          ),
+        Positioned.fill(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
+        Positioned(
+          top: 12,
+          right: 16,
+          child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
         ),
-        Expanded(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
       ],
     );
   }
