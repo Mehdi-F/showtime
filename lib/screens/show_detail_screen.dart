@@ -771,6 +771,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 posterPath: details.posterPath,
                 isEnded: details.isEnded,
                 seasonCount: details.seasons.where((s) => s.seasonNumber >= 1).length,
+                progress: _totalMainEpisodes > 0 ? _totalWatchedMain / _totalMainEpisodes : null,
                 favorite: _favorite,
                 followed: _libraryItem != null,
                 onToggleFavorite: _toggleFavorite,
@@ -819,6 +820,7 @@ class _ShowBanner extends StatelessWidget {
   final String? posterPath;
   final bool isEnded;
   final int seasonCount;
+  final double? progress;
   final bool favorite;
   final bool followed;
   final VoidCallback onToggleFavorite;
@@ -830,6 +832,7 @@ class _ShowBanner extends StatelessWidget {
     required this.posterPath,
     required this.isEnded,
     required this.seasonCount,
+    required this.progress,
     required this.favorite,
     required this.followed,
     required this.onToggleFavorite,
@@ -930,6 +933,23 @@ class _ShowBanner extends StatelessWidget {
               ],
             ),
           ),
+          if (progress != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 4,
+                color: Colors.black45,
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: progress!.clamp(0.0, 1.0),
+                  child: Container(
+                    color: progress! >= 1.0 ? (isEnded ? Colors.purple : Colors.green) : AppColors.accent,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
