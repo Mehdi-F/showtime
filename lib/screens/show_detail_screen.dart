@@ -11,6 +11,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/episode_detail_sheet.dart';
@@ -467,6 +468,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
+        WatchProvidersRow(future: tmdb.getTvWatchProviders(widget.tmdbId)),
         InfoCard(
           yearRange: yearRange,
           genres: details.genres,
@@ -768,13 +770,11 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 title: details.name,
                 posterPath: details.posterPath,
                 isEnded: details.isEnded,
+                seasonCount: details.seasons.where((s) => s.seasonNumber >= 1).length,
                 favorite: _favorite,
                 followed: _libraryItem != null,
                 onToggleFavorite: _toggleFavorite,
                 onUnfollow: _unfollow,
-                onFollow: () async {
-                  await _ensureFollowed();
-                },
                 onAddToList: () => showAddToListSheet(
                   context,
                   tmdbId: widget.tmdbId,
@@ -809,6 +809,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           ),
         ],
       ),
+      bottomNavigationBar: _libraryItem == null ? AddBar(label: 'AJOUTER LA SÉRIE', onTap: _ensureFollowed) : null,
     );
   }
 }
@@ -817,22 +818,22 @@ class _ShowBanner extends StatelessWidget {
   final String title;
   final String? posterPath;
   final bool isEnded;
+  final int seasonCount;
   final bool favorite;
   final bool followed;
   final VoidCallback onToggleFavorite;
   final VoidCallback onUnfollow;
-  final Future<void> Function() onFollow;
   final VoidCallback onAddToList;
 
   const _ShowBanner({
     required this.title,
     required this.posterPath,
     required this.isEnded,
+    required this.seasonCount,
     required this.favorite,
     required this.followed,
     required this.onToggleFavorite,
     required this.onUnfollow,
-    required this.onFollow,
     required this.onAddToList,
   });
 
@@ -881,13 +882,6 @@ class _ShowBanner extends StatelessWidget {
                             color: favorite ? Colors.redAccent : Colors.white,
                           ),
                           onPressed: onToggleFavorite,
-                        )
-                      else
-                        TextButton.icon(
-                          onPressed: onFollow,
-                          icon: const Icon(Icons.add, color: Colors.black),
-                          label: const Text('Suivre', style: TextStyle(color: Colors.black)),
-                          style: TextButton.styleFrom(backgroundColor: AppColors.accent),
                         ),
                       if (followed)
                         PopupMenuButton<void>(
@@ -918,22 +912,6 @@ class _ShowBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isEnded ? AppColors.surfaceVariant : AppColors.accent,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    isEnded ? 'Terminée' : 'En cours',
-                    style: TextStyle(
-                      color: isEnded ? Colors.white : Colors.black,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
                 Text(
                   title,
                   style: const TextStyle(
@@ -943,6 +921,11 @@ class _ShowBanner extends StatelessWidget {
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$seasonCount saison${seasonCount > 1 ? 's' : ''} • ${isEnded ? 'Terminée' : 'En cours'}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ],
             ),

@@ -260,3 +260,17 @@ class MovieDetails {
         voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
       );
 }
+
+class WatchProvider {
+  final int id;
+  final String name;
+  final String? logoPath;
+
+  WatchProvider({required this.id, required this.name, required this.logoPath});
+
+  factory WatchProvider.fromJson(Map<String, dynamic> json) => WatchProvider(
+        id: json['provider_id'] as int,
+        name: json['provider_name'] as String,
+        logoPath: json['logo_path'] as String?,
+      );
+}

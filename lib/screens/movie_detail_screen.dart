@@ -9,6 +9,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
@@ -253,6 +254,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _buildWatchedCard(),
         ),
+        WatchProvidersRow(future: tmdb.getMovieWatchProviders(widget.tmdbId)),
         InfoCard(
           yearRange: movie.releaseDate?.year.toString(),
           genres: movie.genres,
@@ -303,14 +305,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               _MovieBanner(
                 title: movie.title,
                 posterPath: movie.posterPath,
-                watched: _watched,
+                runtimeMinutes: movie.runtime,
+                genres: movie.genres,
                 favorite: _favorite,
                 followed: _libraryItem != null,
                 onToggleFavorite: _toggleFavorite,
                 onUnfollow: _unfollow,
-                onFollow: () async {
-                  await _ensureFollowed();
-                },
                 onAddToList: () => showAddToListSheet(
                   context,
                   tmdbId: widget.tmdbId,
@@ -320,6 +320,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               Expanded(child: _buildBody(movie)),
             ],
           ),
+          bottomNavigationBar:
+              _libraryItem == null ? AddBar(label: 'AJOUTER LE FILM', onTap: _ensureFollowed) : null,
         );
       },
     );
@@ -329,23 +331,23 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 class _MovieBanner extends StatelessWidget {
   final String title;
   final String? posterPath;
-  final bool watched;
+  final int runtimeMinutes;
+  final List<String> genres;
   final bool favorite;
   final bool followed;
   final VoidCallback onToggleFavorite;
   final VoidCallback onUnfollow;
-  final Future<void> Function() onFollow;
   final VoidCallback onAddToList;
 
   const _MovieBanner({
     required this.title,
     required this.posterPath,
-    required this.watched,
+    required this.runtimeMinutes,
+    required this.genres,
     required this.favorite,
     required this.followed,
     required this.onToggleFavorite,
     required this.onUnfollow,
-    required this.onFollow,
     required this.onAddToList,
   });
 
@@ -394,13 +396,6 @@ class _MovieBanner extends StatelessWidget {
                             color: favorite ? Colors.redAccent : Colors.white,
                           ),
                           onPressed: onToggleFavorite,
-                        )
-                      else
-                        TextButton.icon(
-                          onPressed: onFollow,
-                          icon: const Icon(Icons.add, color: Colors.black),
-                          label: const Text('Suivre', style: TextStyle(color: Colors.black)),
-                          style: TextButton.styleFrom(backgroundColor: AppColors.accent),
                         ),
                       if (followed)
                         PopupMenuButton<void>(
@@ -431,22 +426,6 @@ class _MovieBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: watched ? Colors.green : AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    watched ? 'Vu' : 'Non vu',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
                 Text(
                   title,
                   style: const TextStyle(
@@ -457,6 +436,16 @@ class _MovieBanner extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (runtimeMinutes > 0 || genres.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (runtimeMinutes > 0) '${runtimeMinutes ~/ 60} h ${runtimeMinutes % 60} m',
+                      if (genres.isNotEmpty) genres.first,
+                    ].join(' • '),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ],
             ),
           ),

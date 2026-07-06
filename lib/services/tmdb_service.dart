@@ -133,4 +133,23 @@ class TmdbService {
     final results = body['results'] as List<dynamic>? ?? [];
     return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
   }
+
+  Future<List<WatchProvider>> getTvWatchProviders(int id) => _getWatchProviders('tv', id);
+
+  Future<List<WatchProvider>> getMovieWatchProviders(int id) => _getWatchProviders('movie', id);
+
+  Future<List<WatchProvider>> _getWatchProviders(String mediaType, int id) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/$mediaType/$id/watch/providers')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('TMDB $mediaType watch providers failed: ${response.statusCode}');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = body['results'] as Map<String, dynamic>? ?? {};
+    final country = (results['FR'] ?? results['US']) as Map<String, dynamic>?;
+    if (country == null) return [];
+    final flatrate = country['flatrate'] as List<dynamic>? ?? [];
+    return flatrate.map((p) => WatchProvider.fromJson(p as Map<String, dynamic>)).toList();
+  }
 }

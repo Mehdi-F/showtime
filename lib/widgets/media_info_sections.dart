@@ -4,6 +4,69 @@ import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
 import '../theme/app_theme.dart';
 
+class WatchProvidersRow extends StatelessWidget {
+  final Future<List<WatchProvider>> future;
+
+  const WatchProvidersRow({super.key, required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<WatchProvider>>(
+      future: future,
+      builder: (context, snapshot) {
+        final providers = snapshot.data ?? const [];
+        if (providers.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text('Où regarder', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            ),
+            SizedBox(
+              height: 44,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: providers.length,
+                itemBuilder: (context, index) {
+                  final provider = providers[index];
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (provider.logoPath != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: CachedNetworkImage(
+                              imageUrl: '${TmdbConfig.imageBaseUrl}${provider.logoPath}',
+                              width: 20,
+                              height: 20,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        Text(provider.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class InfoCard extends StatelessWidget {
   final String? yearRange;
   final List<String> genres;
