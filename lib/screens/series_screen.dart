@@ -393,6 +393,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           _autoScrollPastHistoryOnce();
         }
 
+        // The toggle always lands on "À voir" (or "Pas regardé...") rather
+        // than history — history gets auto-scrolled out of view, so a
+        // toggle placed there would effectively disappear.
+        final toggleOnActive = active.isNotEmpty;
+        final toggleOnStale = !toggleOnActive && stale.isNotEmpty;
+        final toggleOnHistory = !toggleOnActive && !toggleOnStale && showHistory;
+
         return ListView(
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
@@ -400,10 +407,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           children: widget.viewMode == _ViewMode.list
               ? [
                   if (showHistory)
-                    Column(key: _historyKey, children: _historySection(context, history, withToggle: true)),
-                  if (active.isNotEmpty) ..._activeSection(context, active, withToggle: !showHistory),
-                  if (stale.isNotEmpty)
-                    ..._staleSection(context, stale, withToggle: !showHistory && active.isEmpty),
+                    Column(
+                        key: _historyKey,
+                        children: _historySection(context, history, withToggle: toggleOnHistory)),
+                  if (active.isNotEmpty) ..._activeSection(context, active, withToggle: toggleOnActive),
+                  if (stale.isNotEmpty) ..._staleSection(context, stale, withToggle: toggleOnStale),
                 ]
               : [
                   if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active, withToggle: true),
