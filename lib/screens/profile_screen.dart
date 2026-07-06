@@ -596,31 +596,39 @@ class _CarouselSection extends StatelessWidget {
 
   const _CarouselSection({required this.title, required this.items, this.showHeart = false});
 
+  static const _carouselCap = 20;
+
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
+    final visible = items.take(_carouselCap).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  if (showHeart)
-                    Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                      child: const Icon(Icons.favorite, color: Colors.white, size: 14),
-                    ),
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                ],
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-            ],
+        GestureDetector(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => _FullListScreen(title: title, items: items),
+          )),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    if (showHeart)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                        child: const Icon(Icons.favorite, color: Colors.white, size: 14),
+                      ),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  ],
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              ],
+            ),
           ),
         ),
         SizedBox(
@@ -628,9 +636,9 @@ class _CarouselSection extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: items.length,
+            itemCount: visible.length,
             itemBuilder: (context, index) {
-              final resolved = items[index];
+              final resolved = visible[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: GestureDetector(
@@ -667,6 +675,79 @@ class _CarouselSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+class _FullListScreen extends StatelessWidget {
+  final String title;
+  final List<_ResolvedItem> items;
+
+  const _FullListScreen({required this.title, required this.items});
+
+  double? _progressRatio(_ResolvedItem r) {
+    if (r.item.type == 'movie') return r.item.watched ? 1.0 : 0.0;
+    if (r.totalEpisodeCount <= 0) return null;
+    return (r.watchedEpisodesCount / r.totalEpisodeCount).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(10),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 0.6,
+          crossAxisSpacing: 4,
+          mainAxisSpacing: 4,
+        ),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final resolved = items[index];
+          final ratio = _progressRatio(resolved);
+          return GestureDetector(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => resolved.item.type == 'tv'
+                  ? ShowDetailScreen(libraryItem: resolved.item)
+                  : MovieDetailScreen(libraryItem: resolved.item),
+            )),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: resolved.posterPath != null
+                      ? CachedNetworkImage(
+                          imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          color: AppColors.surfaceVariant,
+                          child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                        ),
+                ),
+                if (ratio != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      height: 6,
+                      color: Colors.black45,
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: ratio,
+                        child: Container(color: ratio >= 1.0 ? Colors.green : AppColors.accent),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
