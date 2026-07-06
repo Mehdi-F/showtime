@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../config/tmdb_config.dart';
@@ -676,6 +675,7 @@ class _LinkedAccountSection extends StatefulWidget {
 
 class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
   final _controller = TextEditingController();
+  bool _linking = false;
 
   @override
   void dispose() {
@@ -683,17 +683,25 @@ class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
     super.dispose();
   }
 
-  Future<void> _copyUid(String uid) async {
-    await Clipboard.setData(ClipboardData(text: uid));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID copié')));
-    }
-  }
-
   Future<void> _link(String uid) async {
-    final partnerUid = _controller.text.trim();
-    if (partnerUid.isEmpty || partnerUid == uid) return;
-    await context.read<LinkService>().setLinkedUid(uid: uid, linkedUid: partnerUid);
+    final email = _controller.text.trim();
+    if (email.isEmpty) return;
+    final currentEmail = context.read<AuthProvider>().user?.email;
+    if (currentEmail != null && email.toLowerCase() == currentEmail.toLowerCase()) return;
+
+    setState(() => _linking = true);
+    final linkService = context.read<LinkService>();
+    final partnerUid = await linkService.findUidByEmail(email);
+    if (!mounted) return;
+    setState(() => _linking = false);
+
+    if (partnerUid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Aucun compte trouvé avec cet email — l'autre personne doit d'abord ouvrir l'app.")),
+      );
+      return;
+    }
+    await linkService.setLinkedUid(uid: uid, linkedUid: partnerUid);
     _controller.clear();
   }
 
@@ -709,20 +717,6 @@ class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text('Mon ID : $uid',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                    overflow: TextOverflow.ellipsis),
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy, size: 18),
-                tooltip: 'Copier',
-                onPressed: () => _copyUid(uid),
-              ),
-            ],
-          ),
           StreamBuilder<String?>(
             stream: linkService.watchOwnLinkedUid(uid),
             builder: (context, snapshot) {
@@ -733,11 +727,21 @@ class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
                     Expanded(
                       child: TextField(
                         controller: _controller,
-                        decoration: const InputDecoration(hintText: "ID de l'autre compte"),
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(hintText: "Email de l'autre compte"),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    FilledButton(onPressed: () => _link(uid), child: const Text('Lier')),
+                    FilledButton(
+                      onPressed: _linking ? null : () => _link(uid),
+                      child: _linking
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            )
+                          : const Text('Lier'),
+                    ),
                   ],
                 );
               }

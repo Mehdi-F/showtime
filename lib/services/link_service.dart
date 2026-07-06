@@ -2,8 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Manages the lightweight "shared account" link between two users so each
 /// can browse the other's library read-only. Deliberately minimal: a single
-/// `linkedUid` field per user, made visible to each other only once both
-/// sides point at one another (see firestore.rules).
+/// `linkedUid` field per user, resolved by email lookup rather than raw UID
+/// copy-paste. Profile docs (displayName/email/linkedUid) are readable by
+/// any authenticated user of the app — see firestore.rules — since this is a
+/// small personal app between people who already know each other; only the
+/// actual library/lists data stays gated behind a true mutual link.
 class LinkService {
   final FirebaseFirestore _firestore;
 
@@ -14,7 +17,7 @@ class LinkService {
   Future<void> ensureProfile({required String uid, String? displayName, String? email}) {
     return _userDoc(uid).set({
       if (displayName != null) 'displayName': displayName,
-      if (email != null) 'email': email,
+      if (email != null) 'email': email.toLowerCase(),
     }, SetOptions(merge: true));
   }
 
@@ -26,9 +29,18 @@ class LinkService {
     return _userDoc(uid).set({'linkedUid': linkedUid}, SetOptions(merge: true));
   }
 
-  /// Fetches the other user's small profile doc (displayName/linkedUid only).
-  /// Only readable once this user has pointed their own linkedUid at them —
-  /// see firestore.rules — so this returns null until that's done.
+  /// Looks up a user's uid by their sign-in email. Returns null if no one
+  /// with that email has ever opened the app.
+  Future<String?> findUidByEmail(String email) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .where('email', isEqualTo: email.trim().toLowerCase())
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    return snapshot.docs.first.id;
+  }
+
   Future<Map<String, dynamic>?> getProfile(String uid) async {
     final doc = await _userDoc(uid).get();
     return doc.data();
