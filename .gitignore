@@ -1,4 +1,5 @@
 .superpowers/
+graphify-out/
 
 # Contains the real allowlisted emails; deployed to Firebase directly via
 # `firebase deploy --only firestore:rules`, not via the public repo.
