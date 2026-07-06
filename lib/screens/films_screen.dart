@@ -12,6 +12,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/view_mode_toggle.dart';
 import 'movie_detail_screen.dart';
 
 enum _ViewMode { grid, list }
@@ -66,17 +67,15 @@ class _FilmsScreenState extends State<FilmsScreen> {
     final tmdb = context.read<TmdbService>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Films'),
-        actions: [
-          IconButton(
-            icon: Icon(_viewMode == _ViewMode.grid ? Icons.view_list : Icons.grid_view),
-            tooltip: 'Changer la vue',
-            onPressed: _toggleViewMode,
-          ),
-        ],
+      body: SafeArea(
+        child: _ToWatchTab(
+          movieItems: movieItems,
+          tmdb: tmdb,
+          resolveRow: _resolveRow,
+          viewMode: _viewMode,
+          onToggleViewMode: _toggleViewMode,
+        ),
       ),
-      body: _ToWatchTab(movieItems: movieItems, tmdb: tmdb, resolveRow: _resolveRow, viewMode: _viewMode),
     );
   }
 }
@@ -86,12 +85,14 @@ class _ToWatchTab extends StatefulWidget {
   final TmdbService tmdb;
   final Future<_MovieRow> Function(TmdbService, LibraryItem) resolveRow;
   final _ViewMode viewMode;
+  final VoidCallback onToggleViewMode;
 
   const _ToWatchTab({
     required this.movieItems,
     required this.tmdb,
     required this.resolveRow,
     required this.viewMode,
+    required this.onToggleViewMode,
   });
 
   @override
@@ -190,8 +191,28 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
         final visible = rows.take(_visibleCount).toList();
-        return widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible);
+        return Column(
+          children: [
+            _buildHeader(),
+            Expanded(child: widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible)),
+          ],
+        );
       },
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('À VOIR',
+              style: TextStyle(
+                  color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+          ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+        ],
+      ),
     );
   }
 

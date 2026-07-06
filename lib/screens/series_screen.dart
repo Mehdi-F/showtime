@@ -13,6 +13,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/view_mode_toggle.dart';
 import 'show_detail_screen.dart';
 
 enum _ViewMode { list, grid }
@@ -220,14 +221,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Séries'),
-        actions: [
-          IconButton(
-            icon: Icon(_viewMode == _ViewMode.list ? Icons.grid_view : Icons.view_list),
-            tooltip: 'Changer la vue',
-            onPressed: _toggleViewMode,
-          ),
-        ],
+        toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [Tab(text: 'À VOIR'), Tab(text: 'À VENIR')],
@@ -236,8 +230,20 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
       body: TabBarView(
         controller: _tabController,
         children: [
-          _ToWatchTab(tvItems: tvItems, tmdb: tmdb, resolveRow: _resolveShowEpisodes, viewMode: _viewMode),
-          _UpcomingTab(tvItems: tvItems, tmdb: tmdb, resolveRow: _resolveCalendarRow, viewMode: _viewMode),
+          _ToWatchTab(
+            tvItems: tvItems,
+            tmdb: tmdb,
+            resolveRow: _resolveShowEpisodes,
+            viewMode: _viewMode,
+            onToggleViewMode: _toggleViewMode,
+          ),
+          _UpcomingTab(
+            tvItems: tvItems,
+            tmdb: tmdb,
+            resolveRow: _resolveCalendarRow,
+            viewMode: _viewMode,
+            onToggleViewMode: _toggleViewMode,
+          ),
         ],
       ),
     );
@@ -249,12 +255,14 @@ class _ToWatchTab extends StatefulWidget {
   final TmdbService tmdb;
   final Future<_ShowEpisodesData> Function(TmdbService, LibraryItem) resolveRow;
   final _ViewMode viewMode;
+  final VoidCallback onToggleViewMode;
 
   const _ToWatchTab({
     required this.tvItems,
     required this.tmdb,
     required this.resolveRow,
     required this.viewMode,
+    required this.onToggleViewMode,
   });
 
   @override
@@ -391,24 +399,28 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: widget.viewMode == _ViewMode.list
               ? [
-                  if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
-                  if (active.isNotEmpty) ..._activeSection(context, active),
-                  if (stale.isNotEmpty) ..._staleSection(context, stale),
+                  if (showHistory)
+                    Column(key: _historyKey, children: _historySection(context, history, withToggle: true)),
+                  if (active.isNotEmpty) ..._activeSection(context, active, withToggle: !showHistory),
+                  if (stale.isNotEmpty)
+                    ..._staleSection(context, stale, withToggle: !showHistory && active.isEmpty),
                 ]
               : [
-                  if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
-                  if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
+                  if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active, withToggle: true),
+                  if (stale.isNotEmpty)
+                    _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale, withToggle: active.isEmpty),
                 ],
         );
       },
     );
   }
 
-  Widget _buildCardSection(BuildContext context, String label, List<_ShowEpisodesData> rows) {
+  Widget _buildCardSection(BuildContext context, String label, List<_ShowEpisodesData> rows,
+      {bool withToggle = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(label),
+        _sectionHeader(label, withToggle: withToggle),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -436,16 +448,26 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     );
   }
 
-  Widget _sectionHeader(String label) => Padding(
+  Widget _sectionHeader(String label, {bool withToggle = false}) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5)),
+            if (withToggle)
+              ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+          ],
+        ),
       );
 
-  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries) {
+  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries, {bool withToggle = false}) {
     return [
-      _sectionHeader('HISTORIQUE DE VISIONNAGE'),
+      _sectionHeader('HISTORIQUE DE VISIONNAGE', withToggle: withToggle),
       ...entries.map((h) {
         final ep = h.episode;
         final d = h.show;
@@ -468,17 +490,17 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     ];
   }
 
-  List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows) {
+  List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows, {bool withToggle = false}) {
     return [
-      _sectionHeader('À VOIR'),
+      _sectionHeader('À VOIR', withToggle: withToggle),
       for (var i = 0; i < rows.length; i++)
         _buildNextCard(context, rows[i], showMostRecentBadge: i == 0 && rows[i].nextEpisode!.airDate != null),
     ];
   }
 
-  List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows) {
+  List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows, {bool withToggle = false}) {
     return [
-      _sectionHeader('PAS REGARDÉ DEPUIS UN MOMENT'),
+      _sectionHeader('PAS REGARDÉ DEPUIS UN MOMENT', withToggle: withToggle),
       for (final d in rows) _buildNextCard(context, d, showMostRecentBadge: false),
     ];
   }
@@ -506,12 +528,14 @@ class _UpcomingTab extends StatefulWidget {
   final TmdbService tmdb;
   final Future<_CalendarRow?> Function(TmdbService, LibraryItem) resolveRow;
   final _ViewMode viewMode;
+  final VoidCallback onToggleViewMode;
 
   const _UpcomingTab({
     required this.tvItems,
     required this.tmdb,
     required this.resolveRow,
     required this.viewMode,
+    required this.onToggleViewMode,
   });
 
   @override
@@ -603,12 +627,25 @@ class _UpcomingTabState extends State<_UpcomingTab> {
         }
 
         final children = <Widget>[];
+        var isFirstGroup = true;
         groups.forEach((label, groupRows) {
+          final withToggle = isFirstGroup;
+          isFirstGroup = false;
           children.add(Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(label,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5)),
+                if (withToggle)
+                  ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+              ],
+            ),
           ));
           if (widget.viewMode == _ViewMode.list) {
             for (final row in groupRows) {
