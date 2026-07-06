@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/library_item.dart';
@@ -26,6 +27,8 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loading = false;
   bool _showDiscover = true;
   String? _error;
+  Timer? _debounce;
+  int _searchToken = 0;
 
   late Future<List<SimilarMedia>> _topRatedTv;
   late Future<List<SimilarMedia>> _trendingTv;
@@ -53,22 +56,43 @@ class _SearchScreenState extends State<SearchScreen> {
     await Future.wait([_topRatedTv, _trendingTv, _popularTv, _trendingMovies, _popularMovies]);
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    setState(() => _showDiscover = value.trim().isEmpty);
+    _debounce?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() => _results = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 400), () => _runSearch(value));
+  }
+
   Future<void> _runSearch(String query) async {
     if (query.trim().isEmpty) {
       setState(() => _results = []);
       return;
     }
+    final token = ++_searchToken;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final results = await context.read<TmdbService>().search(query);
+      // A newer search may have superseded this one while it was in flight.
+      if (!mounted || token != _searchToken) return;
       setState(() => _results = results);
     } catch (e) {
+      if (!mounted || token != _searchToken) return;
       setState(() => _error = 'Search failed. Check your connection and try again.');
     } finally {
-      setState(() => _loading = false);
+      if (mounted && token == _searchToken) setState(() => _loading = false);
     }
   }
 
@@ -86,8 +110,11 @@ class _SearchScreenState extends State<SearchScreen> {
             hintStyle: TextStyle(color: AppColors.textSecondary),
             border: InputBorder.none,
           ),
-          onChanged: (value) => setState(() => _showDiscover = value.trim().isEmpty),
-          onSubmitted: _runSearch,
+          onChanged: _onQueryChanged,
+          onSubmitted: (value) {
+            _debounce?.cancel();
+            _runSearch(value);
+          },
         ),
       ),
       body: _showDiscover ? _buildDiscover() : _buildSearchResults(uid),
