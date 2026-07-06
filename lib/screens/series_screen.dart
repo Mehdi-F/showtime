@@ -288,9 +288,14 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   Future<List<_ShowEpisodesData>> _resolveAll() async {
     final results = List<_ShowEpisodesData?>.filled(widget.tvItems.length, null);
     await _forEachBounded(List.generate(widget.tvItems.length, (i) => i), 5, (i) async {
-      results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+      try {
+        results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+      } catch (_) {
+        // A single show failing to load (TMDB hiccup, rate limit) shouldn't
+        // block the rest of the list from rendering.
+      }
     });
-    return results.cast<_ShowEpisodesData>();
+    return results.whereType<_ShowEpisodesData>().toList();
   }
 
   Future<void> _refresh() async {
@@ -531,7 +536,11 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   Future<List<_CalendarRow?>> _resolveAll() async {
     final results = List<_CalendarRow?>.filled(widget.tvItems.length, null);
     await _forEachBounded(List.generate(widget.tvItems.length, (i) => i), 8, (i) async {
-      results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+      try {
+        results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+      } catch (_) {
+        // A single show failing to load shouldn't block the rest of the list.
+      }
     });
     return results;
   }

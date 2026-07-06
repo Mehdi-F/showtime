@@ -127,8 +127,18 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     super.dispose();
   }
 
-  Future<List<_MovieRow>> _resolveAll() =>
-      Future.wait(widget.movieItems.map((item) => widget.resolveRow(widget.tmdb, item)));
+  Future<List<_MovieRow>> _resolveAll() async {
+    final rows = await Future.wait(widget.movieItems.map((item) async {
+      try {
+        return await widget.resolveRow(widget.tmdb, item);
+      } catch (_) {
+        // A single movie failing to load (TMDB hiccup) shouldn't block the
+        // rest of the list from rendering.
+        return null;
+      }
+    }));
+    return rows.whereType<_MovieRow>().toList();
+  }
 
   Future<void> _refresh() async {
     final future = _resolveAll();

@@ -139,10 +139,18 @@ class ProfileScreen extends StatelessWidget {
     final user = context.watch<AuthProvider>().user;
     final lists = context.watch<ListsProvider>().lists;
 
-    return FutureBuilder<List<_ResolvedItem>>(
-      future: Future.wait(items.map((i) => _resolve(tmdb, i))),
+    return FutureBuilder<List<_ResolvedItem?>>(
+      future: Future.wait(items.map((i) async {
+        try {
+          return await _resolve(tmdb, i);
+        } catch (_) {
+          // A single title failing to load (TMDB hiccup) shouldn't block the
+          // rest of the profile from rendering.
+          return null;
+        }
+      })),
       builder: (context, snapshot) {
-        final resolved = snapshot.data;
+        final resolved = snapshot.data?.whereType<_ResolvedItem>().toList();
         if (resolved == null) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }

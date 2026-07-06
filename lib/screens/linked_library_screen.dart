@@ -115,10 +115,16 @@ class LinkedLibraryScreen extends StatelessWidget {
                   Text('Aucun contenu suivi pour le moment.', style: TextStyle(color: AppColors.textSecondary)),
             );
           }
-          return FutureBuilder<List<_ResolvedPartnerItem>>(
-            future: Future.wait(items.map((i) => _resolve(tmdb, i))),
+          return FutureBuilder<List<_ResolvedPartnerItem?>>(
+            future: Future.wait(items.map((i) async {
+              try {
+                return await _resolve(tmdb, i);
+              } catch (_) {
+                return null;
+              }
+            })),
             builder: (context, resolvedSnapshot) {
-              final resolved = resolvedSnapshot.data;
+              final resolved = resolvedSnapshot.data?.whereType<_ResolvedPartnerItem>().toList();
               if (resolved == null) {
                 return const Center(child: CircularProgressIndicator());
               }
