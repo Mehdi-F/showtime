@@ -342,7 +342,20 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(onRefresh: _refresh, child: _buildBody(context));
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+            ],
+          ),
+        ),
+        Expanded(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
+      ],
+    );
   }
 
   Widget _buildBody(BuildContext context) {
@@ -393,42 +406,30 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           _autoScrollPastHistoryOnce();
         }
 
-        // The toggle always lands on "À voir" (or "Pas regardé...") rather
-        // than history — history gets auto-scrolled out of view, so a
-        // toggle placed there would effectively disappear.
-        final toggleOnActive = active.isNotEmpty;
-        final toggleOnStale = !toggleOnActive && stale.isNotEmpty;
-        final toggleOnHistory = !toggleOnActive && !toggleOnStale && showHistory;
-
         return ListView(
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: widget.viewMode == _ViewMode.list
               ? [
-                  if (showHistory)
-                    Column(
-                        key: _historyKey,
-                        children: _historySection(context, history, withToggle: toggleOnHistory)),
-                  if (active.isNotEmpty) ..._activeSection(context, active, withToggle: toggleOnActive),
-                  if (stale.isNotEmpty) ..._staleSection(context, stale, withToggle: toggleOnStale),
+                  if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
+                  if (active.isNotEmpty) ..._activeSection(context, active),
+                  if (stale.isNotEmpty) ..._staleSection(context, stale),
                 ]
               : [
-                  if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active, withToggle: true),
-                  if (stale.isNotEmpty)
-                    _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale, withToggle: active.isEmpty),
+                  if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
+                  if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
                 ],
         );
       },
     );
   }
 
-  Widget _buildCardSection(BuildContext context, String label, List<_ShowEpisodesData> rows,
-      {bool withToggle = false}) {
+  Widget _buildCardSection(BuildContext context, String label, List<_ShowEpisodesData> rows) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(label, withToggle: withToggle),
+        _sectionHeader(label),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -456,26 +457,16 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     );
   }
 
-  Widget _sectionHeader(String label, {bool withToggle = false}) => Padding(
+  Widget _sectionHeader(String label) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5)),
-            if (withToggle)
-              ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
-          ],
-        ),
+        child: Text(label,
+            style: const TextStyle(
+                color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
       );
 
-  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries, {bool withToggle = false}) {
+  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries) {
     return [
-      _sectionHeader('HISTORIQUE DE VISIONNAGE', withToggle: withToggle),
+      _sectionHeader('HISTORIQUE DE VISIONNAGE'),
       ...entries.map((h) {
         final ep = h.episode;
         final d = h.show;
@@ -498,17 +489,17 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     ];
   }
 
-  List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows, {bool withToggle = false}) {
+  List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows) {
     return [
-      _sectionHeader('À VOIR', withToggle: withToggle),
+      _sectionHeader('À VOIR'),
       for (var i = 0; i < rows.length; i++)
         _buildNextCard(context, rows[i], showMostRecentBadge: i == 0 && rows[i].nextEpisode!.airDate != null),
     ];
   }
 
-  List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows, {bool withToggle = false}) {
+  List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows) {
     return [
-      _sectionHeader('PAS REGARDÉ DEPUIS UN MOMENT', withToggle: withToggle),
+      _sectionHeader('PAS REGARDÉ DEPUIS UN MOMENT'),
       for (final d in rows) _buildNextCard(context, d, showMostRecentBadge: false),
     ];
   }
@@ -596,7 +587,20 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(onRefresh: _refresh, child: _buildBody(context));
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+            ],
+          ),
+        ),
+        Expanded(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
+      ],
+    );
   }
 
   Widget _buildBody(BuildContext context) {
@@ -635,25 +639,12 @@ class _UpcomingTabState extends State<_UpcomingTab> {
         }
 
         final children = <Widget>[];
-        var isFirstGroup = true;
         groups.forEach((label, groupRows) {
-          final withToggle = isFirstGroup;
-          isFirstGroup = false;
           children.add(Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5)),
-                if (withToggle)
-                  ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
-              ],
-            ),
+            child: Text(label,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
           ));
           if (widget.viewMode == _ViewMode.list) {
             for (final row in groupRows) {
