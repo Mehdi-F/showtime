@@ -42,6 +42,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _watched = false;
   bool _favorite = false;
   int _rewatchCount = 0;
+  late Future<MovieDetails> _detailsFuture;
 
   @override
   void initState() {
@@ -50,6 +51,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _watched = widget.libraryItem?.watched ?? false;
     _favorite = widget.libraryItem?.favorite ?? false;
     _rewatchCount = widget.libraryItem?.movieRewatchCount ?? 0;
+    _detailsFuture = context.read<TmdbService>().getMovieDetails(widget.tmdbId);
+  }
+
+  void _retryLoad() {
+    setState(() => _detailsFuture = context.read<TmdbService>().getMovieDetails(widget.tmdbId));
   }
 
   LibraryItem _withUpdates(LibraryItem item, {required bool watched, required DateTime? watchedAt}) =>
@@ -269,9 +275,24 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: context.read<TmdbService>().getMovieDetails(widget.tmdbId),
+    return FutureBuilder<MovieDetails>(
+      future: _detailsFuture,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Impossible de charger ce film.',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 12),
+                  FilledButton(onPressed: _retryLoad, child: const Text('Réessayer')),
+                ],
+              ),
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }

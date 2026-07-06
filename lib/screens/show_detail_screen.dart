@@ -58,6 +58,7 @@ class ShowDetailScreen extends StatefulWidget {
 class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerProviderStateMixin {
   LibraryItem? _libraryItem;
   TvDetails? _details;
+  bool _loadError = false;
   Map<int, SeasonDetails> _seasonsByNumber = {};
   Set<int> _expandedSeasons = {};
   Map<String, bool> _watchedEpisodes = {};
@@ -124,14 +125,25 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 
   Future<void> _load() async {
     final tmdb = context.read<TmdbService>();
-    final details = await tmdb.getTvDetails(widget.tmdbId);
+    setState(() => _loadError = false);
+    final TvDetails details;
+    try {
+      details = await tmdb.getTvDetails(widget.tmdbId);
+    } catch (_) {
+      if (mounted) setState(() => _loadError = true);
+      return;
+    }
     if (!mounted) return;
     setState(() => _details = details);
 
     final seasonNumbers = details.seasons.map((s) => s.seasonNumber).toList();
     final loaded = <int, SeasonDetails>{};
     await _forEachBounded(seasonNumbers, 4, (n) async {
-      loaded[n] = await tmdb.getSeasonDetails(widget.tmdbId, n);
+      try {
+        loaded[n] = await tmdb.getSeasonDetails(widget.tmdbId, n);
+      } catch (_) {
+        // Leave this season unavailable rather than aborting the rest.
+      }
     });
     if (!mounted) return;
     setState(() => _seasonsByNumber = loaded);
@@ -729,6 +741,21 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final details = _details;
     if (details == null) {
+      if (_loadError) {
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Impossible de charger cette série.',
+                    style: TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 12),
+                FilledButton(onPressed: _load, child: const Text('Réessayer')),
+              ],
+            ),
+          ),
+        );
+      }
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

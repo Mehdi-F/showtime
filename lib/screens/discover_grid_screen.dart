@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/tmdb_models.dart';
 import '../services/tmdb_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/scrollable_center.dart';
 
@@ -23,6 +24,7 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
   int _nextPage = 1;
   bool _loading = false;
   bool _exhausted = false;
+  bool _error = false;
 
   @override
   void initState() {
@@ -46,35 +48,47 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
 
   Future<void> _loadMore() async {
     if (_loading || _exhausted) return;
-    setState(() => _loading = true);
-    final tmdb = context.read<TmdbService>();
-    final results = await tmdb.discoverMedia(
-      mediaType: widget.mediaType,
-      page: _nextPage,
-      sortBy: 'popularity.desc',
-    );
-    if (results.isEmpty) {
-      _exhausted = true;
-    } else {
-      _nextPage++;
-      _items.addAll(results);
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+    try {
+      final tmdb = context.read<TmdbService>();
+      final results = await tmdb.discoverMedia(
+        mediaType: widget.mediaType,
+        page: _nextPage,
+        sortBy: 'popularity.desc',
+      );
+      if (results.isEmpty) {
+        _exhausted = true;
+      } else {
+        _nextPage++;
+        _items.addAll(results);
+      }
+    } catch (_) {
+      if (_items.isEmpty) _error = true;
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _refresh() async {
-    final tmdb = context.read<TmdbService>();
-    final results = await tmdb.discoverMedia(
-      mediaType: widget.mediaType,
-      page: 1,
-      sortBy: 'popularity.desc',
-    );
-    if (!mounted) return;
-    setState(() {
-      final existingIds = _items.map((m) => m.id).toSet();
-      final newOnes = results.where((m) => !existingIds.contains(m.id)).toList();
-      _items.insertAll(0, newOnes);
-    });
+    try {
+      final tmdb = context.read<TmdbService>();
+      final results = await tmdb.discoverMedia(
+        mediaType: widget.mediaType,
+        page: 1,
+        sortBy: 'popularity.desc',
+      );
+      if (!mounted) return;
+      setState(() {
+        final existingIds = _items.map((m) => m.id).toSet();
+        final newOnes = results.where((m) => !existingIds.contains(m.id)).toList();
+        _items.insertAll(0, newOnes);
+      });
+    } catch (_) {
+      // Pull-to-refresh failing quietly just means the user can try again.
+    }
   }
 
   @override
@@ -87,7 +101,17 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
             ? ScrollableCenter(
                 child: _loading
                     ? const CircularProgressIndicator()
-                    : const Text('Aucun résultat.'),
+                    : _error
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Impossible de charger.',
+                                  style: TextStyle(color: AppColors.textSecondary)),
+                              const SizedBox(height: 12),
+                              FilledButton(onPressed: _loadMore, child: const Text('Réessayer')),
+                            ],
+                          )
+                        : const Text('Aucun résultat.'),
               )
             : GridView.builder(
                 controller: _scrollController,
