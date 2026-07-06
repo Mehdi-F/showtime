@@ -798,10 +798,21 @@ class FriendProfileScreen extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  "Impossible d'accéder à ce profil.",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Impossible d'accéder à ce profil.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ],
                 ),
               ),
             );
