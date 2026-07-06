@@ -196,7 +196,7 @@ class ProfileScreen extends StatelessWidget {
               const Divider(height: 33, indent: 16, endIndent: 16),
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: Text('Compte partagé', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                child: Text('Ami', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
               ),
               const _LinkedAccountSection(),
               const Divider(height: 33, indent: 16, endIndent: 16),
@@ -725,7 +725,7 @@ class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
                       child: TextField(
                         controller: _controller,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(hintText: "Email de l'autre compte"),
+                        decoration: const InputDecoration(hintText: "Email de votre ami"),
                       ),
                     ),
                     const SizedBox(width: 8),

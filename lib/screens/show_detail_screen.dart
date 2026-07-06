@@ -481,7 +481,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         ),
         CastRow(future: tmdb.getTvCredits(widget.tmdbId)),
         SimilarRow(
-          title: 'Les utilisateurs ont également regardé',
+          title: 'Vous pourriez aussi aimer',
           future: tmdb.getSimilarTv(widget.tmdbId),
           onTap: _openSimilar,
         ),

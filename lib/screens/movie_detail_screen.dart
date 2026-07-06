@@ -267,7 +267,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ),
         CastRow(future: tmdb.getMovieCredits(widget.tmdbId)),
         SimilarRow(
-          title: 'Les utilisateurs ont également regardé',
+          title: 'Vous pourriez aussi aimer',
           future: tmdb.getSimilarMovies(widget.tmdbId),
           onTap: _openSimilar,
         ),
