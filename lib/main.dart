@@ -57,7 +57,12 @@ class AuthGate extends StatelessWidget {
     }
     context.read<LibraryProvider>().watch(user.uid);
     context.read<ListsProvider>().watch(user.uid);
-    context.read<LinkService>().ensureProfile(uid: user.uid, displayName: user.displayName, email: user.email);
+    context.read<LinkService>().ensureProfile(
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoUrl: user.photoURL,
+        );
     return const HomeShell();
   }
 }

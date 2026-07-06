@@ -7,12 +7,11 @@ import '../models/watch_list.dart';
 import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/lists_provider.dart';
-import '../services/link_service.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
-import 'linked_library_screen.dart';
 import 'list_detail_screen.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
@@ -194,11 +193,20 @@ class ProfileScreen extends StatelessWidget {
                 episodesWatched: episodesWatched,
               ),
               const Divider(height: 33, indent: 16, endIndent: 16),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: Text('Ami', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              GestureDetector(
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FriendsScreen())),
+                child: const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Amis', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                      Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    ],
+                  ),
+                ),
               ),
-              const _LinkedAccountSection(),
               const Divider(height: 33, indent: 16, endIndent: 16),
               const _SectionHeader(title: 'Statistiques'),
               SizedBox(
@@ -659,153 +667,6 @@ class _CarouselSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
-    );
-  }
-}
-
-class _LinkedAccountSection extends StatefulWidget {
-  const _LinkedAccountSection();
-
-  @override
-  State<_LinkedAccountSection> createState() => _LinkedAccountSectionState();
-}
-
-class _LinkedAccountSectionState extends State<_LinkedAccountSection> {
-  final _controller = TextEditingController();
-  bool _linking = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _link(String uid) async {
-    final email = _controller.text.trim();
-    if (email.isEmpty) return;
-    final currentEmail = context.read<AuthProvider>().user?.email;
-    if (currentEmail != null && email.toLowerCase() == currentEmail.toLowerCase()) return;
-
-    setState(() => _linking = true);
-    final linkService = context.read<LinkService>();
-    try {
-      final partnerUid = await linkService.findUidByEmail(email);
-      if (!mounted) return;
-
-      if (partnerUid == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Aucun compte trouvé avec cet email — l'autre personne doit d'abord ouvrir l'app.")),
-        );
-        return;
-      }
-      await linkService.setLinkedUid(uid: uid, linkedUid: partnerUid);
-      _controller.clear();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Échec de la liaison. Réessayez.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _linking = false);
-    }
-  }
-
-  Future<void> _unlink(String uid) => context.read<LinkService>().setLinkedUid(uid: uid, linkedUid: null);
-
-  @override
-  Widget build(BuildContext context) {
-    final uid = context.read<AuthProvider>().user!.uid;
-    final linkService = context.read<LinkService>();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StreamBuilder<String?>(
-            stream: linkService.watchOwnLinkedUid(uid),
-            builder: (context, snapshot) {
-              final linkedUid = snapshot.data;
-              if (linkedUid == null || linkedUid.isEmpty) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(hintText: "Email de votre ami"),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _linking ? null : () => _link(uid),
-                      child: _linking
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                            )
-                          : const Text('Lier'),
-                    ),
-                  ],
-                );
-              }
-              return FutureBuilder<Map<String, dynamic>?>(
-                future: linkService.getProfile(linkedUid),
-                builder: (context, profileSnapshot) {
-                  final profile = profileSnapshot.data;
-                  final partnerName =
-                      profile?['displayName'] as String? ?? profile?['email'] as String? ?? linkedUid;
-                  final mutual = profile != null && profile['linkedUid'] == uid;
-                  return Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration:
-                        BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                mutual
-                                    ? 'Lié avec $partnerName'
-                                    : 'En attente que $partnerName vous ajoute aussi',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              if (mutual)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: GestureDetector(
-                                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                                      builder: (_) =>
-                                          LinkedLibraryScreen(partnerUid: linkedUid, partnerName: partnerName),
-                                    )),
-                                    child: const Text('Voir sa bibliothèque',
-                                        style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700)),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.link_off, size: 18),
-                          tooltip: 'Délier',
-                          onPressed: () => _unlink(uid),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ],
-      ),
     );
   }
 }
