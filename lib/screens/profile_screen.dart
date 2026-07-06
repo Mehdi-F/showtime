@@ -7,6 +7,7 @@ import '../models/watch_list.dart';
 import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/lists_provider.dart';
+import '../services/library_service.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
@@ -15,6 +16,30 @@ import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
+
+Future<_ResolvedItem> _resolveItem(TmdbService tmdb, LibraryItem item) async {
+  if (item.type == 'tv') {
+    final details = await tmdb.getTvDetails(item.tmdbId);
+    final totalEpisodeCount = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
+    return _ResolvedItem(
+      item: item,
+      title: details.name,
+      posterPath: details.posterPath,
+      backdropPath: details.backdropPath,
+      runtimeMinutes: details.episodeRunTime,
+      totalEpisodeCount: totalEpisodeCount,
+    );
+  } else {
+    final details = await tmdb.getMovieDetails(item.tmdbId);
+    return _ResolvedItem(
+      item: item,
+      title: details.title,
+      posterPath: details.posterPath,
+      backdropPath: details.backdropPath,
+      runtimeMinutes: details.runtime,
+    );
+  }
+}
 
 class _ResolvedItem {
   final LibraryItem item;
@@ -56,30 +81,6 @@ class _WatchTime {
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
-  Future<_ResolvedItem> _resolve(TmdbService tmdb, LibraryItem item) async {
-    if (item.type == 'tv') {
-      final details = await tmdb.getTvDetails(item.tmdbId);
-      final totalEpisodeCount = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
-      return _ResolvedItem(
-        item: item,
-        title: details.name,
-        posterPath: details.posterPath,
-        backdropPath: details.backdropPath,
-        runtimeMinutes: details.episodeRunTime,
-        totalEpisodeCount: totalEpisodeCount,
-      );
-    } else {
-      final details = await tmdb.getMovieDetails(item.tmdbId);
-      return _ResolvedItem(
-        item: item,
-        title: details.title,
-        posterPath: details.posterPath,
-        backdropPath: details.backdropPath,
-        runtimeMinutes: details.runtime,
-      );
-    }
-  }
 
   Future<void> _createList(BuildContext context) async {
     final controller = TextEditingController();
@@ -140,7 +141,7 @@ class ProfileScreen extends StatelessWidget {
     return FutureBuilder<List<_ResolvedItem?>>(
       future: Future.wait(items.map((i) async {
         try {
-          return await _resolve(tmdb, i);
+          return await _resolveItem(tmdb, i);
         } catch (_) {
           // A single title failing to load (TMDB hiccup) shouldn't block the
           // rest of the profile from rendering.
@@ -593,8 +594,14 @@ class _CarouselSection extends StatelessWidget {
   final String title;
   final List<_ResolvedItem> items;
   final bool showHeart;
+  final bool readOnly;
 
-  const _CarouselSection({required this.title, required this.items, this.showHeart = false});
+  const _CarouselSection({
+    required this.title,
+    required this.items,
+    this.showHeart = false,
+    this.readOnly = false,
+  });
 
   static const _carouselCap = 20;
 
@@ -607,7 +614,7 @@ class _CarouselSection extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => _FullListScreen(title: title, items: items),
+            builder: (_) => _FullListScreen(title: title, items: items, readOnly: readOnly),
           )),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -644,9 +651,13 @@ class _CarouselSection extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => resolved.item.type == 'tv'
-                          ? ShowDetailScreen(libraryItem: resolved.item)
-                          : MovieDetailScreen(libraryItem: resolved.item),
+                      builder: (_) => readOnly
+                          ? (resolved.item.type == 'tv'
+                              ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
+                              : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
+                          : (resolved.item.type == 'tv'
+                              ? ShowDetailScreen(libraryItem: resolved.item)
+                              : MovieDetailScreen(libraryItem: resolved.item)),
                     ));
                   },
                   child: SizedBox(
@@ -682,8 +693,9 @@ class _CarouselSection extends StatelessWidget {
 class _FullListScreen extends StatelessWidget {
   final String title;
   final List<_ResolvedItem> items;
+  final bool readOnly;
 
-  const _FullListScreen({required this.title, required this.items});
+  const _FullListScreen({required this.title, required this.items, this.readOnly = false});
 
   double? _progressRatio(_ResolvedItem r) {
     if (r.item.type == 'movie') return r.item.watched ? 1.0 : 0.0;
@@ -709,9 +721,13 @@ class _FullListScreen extends StatelessWidget {
           final ratio = _progressRatio(resolved);
           return GestureDetector(
             onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => resolved.item.type == 'tv'
-                  ? ShowDetailScreen(libraryItem: resolved.item)
-                  : MovieDetailScreen(libraryItem: resolved.item),
+              builder: (_) => readOnly
+                  ? (resolved.item.type == 'tv'
+                      ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
+                      : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
+                  : (resolved.item.type == 'tv'
+                      ? ShowDetailScreen(libraryItem: resolved.item)
+                      : MovieDetailScreen(libraryItem: resolved.item)),
             )),
             child: Stack(
               fit: StackFit.expand,
@@ -748,6 +764,214 @@ class _FullListScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Read-only view of a friend's profile, mirroring [ProfileScreen]'s layout
+/// (banner, avatar, stats, carousels) so every profile looks the same —
+/// only the data source (a friend's uid instead of the current user's) and
+/// the lack of edit affordances differ. Poster taps open detail screens in
+/// preview mode since these items belong to someone else's library.
+class FriendProfileScreen extends StatelessWidget {
+  final String friendUid;
+  final String displayName;
+  final String? photoUrl;
+
+  const FriendProfileScreen({
+    super.key,
+    required this.friendUid,
+    required this.displayName,
+    this.photoUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final library = context.read<LibraryService>();
+    final tmdb = context.read<TmdbService>();
+
+    return Scaffold(
+      body: StreamBuilder<List<LibraryItem>>(
+        stream: library.watchLibrary(friendUid),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  "Impossible d'accéder à ce profil.",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            );
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final libraryItems = snapshot.data!;
+
+          return FutureBuilder<List<_ResolvedItem?>>(
+            future: Future.wait(libraryItems.map((i) async {
+              try {
+                return await _resolveItem(tmdb, i);
+              } catch (_) {
+                return null;
+              }
+            })),
+            builder: (context, resolvedSnapshot) {
+              if (resolvedSnapshot.hasError) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text("Impossible d'accéder à ce profil.",
+                        textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                );
+              }
+              final resolved = resolvedSnapshot.data?.whereType<_ResolvedItem>().toList();
+              if (resolved == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final series = resolved.where((r) => r.item.type == 'tv').toList();
+              final seriesFav = series.where((r) => r.item.favorite).toList();
+              final films = resolved.where((r) => r.item.type == 'movie').toList();
+              final filmsFav = films.where((r) => r.item.favorite).toList();
+              final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
+
+              String? bannerBackdrop;
+              if (resolved.isNotEmpty) {
+                final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
+                bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
+              }
+
+              return ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _FriendProfileHeader(
+                    backdropPath: bannerBackdrop,
+                    photoUrl: photoUrl,
+                    displayName: displayName,
+                  ),
+                  const SizedBox(height: 8),
+                  _StatsRow(
+                    seriesCount: series.where((r) => r.isWatched).length,
+                    filmsCount: films.where((r) => r.isWatched).length,
+                    episodesWatched: episodesWatched,
+                  ),
+                  const Divider(height: 33, indent: 16, endIndent: 16),
+                  _CarouselSection(title: 'Séries', items: series, readOnly: true),
+                  _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true, readOnly: true),
+                  _CarouselSection(title: 'Films', items: films, readOnly: true),
+                  _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true, readOnly: true),
+                  const SizedBox(height: 24),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FriendProfileHeader extends StatelessWidget {
+  final String? backdropPath;
+  final String? photoUrl;
+  final String displayName;
+
+  const _FriendProfileHeader({
+    required this.backdropPath,
+    required this.photoUrl,
+    required this.displayName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const bannerHeight = 220.0;
+    const avatarSize = 84.0;
+    const spacer = 48.0;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Column(
+          children: [
+            SizedBox(
+              height: bannerHeight,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (backdropPath != null)
+                    CachedNetworkImage(
+                      imageUrl: '${TmdbConfig.imageBaseUrl}$backdropPath',
+                      fit: BoxFit.cover,
+                    )
+                  else
+                    Container(color: AppColors.surfaceVariant),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.black.withValues(alpha: 0.35), Colors.black.withValues(alpha: 0.85)],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    child: SafeArea(
+                      bottom: false,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: spacer),
+          ],
+        ),
+        Positioned(
+          left: 16,
+          bottom: 0,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: avatarSize,
+                height: avatarSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.background, width: 3),
+                ),
+                child: ClipOval(
+                  child: photoUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: photoUrl!,
+                          fit: BoxFit.cover,
+                          width: avatarSize,
+                          height: avatarSize,
+                        )
+                      : Container(
+                          color: AppColors.surfaceVariant,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.person, color: AppColors.textSecondary, size: 40),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(displayName,
+                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

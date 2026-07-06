@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/link_service.dart';
 import '../theme/app_theme.dart';
-import 'linked_library_screen.dart';
+import 'profile_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -130,7 +130,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
                             children: [
                               OutlinedButton(
                                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => LinkedLibraryScreen(partnerUid: friendUid, partnerName: name),
+                                  builder: (_) => FriendProfileScreen(
+                                    friendUid: friendUid,
+                                    displayName: name,
+                                    photoUrl: photoUrl,
+                                  ),
                                 )),
                                 child: const Text('CONSULTER', style: TextStyle(fontSize: 11)),
                               ),
