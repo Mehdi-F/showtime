@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
@@ -9,6 +10,8 @@ import '../theme/app_theme.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/media_list_tile.dart';
 import 'discover_grid_screen.dart';
+import 'movie_detail_screen.dart';
+import 'show_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -23,7 +26,6 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loading = false;
   bool _showDiscover = true;
   String? _error;
-  final Set<String> _added = {};
 
   late Future<List<SimilarMedia>> _topRatedTv;
   late Future<List<SimilarMedia>> _trendingTv;
@@ -99,35 +101,47 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_error != null) {
       return Center(child: Text(_error!, style: const TextStyle(color: AppColors.textSecondary)));
     }
+    final libraryItems = context.watch<LibraryProvider>().items;
     return ListView.builder(
       itemCount: _results.length,
       itemBuilder: (context, index) {
         final result = _results[index];
-        final key = '${result.mediaType}_${result.id}';
-        final added = _added.contains(key);
+        LibraryItem? existing;
+        for (final i in libraryItems) {
+          if (i.tmdbId == result.id && i.type == result.mediaType) existing = i;
+        }
+        final added = existing != null;
+
+        void openDetail() {
+          final item = existing;
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) {
+              if (result.mediaType == 'tv') {
+                return item != null ? ShowDetailScreen(libraryItem: item) : ShowDetailScreen.preview(tmdbId: result.id);
+              }
+              return item != null ? MovieDetailScreen(libraryItem: item) : MovieDetailScreen.preview(tmdbId: result.id);
+            },
+          ));
+        }
+
         return MediaListTile(
           posterPath: result.posterPath,
           title: result.year != null ? '${result.title} (${result.year})' : result.title,
           subtitle: result.mediaType == 'tv' ? 'Series' : 'Film',
+          onTap: openDetail,
           trailing: IconButton(
             icon: Icon(
               added ? Icons.check_circle : Icons.add_circle_outline,
               color: added ? Colors.greenAccent : AppColors.accent,
             ),
-            onPressed: added
-                ? null
-                : () async {
-                    await context.read<LibraryService>().addToLibrary(
-                          uid: uid,
-                          tmdbId: result.id,
-                          type: result.mediaType,
-                        );
-                    setState(() => _added.add(key));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text('Added ${result.title}')));
-                    }
-                  },
+            onPressed: () async {
+              final library = context.read<LibraryService>();
+              if (added) {
+                await library.removeFromLibrary(uid: uid, tmdbId: result.id, type: result.mediaType);
+              } else {
+                await library.addToLibrary(uid: uid, tmdbId: result.id, type: result.mediaType);
+              }
+            },
           ),
         );
       },
