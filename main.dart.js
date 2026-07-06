@@ -104166,7 +104166,7 @@ case 1:return A.q(q,r)}})
 return A.r($async$BV,r)},
 F(a){var s,r,q,p=this,o=null,n=A.BE(o,o,B.CH,o)
 switch(p.d.a){case 0:s=t.p
-r=A.b([B.JZ,B.dM,B.a0V,B.n4,A.aV4(B.Kc,B.a0s,p.gaqe())],s)
+r=A.b([B.JZ,B.dM,B.a0U,B.n4,A.aV4(B.Kc,B.a0s,p.gaqe())],s)
 q=p.e
 if(q!=null)B.b.M(r,A.b([B.dM,A.aJ(q,o,o,o,o,B.Cu,o,o)],s))
 s=A.f_(new A.aB(B.l4,A.bJ(r,B.q,o,B.m,B.ab),o),o,o)
@@ -104414,7 +104414,7 @@ l(){var s=this.gJA()
 s.P$=$.ak()
 s.K$=0
 this.az()},
-F(a){var s,r=this,q=null,p=t.p,o=A.c2(A.b([A.dK(A.z6(!1,r.gJA(),B.KM,q,q,new A.az2(r),q),1),A.k1(q,q,q,B.ql,q,q,r.gasi(),q,q,q,q)],p),B.q,B.m,B.r,0)
+F(a){var s,r=this,q=null,p=t.p,o=A.c2(A.b([A.dK(A.z6(!1,r.gJA(),B.KN,q,q,new A.az2(r),q),1),A.k1(q,q,q,B.ql,q,q,r.gasi(),q,q,q,q)],p),B.q,B.m,B.r,0)
 if(r.f)s=B.e3
 else{s=r.e
 s=s==null?q:s.length
@@ -104620,7 +104620,7 @@ return null},
 $S:0}
 A.aik.prototype={
 $1(a){var s=null,r=A.aJ('"'+this.a.b+'" sera d\xe9finitivement supprim\xe9e.',s,s,s,s,s,s,s)
-return A.OX(A.b([A.uK(B.jC,new A.aii(a),s),A.jZ(B.a0X,new A.aij(a))],t.p),B.aW,r,B.a0S)},
+return A.OX(A.b([A.uK(B.jC,new A.aii(a),s),A.jZ(B.a0W,new A.aij(a))],t.p),B.aW,r,B.a0S)},
 $S:65}
 A.aii.prototype={
 $0(){A.bD(this.a,!1).fb(!1)
@@ -104890,7 +104890,7 @@ d=s.x
 s=s.w
 if(!k){k=i.e
 k="Ajout\xe9 \xe0 votre biblioth\xe8que le "+(""+A.pi(k)+"/"+A.pj(k)+"/"+A.kq(k))}else k="Pas encore suivi"
-c=A.bJ(A.b([new A.a0G(r,q,p,o,m,l!=null,n.gatJ(),n.gau0(),new A.aEN(n,a1),a),A.dK(A.kb(A.b([B.RE,new A.aB(B.cp,g,a),new A.IT(f,a),A.aVG(k,o,s,p,d,e),new A.C3(j.wd(a0,n.a.gi9()),a),new A.Hx("Les utilisateurs ont \xe9galement regard\xe9",j.wj(a0,n.a.gi9()),n.gapm(),a)],c),a,B.fr,a,B.Q),1)],c),B.q,a,B.m,B.r)
+c=A.bJ(A.b([new A.a0G(r,q,p,o,m,l!=null,n.gatJ(),n.gau0(),new A.aEN(n,a1),a),A.dK(A.kb(A.b([B.RE,new A.aB(B.cp,g,a),new A.IT(f,a),A.aVG(k,o,s,p,d,e),new A.C3(j.wd(a0,n.a.gi9()),a),new A.Hx("Vous pourriez aussi aimer",j.wj(a0,n.a.gi9()),n.gapm(),a)],c),a,B.fr,a,B.Q),1)],c),B.q,a,B.m,B.r)
 return A.iL(a,c,n.d==null?new A.Bm("AJOUTER LE FILM",n.gahw(),a):a)},
 $S:713}
 A.aEN.prototype={
@@ -104996,7 +104996,7 @@ A.aoy.prototype={
 $2(a,b){return a+b.b},
 $S:96}
 A.aou.prototype={
-$1(a){var s=null,r=this.a,q=A.z6(!0,r,B.KJ,s,s,s,s)
+$1(a){var s=null,r=this.a,q=A.z6(!0,r,B.KK,s,s,s,s)
 return A.OX(A.b([A.uK(B.jC,new A.aos(a),s),A.jZ(B.CE,new A.aot(a,r))],t.p),B.aW,q,B.a1_)},
 $S:65}
 A.aos.prototype={
@@ -105082,7 +105082,7 @@ f=t.p
 d=A.bY(A.kb(A.b([new A.Mz(B.el,"Temps pass\xe9 devant des s\xe9ries",k,b),new A.Mz(B.iu,"Temps pass\xe9 devant des films",j,b)],f),b,B.cT,b,B.ac),120,b)
 c=A.b([new A.YV(new A.aoQ(g,a0),b)],f)
 B.b.M(c,J.dn(this.c,new A.aoF(a0),t.l7))
-return A.iL(b,A.kb(A.b([new A.a1P(h,r,e,new A.aoG(g,a0,e),new A.aoH(a0),new A.aoI(a0),b),B.bC,new A.a3M(p,a,l,b),B.i6,B.RB,B.a3n,B.i6,B.a4d,d,B.cZ,B.i6,B.a4c,A.bY(A.kb(c,b,B.cT,b,B.ac),120,b),B.cZ,B.i6,new A.v7("S\xe9ries",q,!1,b),new A.v7("S\xe9ries pr\xe9f\xe9r\xe9es",o,!0,b),new A.v7("Films",n,!1,b),new A.v7("Films pr\xe9f\xe9r\xe9s",m,!0,b),B.dM,new A.aB(B.cp,A.aJ("This product uses the TMDB API but is not endorsed or certified by TMDB.",b,b,b,b,B.Cz,B.c0,b),b),B.n4],f),b,B.V,b,B.Q),b)},
+return A.iL(b,A.kb(A.b([new A.a1P(h,r,e,new A.aoG(g,a0,e),new A.aoH(a0),new A.aoI(a0),b),B.bC,new A.a3M(p,a,l,b),B.i6,B.Rx,B.a3n,B.i6,B.a4d,d,B.cZ,B.i6,B.a4c,A.bY(A.kb(c,b,B.cT,b,B.ac),120,b),B.cZ,B.i6,new A.v7("S\xe9ries",q,!1,b),new A.v7("S\xe9ries pr\xe9f\xe9r\xe9es",o,!0,b),new A.v7("Films",n,!1,b),new A.v7("Films pr\xe9f\xe9r\xe9s",m,!0,b),B.dM,new A.aB(B.cp,A.aJ("This product uses the TMDB API but is not endorsed or certified by TMDB.",b,b,b,b,B.Cz,B.c0,b),b),B.n4],f),b,B.V,b,B.Q),b)},
 $S:716}
 A.aoC.prototype={
 $1(a){return a.a.c==="tv"},
@@ -105243,10 +105243,10 @@ $S:0}
 A.aDX.prototype={
 $2(a,b){var s,r,q,p=this,o=null,n=b.b
 if(n==null||n.length===0){s=p.a
-r=A.dK(A.z6(!1,s.d,B.KN,B.Ct,o,o,o),1)
+r=A.dK(A.z6(!1,s.d,B.KJ,B.Ct,o,o,o),1)
 q=s.e
 s=q?o:new A.aDV(s,p.b)
-return A.c2(A.b([r,B.bZ,A.jZ(q?B.Vu:B.a0W,s)],t.p),B.q,B.m,B.r,0)}return A.k0(new A.aDW(p.a,n,p.b),p.c.zx(n),t.nA)},
+return A.c2(A.b([r,B.bZ,A.jZ(q?B.Vu:B.a0V,s)],t.p),B.q,B.m,B.r,0)}return A.k0(new A.aDW(p.a,n,p.b),p.c.zx(n),t.nA)},
 $S:724}
 A.aDV.prototype={
 $0(){return this.a.wH(this.b)},
@@ -105334,7 +105334,7 @@ break
 case 6:case 1:return A.q(q,r)
 case 2:return A.p(o.at(-1),r)}})
 return A.r($async$BW,r)},
-F(a){var s,r,q,p,o=this,n=null,m=A.aF(a,!0,t.d).b.a,l=A.BE(n,n,A.z6(!1,o.d,B.KL,n,new A.aHV(o),o.garK(),B.Y_),n)
+F(a){var s,r,q,p,o=this,n=null,m=A.aF(a,!0,t.d).b.a,l=A.BE(n,n,A.z6(!1,o.d,B.KM,n,new A.aHV(o),o.garK(),B.Y_),n)
 if(o.r){m=o.y
 m===$&&A.a()
 s=o.z
@@ -106308,7 +106308,7 @@ o=f?B.ek:B.lR
 n=t.p
 n=A.b([A.lg(!1,l,!0,new A.aB(B.ps,A.c2(A.b([k,B.jt,q,p,B.bB,A.dq(l,A.hb(o,f?s:B.U,l,l),B.O,!1,l,l,l,l,l,l,l,l,l,l,l,l,l,l,new A.aIB(m,a),l,l,l,l,l,l)],n),B.q,B.m,B.r,0),l),l,!0,l,l,l,l,l,l,l,l,new A.aIC(m,j,a),l,l,l,l,l),new A.aB(B.cp,A.fr(A.cu(4),A.aW7(B.a9,4,g,new A.o2(s,t.Jn))),l)],n)
 if(j&&r!=null){k=r.b
-B.b.M(n,new A.T(k,m.gST(),A.U(k).i("T<1,e>")))}else if(j)n.push(B.Rx)
+B.b.M(n,new A.T(k,m.gST(),A.U(k).i("T<1,e>")))}else if(j)n.push(B.Ry)
 n.push(B.bC)
 return A.bJ(n,B.q,l,B.m,B.r)},
 aeO(){var s,r,q,p,o,n,m=this,l=null,k=m.w.n(0,0),j=m.r.h(0,0),i=j==null,h=i?l:j.b.length
@@ -106372,7 +106372,7 @@ d=a1.w
 if(f!=null){c=f.e
 c="Ajout\xe9e \xe0 votre biblioth\xe8que le "+(""+A.pi(c)+"/"+A.pj(c)+"/"+A.kq(c))}else c="Pas encore suivie"
 b=t.p
-b=A.fz(B.b_,A.b([A.bJ(A.b([new A.a3w(s,r,o,n,m,l!=null,a.gasU(),a.gasV(),new A.aJg(a,a2),a0),j,A.dK(A.aYb(A.b([A.kb(A.b([new A.IT(q,a0),A.aVG(c,p,e,d,i,g),new A.C3(h.wd("tv",a.a.gi9()),a0),new A.Hx("Les utilisateurs ont \xe9galement regard\xe9",h.wj("tv",a.a.gi9()),a.gasT(),a0)],b),a0,B.fr,a0,B.Q),a.aex(a1)],b),k),1)],b),B.q,a0,B.m,B.r),new A.eB(B.cM,a0,a0,new A.Cs(a.gIa(),B.nY,30,!1,B.NK,a0),a0)],b),B.K,B.bv,a0)
+b=A.fz(B.b_,A.b([A.bJ(A.b([new A.a3w(s,r,o,n,m,l!=null,a.gasU(),a.gasV(),new A.aJg(a,a2),a0),j,A.dK(A.aYb(A.b([A.kb(A.b([new A.IT(q,a0),A.aVG(c,p,e,d,i,g),new A.C3(h.wd("tv",a.a.gi9()),a0),new A.Hx("Vous pourriez aussi aimer",h.wj("tv",a.a.gi9()),a.gasT(),a0)],b),a0,B.fr,a0,B.Q),a.aex(a1)],b),k),1)],b),B.q,a0,B.m,B.r),new A.eB(B.cM,a0,a0,new A.Cs(a.gIa(),B.nY,30,!1,B.NK,a0),a0)],b),B.K,B.bv,a0)
 return A.iL(a0,b,a.d==null?new A.Bm("AJOUTER LA S\xc9RIE",a.gasR(),a0):a0)}}
 A.aIG.prototype={
 $0(){return this.a.d=this.b},
@@ -107098,7 +107098,7 @@ F(a){var s=this,r=null,q=A.aF(a,!0,t.d).b.a,p=A.aF(a,!0,t.qo).c,o=A.aF(a,!1,t.vD
 if(k.ga8(p))l.push(B.RG)
 else l.push(new A.eE(B.Ea,A.mO(r,new A.axg(s,p,o,q.c.a.a),k.gD(p),r,r,B.Q,!0),r))
 l.push(B.I6)
-q=A.dK(A.z6(!1,s.d,B.KK,r,r,r,r),1)
+q=A.dK(A.z6(!1,s.d,B.KL,r,r,r,r),1)
 l.push(A.c2(A.b([q,B.bZ,A.jZ(B.CE,s.e?r:s.gag5())],m),B.q,B.m,B.r,0))
 return A.iK(!0,new A.aB(new A.ah(16,16,16,16+n.f.d),A.bJ(l,B.Z,r,B.m,B.ab),r),!1,B.V,!0)}}
 A.axd.prototype={
@@ -107219,7 +107219,7 @@ $2(a,b){var s,r=null,q=b.b
 if(q==null)q=B.Nk
 s=J.al(q)
 if(s.ga8(q))return B.aj
-return A.bJ(A.b([B.Rz,A.bY(A.mO(r,new A.awM(q),s.gD(q),B.cT,r,B.ac,!1),44,r),B.bC],t.p),B.Z,r,B.m,B.r)},
+return A.bJ(A.b([B.RA,A.bY(A.mO(r,new A.awM(q),s.gD(q),B.cT,r,B.ac,!1),44,r),B.bC],t.p),B.Z,r,B.m,B.r)},
 $S:771}
 A.awM.prototype={
 $2(a,b){var s=null,r=J.fo(this.a,b),q=A.cu(20),p=A.b([],t.p),o=r.c
@@ -107234,7 +107234,7 @@ if(n!=null)o.push(n)
 n=q.d
 if(n.length!==0)o.push(B.b.aN(n,", "))
 n=t.p
-s=A.b([B.a0U,B.n3],n)
+s=A.b([B.a0T,B.n3],n)
 if(o.length!==0)s.push(A.aJ(B.b.aN(o," \u2022 "),p,p,p,p,B.dP,p,p))
 o=q.e
 if(o>0)s.push(new A.aB(B.l3,A.c2(A.b([B.Ka,B.jt,A.aJ(B.d.aj(o/2,1)+"/5",p,p,p,p,B.ng,p,p)],n),B.q,B.m,B.r,0),p))
@@ -107254,7 +107254,7 @@ $2(a,b){var s,r=null,q=b.b
 if(q==null)q=B.Nj
 s=J.al(q)
 if(s.ga8(q))return B.aj
-return A.bJ(A.b([B.RF,A.bY(A.mO(r,new A.a9o(q),s.gD(q),B.cT,r,B.ac,!1),160,r),B.Ry],t.p),B.Z,r,B.m,B.r)},
+return A.bJ(A.b([B.RF,A.bY(A.mO(r,new A.a9o(q),s.gD(q),B.cT,r,B.ac,!1),160,r),B.Rz],t.p),B.Z,r,B.m,B.r)},
 $S:773}
 A.a9o.prototype={
 $2(a,b){var s=null,r=J.fo(this.a,b),q=A.cu(6),p=r.c
@@ -111776,8 +111776,8 @@ B.pw=new A.ah(8,0,8,0)
 B.jB=new A.u(!0,null,null,null,null,null,12,B.aL,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.c0=new A.nn(2,"center")
 B.a0H=new A.bg("CR\xc9ER UNE LISTE",null,B.jB,B.c0,null,null,null,null,null,null)
-B.RA=new A.aB(B.pw,B.a0H,null)
-B.N_=s([B.K9,B.bC,B.RA],t.p)
+B.RB=new A.aB(B.pw,B.a0H,null)
+B.N_=s([B.K9,B.bC,B.RB],t.p)
 B.Hl=new A.Cp(B.Q,B.iK,B.r,B.q,null,B.bw,null,0,B.N_,null)
 B.kJ=new A.wC(0,"playing")
 B.kK=new A.wC(1,"stopped")
@@ -112296,13 +112296,13 @@ B.KG=new A.t9(null)
 B.aR=s([],t.oU)
 B.KH=new A.mL("\ufffc",null,null,null,!0,!0,B.aR)
 B.KI=new A.El(null,null,null,null,null,null,null,null,null,B.q2,B.oe,!1,null,!1,null,null,null,null,null,null,null,null,!1,null,null,null,null,null,null,null,null,null,null,null,!1,null,null)
+B.KJ=new A.lh(null,null,null,null,null,null,null,null,null,null,"Email de votre ami",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
 B.qq=new A.lh(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
-B.KJ=new A.lh(null,null,null,null,null,null,null,null,null,null,"Nom de la liste",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
-B.KK=new A.lh(null,null,null,null,null,null,null,null,null,null,"Nouvelle liste...",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
+B.KK=new A.lh(null,null,null,null,null,null,null,null,null,null,"Nom de la liste",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
+B.KL=new A.lh(null,null,null,null,null,null,null,null,null,null,"Nouvelle liste...",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
 B.nJ=new A.a0W(B.w)
-B.KL=new A.lh(null,null,null,null,null,null,null,null,null,null,"Rechercher",null,B.b7,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,B.nJ,!0,null,null,null,null)
-B.KM=new A.lh(null,null,null,null,null,null,null,null,null,null,"Nom de la s\xe9rie",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
-B.KN=new A.lh(null,null,null,null,null,null,null,null,null,null,"Email de l'autre compte",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
+B.KM=new A.lh(null,null,null,null,null,null,null,null,null,null,"Rechercher",null,B.b7,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,B.nJ,!0,null,null,null,null)
+B.KN=new A.lh(null,null,null,null,null,null,null,null,null,null,"Nom de la s\xe9rie",null,null,null,null,null,!0,!0,!1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,!0,null,null,null,null)
 B.Hn=new A.dX(0.1,0,0.45,1)
 B.KP=new A.dd(0.7038888888888889,1,B.Hn)
 B.R4=new A.i(0.05,0)
@@ -113670,15 +113670,15 @@ B.a4M=new A.TD(0,"start")
 B.Ru=new A.TD(1,"end")
 B.Rv=new A.TE(0,"nearestOverlay")
 B.Rw=new A.TE(1,"rootOverlay")
-B.Rx=new A.aB(B.dk,B.e3,null)
+B.d0=new A.u(!0,null,null,null,null,null,18,B.bx,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
+B.a0Z=new A.bg("Ami",null,B.d0,null,null,null,null,null,null,null)
+B.Rx=new A.aB(B.i9,B.a0Z,null)
+B.Ry=new A.aB(B.dk,B.e3,null)
 B.IQ=new A.ah(16,20,16,0)
 B.pa=new A.rx(1,null,null,null)
-B.Ry=new A.aB(B.IQ,B.pa,null)
-B.d0=new A.u(!0,null,null,null,null,null,18,B.bx,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
+B.Rz=new A.aB(B.IQ,B.pa,null)
 B.a0Q=new A.bg("O\xf9 regarder",null,B.d0,null,null,null,null,null,null,null)
-B.Rz=new A.aB(B.cU,B.a0Q,null)
-B.a0T=new A.bg("Compte partag\xe9",null,B.d0,null,null,null,null,null,null,null)
-B.RB=new A.aB(B.i9,B.a0T,null)
+B.RA=new A.aB(B.cU,B.a0Q,null)
 B.eL=new A.u(!0,B.U,null,null,null,null,13,B.aL,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.a0q=new A.bg("D\xc9MARRER LE SUIVI",null,B.eL,null,null,null,null,null,null,null)
 B.RC=new A.aB(B.cU,B.a0q,null)
@@ -113686,10 +113686,10 @@ B.IG=new A.ah(0,20,0,0)
 B.RD=new A.aB(B.IG,B.pa,null)
 B.a0e=new A.bg("VISIONNAGE",null,B.eL,null,null,null,null,null,null,null)
 B.RE=new A.aB(B.cU,B.a0e,null)
-B.a0Z=new A.bg("Distribution",null,B.d0,null,null,null,null,null,null,null)
-B.RF=new A.aB(B.i9,B.a0Z,null)
-B.a0Y=new A.bg("Aucune liste pour le moment.",null,B.b7,null,null,null,null,null,null,null)
-B.RG=new A.aB(B.po,B.a0Y,null)
+B.a0Y=new A.bg("Distribution",null,B.d0,null,null,null,null,null,null,null)
+B.RF=new A.aB(B.i9,B.a0Y,null)
+B.a0X=new A.bg("Aucune liste pour le moment.",null,B.b7,null,null,null,null,null,null,null)
+B.RG=new A.aB(B.po,B.a0X,null)
 B.xg=new A.xV(null)
 B.bY=new A.TL(0,"fill")
 B.b4=new A.TL(1,"stroke")
@@ -114523,10 +114523,10 @@ B.a0L=new A.bg("Renommer la liste",null,null,null,null,null,null,null,null,null)
 B.CH=new A.bg("Importer depuis TV Time",null,null,null,null,null,null,null,null,null)
 B.a0N=new A.bg("Voulez-vous marquer tous les \xe9pisodes pr\xe9c\xe9dents comme vus ?",null,null,null,null,null,null,null,null,null)
 B.a0S=new A.bg("Supprimer la liste ?",null,null,null,null,null,null,null,null,null)
-B.a0U=new A.bg("Informations",null,B.d0,null,null,null,null,null,null,null)
-B.a0V=new A.bg("S\xe9lectionne le fichier zip de ton export RGPD TV Time. On importe les s\xe9ries suivies, le statut favori, et on marque comme vus les premiers \xe9pisodes (dans l'ordre) \xe0 hauteur du nombre d'\xe9pisodes vus rapport\xe9 par TV Time \u2014 TV Time ne fournit pas la liste exacte des \xe9pisodes vus, ni les films.",null,B.b7,B.c0,null,null,null,null,null,null)
-B.a0W=new A.bg("Lier",null,null,null,null,null,null,null,null,null)
-B.a0X=new A.bg("Supprimer",null,null,null,null,null,null,null,null,null)
+B.a0T=new A.bg("Informations",null,B.d0,null,null,null,null,null,null,null)
+B.a0U=new A.bg("S\xe9lectionne le fichier zip de ton export RGPD TV Time. On importe les s\xe9ries suivies, le statut favori, et on marque comme vus les premiers \xe9pisodes (dans l'ordre) \xe0 hauteur du nombre d'\xe9pisodes vus rapport\xe9 par TV Time \u2014 TV Time ne fournit pas la liste exacte des \xe9pisodes vus, ni les films.",null,B.b7,B.c0,null,null,null,null,null,null)
+B.a0V=new A.bg("Lier",null,null,null,null,null,null,null,null,null)
+B.a0W=new A.bg("Supprimer",null,null,null,null,null,null,null,null,null)
 B.CI=new A.bg("Ajouter \xe0 une liste",null,null,null,null,null,null,null,null,null)
 B.nh=new A.bg("R\xe9essayer",null,null,null,null,null,null,null,null,null)
 B.a1_=new A.bg("Nouvelle liste",null,null,null,null,null,null,null,null,null)
