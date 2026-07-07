@@ -1,6 +1,6 @@
 {
-    "name": "showtime",
-    "short_name": "showtime",
+    "name": "Showtime",
+    "short_name": "Showtime",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0D0D0D",
