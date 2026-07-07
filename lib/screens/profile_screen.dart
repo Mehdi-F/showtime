@@ -12,6 +12,7 @@ import '../services/library_service.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/library_filter_sheet.dart';
 import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
@@ -29,6 +30,8 @@ Future<_ResolvedItem> _resolveItem(TmdbService tmdb, LibraryItem item) async {
       backdropPath: details.backdropPath,
       runtimeMinutes: details.episodeRunTime,
       totalEpisodeCount: totalEpisodeCount,
+      isEnded: details.isEnded,
+      status: details.status,
     );
   } else {
     final details = await tmdb.getMovieDetails(item.tmdbId);
@@ -49,6 +52,8 @@ class _ResolvedItem {
   final String? backdropPath;
   final int runtimeMinutes; // per episode (tv) or per movie
   final int totalEpisodeCount; // tv only, 0 for movies
+  final bool isEnded; // tv only
+  final String? status; // tv only, raw TMDB status (e.g. "Canceled")
 
   _ResolvedItem({
     required this.item,
@@ -57,6 +62,8 @@ class _ResolvedItem {
     required this.backdropPath,
     required this.runtimeMinutes,
     this.totalEpisodeCount = 0,
+    this.isEnded = false,
+    this.status,
   });
 
   int get watchedEpisodesCount => item.watchedEpisodes.values.where((w) => w).length;
@@ -749,12 +756,60 @@ class _CarouselSection extends StatelessWidget {
   }
 }
 
-class _FullListScreen extends StatelessWidget {
+enum _SeriesProgressFilter { all, inProgress, notStarted, upToDate, completed, cancelled, favorites }
+
+extension on _SeriesProgressFilter {
+  String get label => switch (this) {
+        _SeriesProgressFilter.all => 'Tout',
+        _SeriesProgressFilter.inProgress => 'Vos séries en cours',
+        _SeriesProgressFilter.notStarted => "N'a pas encore commencé",
+        _SeriesProgressFilter.upToDate => 'À jour',
+        _SeriesProgressFilter.completed => 'Terminé',
+        _SeriesProgressFilter.cancelled => 'Arrêtées',
+        _SeriesProgressFilter.favorites => 'Favoris',
+      };
+}
+
+enum _FilmProgressFilter { all, watched, unwatched, favorites }
+
+extension on _FilmProgressFilter {
+  String get label => switch (this) {
+        _FilmProgressFilter.all => 'Tous',
+        _FilmProgressFilter.watched => 'Vu',
+        _FilmProgressFilter.unwatched => 'Non vu',
+        _FilmProgressFilter.favorites => 'Favoris',
+      };
+}
+
+/// Cancelled takes priority over watch progress (there will never be more
+/// episodes), then completion, then whether anything has been watched.
+_SeriesProgressFilter _categorizeSeries(_ResolvedItem r) {
+  if (r.status == 'Canceled') return _SeriesProgressFilter.cancelled;
+  final total = r.totalEpisodeCount;
+  final watched = r.watchedEpisodesCount;
+  if (total > 0 && watched >= total) {
+    return r.isEnded ? _SeriesProgressFilter.completed : _SeriesProgressFilter.upToDate;
+  }
+  if (watched == 0) return _SeriesProgressFilter.notStarted;
+  return _SeriesProgressFilter.inProgress;
+}
+
+class _FullListScreen extends StatefulWidget {
   final String title;
   final List<_ResolvedItem> items;
   final bool readOnly;
 
   const _FullListScreen({required this.title, required this.items, this.readOnly = false});
+
+  @override
+  State<_FullListScreen> createState() => _FullListScreenState();
+}
+
+class _FullListScreenState extends State<_FullListScreen> {
+  late final bool _isSeries = widget.items.first.item.type == 'tv';
+  LibrarySort _sort = LibrarySort.lastActivity;
+  _SeriesProgressFilter _seriesFilter = _SeriesProgressFilter.all;
+  _FilmProgressFilter _filmFilter = _FilmProgressFilter.all;
 
   double? _progressRatio(_ResolvedItem r) {
     if (r.item.type == 'movie') return r.item.watched ? 1.0 : 0.0;
@@ -762,66 +817,173 @@ class _FullListScreen extends StatelessWidget {
     return (r.watchedEpisodesCount / r.totalEpisodeCount).clamp(0.0, 1.0);
   }
 
+  Future<void> _openFilterSheet() async {
+    if (_isSeries) {
+      final result = await showLibraryFilterSheet<_SeriesProgressFilter>(
+        context,
+        initialSort: _sort,
+        progressTitle: 'Progress',
+        filterValues: _SeriesProgressFilter.values,
+        filterLabel: (f) => f.label,
+        initialFilter: _seriesFilter,
+        defaultFilter: _SeriesProgressFilter.all,
+      );
+      if (result != null && mounted) {
+        setState(() {
+          _sort = result.sort;
+          _seriesFilter = result.filter;
+        });
+      }
+    } else {
+      final result = await showLibraryFilterSheet<_FilmProgressFilter>(
+        context,
+        initialSort: _sort,
+        progressTitle: 'Avancement',
+        filterValues: _FilmProgressFilter.values,
+        filterLabel: (f) => f.label,
+        initialFilter: _filmFilter,
+        defaultFilter: _FilmProgressFilter.all,
+      );
+      if (result != null && mounted) {
+        setState(() {
+          _sort = result.sort;
+          _filmFilter = result.filter;
+        });
+      }
+    }
+  }
+
+  bool _matchesFilter(_ResolvedItem r) {
+    if (_isSeries) {
+      switch (_seriesFilter) {
+        case _SeriesProgressFilter.all:
+          return true;
+        case _SeriesProgressFilter.favorites:
+          return r.item.favorite;
+        case _SeriesProgressFilter.inProgress:
+        case _SeriesProgressFilter.notStarted:
+        case _SeriesProgressFilter.upToDate:
+        case _SeriesProgressFilter.completed:
+        case _SeriesProgressFilter.cancelled:
+          return _categorizeSeries(r) == _seriesFilter;
+      }
+    }
+    switch (_filmFilter) {
+      case _FilmProgressFilter.all:
+        return true;
+      case _FilmProgressFilter.watched:
+        return r.item.watched;
+      case _FilmProgressFilter.unwatched:
+        return !r.item.watched;
+      case _FilmProgressFilter.favorites:
+        return r.item.favorite;
+    }
+  }
+
+  List<_ResolvedItem> _applyFilterAndSort() {
+    final filtered = widget.items.where(_matchesFilter).toList();
+    filtered.sort((a, b) {
+      switch (_sort) {
+        case LibrarySort.lastActivity:
+          return b.recency.compareTo(a.recency);
+        case LibrarySort.lastAdded:
+          return b.item.addedAt.compareTo(a.item.addedAt);
+        case LibrarySort.alphabetical:
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      }
+    });
+    return filtered;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visible = _applyFilterAndSort();
+    final filterLabel = _isSeries ? _seriesFilter.label : _filmFilter.label;
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(10),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 0.6,
-          crossAxisSpacing: 4,
-          mainAxisSpacing: 4,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final resolved = items[index];
-          final ratio = _progressRatio(resolved);
-          return GestureDetector(
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => readOnly
-                  ? (resolved.item.type == 'tv'
-                      ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
-                      : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
-                  : (resolved.item.type == 'tv'
-                      ? ShowDetailScreen(libraryItem: resolved.item)
-                      : MovieDetailScreen(libraryItem: resolved.item)),
-            )),
-            child: Stack(
-              fit: StackFit.expand,
+      appBar: AppBar(title: Text(widget.title)),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: resolved.posterPath != null
-                      ? CachedNetworkImage(
-                          imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
-                          fit: BoxFit.cover,
-                        )
-                      : Container(
-                          color: AppColors.surfaceVariant,
-                          child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                        ),
-                ),
-                if (ratio != null)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      height: 6,
-                      color: Colors.black45,
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: ratio,
-                        child: Container(color: ratio >= 1.0 ? Colors.green : AppColors.accent),
+                LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
+                if (visible.isEmpty)
+                  const Expanded(
+                    child: Center(
+                      child: Text('Aucun titre ne correspond à ce filtre.',
+                          style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(10),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.6,
+                        crossAxisSpacing: 4,
+                        mainAxisSpacing: 4,
                       ),
+                      itemCount: visible.length,
+                      itemBuilder: (context, index) {
+                        final resolved = visible[index];
+                        final ratio = _progressRatio(resolved);
+                        return GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => widget.readOnly
+                                ? (resolved.item.type == 'tv'
+                                    ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
+                                    : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
+                                : (resolved.item.type == 'tv'
+                                    ? ShowDetailScreen(libraryItem: resolved.item)
+                                    : MovieDetailScreen(libraryItem: resolved.item)),
+                          )),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: resolved.posterPath != null
+                                    ? CachedNetworkImage(
+                                        imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Container(
+                                        color: AppColors.surfaceVariant,
+                                        child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                                      ),
+                              ),
+                              if (ratio != null)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    height: 6,
+                                    color: Colors.black45,
+                                    alignment: Alignment.centerLeft,
+                                    child: FractionallySizedBox(
+                                      widthFactor: ratio,
+                                      child: Container(color: ratio >= 1.0 ? Colors.green : AppColors.accent),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
               ],
             ),
-          );
-        },
+          ),
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(child: LibraryFilterButton(onTap: _openFilterSheet)),
+          ),
+        ],
       ),
     );
   }
