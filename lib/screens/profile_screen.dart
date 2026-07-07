@@ -819,6 +819,12 @@ class _FullListScreenState extends State<_FullListScreen> {
     return (r.watchedEpisodesCount / r.totalEpisodeCount).clamp(0.0, 1.0);
   }
 
+  Color _progressColor(_ResolvedItem r, double ratio) {
+    if (ratio < 1.0) return AppColors.accent;
+    if (r.item.type == 'tv' && r.isEnded) return Colors.purple;
+    return Colors.green;
+  }
+
   Future<void> _openFilterSheet() async {
     if (_isSeries) {
       final result = await showLibraryFilterSheet<_SeriesProgressFilter>(
@@ -966,7 +972,7 @@ class _FullListScreenState extends State<_FullListScreen> {
                                     alignment: Alignment.centerLeft,
                                     child: FractionallySizedBox(
                                       widthFactor: ratio,
-                                      child: Container(color: ratio >= 1.0 ? Colors.green : AppColors.accent),
+                                      child: Container(color: _progressColor(resolved, ratio)),
                                     ),
                                   ),
                                 ),
