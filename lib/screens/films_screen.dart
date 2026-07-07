@@ -10,12 +10,24 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/library_filter_sheet.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/view_mode_toggle.dart';
 import 'movie_detail_screen.dart';
 
 enum _ViewMode { grid, list }
+
+enum _FilmFilter { all, watched, unwatched, favorites }
+
+extension on _FilmFilter {
+  String get label => switch (this) {
+        _FilmFilter.all => 'Tous',
+        _FilmFilter.watched => 'Vu',
+        _FilmFilter.unwatched => 'Non vu',
+        _FilmFilter.favorites => 'Favoris',
+      };
+}
 
 class _MovieRow {
   final LibraryItem item;
@@ -105,6 +117,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   final _scrollController = ScrollController();
   int _visibleCount = _pageSize;
   late Future<List<_MovieRow>> _rowsFuture;
+  LibrarySort _sort = LibrarySort.lastActivity;
+  _FilmFilter _filter = _FilmFilter.all;
 
   @override
   void initState() {
@@ -163,6 +177,53 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         );
   }
 
+  Future<void> _openFilterSheet() async {
+    final result = await showLibraryFilterSheet<_FilmFilter>(
+      context,
+      initialSort: _sort,
+      progressTitle: 'Avancement',
+      filterValues: _FilmFilter.values,
+      filterLabel: (f) => f.label,
+      initialFilter: _filter,
+      defaultFilter: _FilmFilter.all,
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _sort = result.sort;
+        _filter = result.filter;
+      });
+    }
+  }
+
+  List<_MovieRow> _applyFilterAndSort(List<_MovieRow> rows) {
+    final filtered = rows.where((r) {
+      switch (_filter) {
+        case _FilmFilter.all:
+          return true;
+        case _FilmFilter.watched:
+          return r.item.watched;
+        case _FilmFilter.unwatched:
+          return !r.item.watched;
+        case _FilmFilter.favorites:
+          return r.item.favorite;
+      }
+    }).toList();
+
+    filtered.sort((a, b) {
+      switch (_sort) {
+        case LibrarySort.lastActivity:
+          final dateA = a.item.watchedAt ?? a.item.addedAt;
+          final dateB = b.item.watchedAt ?? b.item.addedAt;
+          return dateB.compareTo(dateA);
+        case LibrarySort.lastAdded:
+          return b.item.addedAt.compareTo(a.item.addedAt);
+        case LibrarySort.alphabetical:
+          return a.details.title.toLowerCase().compareTo(b.details.title.toLowerCase());
+      }
+    });
+    return filtered;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -172,6 +233,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           top: 12,
           right: 16,
           child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+        ),
+        Positioned(
+          bottom: 16,
+          left: 0,
+          right: 0,
+          child: Center(child: LibraryFilterButton(onTap: _openFilterSheet)),
         ),
       ],
     );
@@ -190,33 +257,22 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         if (!snapshot.hasData) {
           return const ScrollableCenter(child: CircularProgressIndicator());
         }
-        final rows = snapshot.data!.where((r) => !r.item.watched).toList()
-          ..sort((a, b) {
-            final dateA = a.details.releaseDate ?? DateTime(0);
-            final dateB = b.details.releaseDate ?? DateTime(0);
-            return dateB.compareTo(dateA);
-          });
-        if (rows.isEmpty) {
-          return const ScrollableCenter(
-              child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
-        }
-        final visible = rows.take(_visibleCount).toList();
+        final visible = _applyFilterAndSort(snapshot.data!).take(_visibleCount).toList();
         return Column(
           children: [
-            _buildHeader(),
-            Expanded(child: widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible)),
+            LibraryFilterBadge(label: _filter.label, onTap: _openFilterSheet),
+            if (visible.isEmpty)
+              const Expanded(
+                child: ScrollableCenter(
+                  child: Text('Aucun film ne correspond à ce filtre.',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              )
+            else
+              Expanded(child: widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible)),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text('À VOIR',
-          style: TextStyle(
-              color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
     );
   }
 
@@ -240,16 +296,28 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               builder: (_) => MovieDetailScreen(libraryItem: row.item),
             ));
           },
-          child: row.details.posterPath != null
-              ? CachedNetworkImage(
-                  imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
-                  fit: BoxFit.cover,
-                )
-              : Container(
-                  color: AppColors.surfaceVariant,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.movie, color: AppColors.textSecondary),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              row.details.posterPath != null
+                  ? CachedNetworkImage(
+                      imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      color: AppColors.surfaceVariant,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                    ),
+              if (row.item.watched)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(height: 4, color: Colors.green),
                 ),
+            ],
+          ),
         );
       },
     );
@@ -316,8 +384,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                 ),
                 const SizedBox(width: 8),
                 RoundCheck(
-                  checked: false,
-                  onTap: () => _toggleWatched(row.item, true),
+                  checked: row.item.watched,
+                  onTap: () => _toggleWatched(row.item, !row.item.watched),
                 ),
               ],
             ),

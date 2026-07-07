@@ -11,6 +11,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/library_filter_sheet.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/view_mode_toggle.dart';
@@ -18,7 +19,20 @@ import 'show_detail_screen.dart';
 
 enum _ViewMode { list, grid }
 
-const _staleAfter = Duration(days: 14);
+enum _SeriesFilter { all, inProgress, notStarted, upToDate, completed, cancelled, favorites }
+
+extension on _SeriesFilter {
+  String get label => switch (this) {
+        _SeriesFilter.all => 'Tout',
+        _SeriesFilter.inProgress => 'Vos séries en cours',
+        _SeriesFilter.notStarted => "N'a pas encore commencé",
+        _SeriesFilter.upToDate => 'À jour',
+        _SeriesFilter.completed => 'Terminé',
+        _SeriesFilter.cancelled => 'Arrêtées',
+        _SeriesFilter.favorites => 'Favoris',
+      };
+}
+
 const _frMonthsShort = [
   'JANV.',
   'FÉVR.',
@@ -74,6 +88,7 @@ class _ShowEpisodesData {
   final int extraUnwatched;
   final int totalEpisodeCount;
   final bool isEnded;
+  final String status; // raw TMDB status, used to tell Ended apart from Canceled
   final List<EpisodeRef> allEpisodes;
 
   _ShowEpisodesData({
@@ -84,37 +99,25 @@ class _ShowEpisodesData {
     required this.extraUnwatched,
     required this.totalEpisodeCount,
     required this.isEnded,
+    required this.status,
     required this.allEpisodes,
   });
 
   int get watchedEpisodesCount => item.watchedEpisodes.values.where((w) => w).length;
 }
 
-class _HistoryEntry {
-  final _ShowEpisodesData show;
-  final EpisodeRef episode;
-  final DateTime watchedAt;
-
-  _HistoryEntry({required this.show, required this.episode, required this.watchedAt});
-}
-
-/// Flattens every show's individually-timestamped watched episodes into one
-/// chronological list (oldest first), most recent 200 kept.
-List<_HistoryEntry> _buildHistory(List<_ShowEpisodesData> data) {
-  final entries = <_HistoryEntry>[];
-  for (final d in data) {
-    for (final ep in d.allEpisodes) {
-      final watchedAt = d.item.episodeWatchedAt[ep.key];
-      if (watchedAt != null) {
-        entries.add(_HistoryEntry(show: d, episode: ep, watchedAt: watchedAt));
-      }
-    }
+/// Categorizes a show for the progress filter. Cancelled takes priority over
+/// watch progress (there will never be more episodes), then completion,
+/// then whether anything at all has been watched.
+_SeriesFilter _categorize(_ShowEpisodesData d) {
+  if (d.status == 'Canceled') return _SeriesFilter.cancelled;
+  final total = d.totalEpisodeCount;
+  final watched = d.watchedEpisodesCount;
+  if (total > 0 && watched >= total) {
+    return d.isEnded ? _SeriesFilter.completed : _SeriesFilter.upToDate;
   }
-  entries.sort((a, b) => a.watchedAt.compareTo(b.watchedAt));
-  if (entries.length > 200) {
-    return entries.sublist(entries.length - 200);
-  }
-  return entries;
+  if (watched == 0) return _SeriesFilter.notStarted;
+  return _SeriesFilter.inProgress;
 }
 
 class _ProgressInfo {
@@ -203,6 +206,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
       extraUnwatched: next == null ? 0 : unwatchedCount - 1,
       totalEpisodeCount: allEpisodes.length,
       isEnded: details.isEnded,
+      status: details.status,
       allEpisodes: allEpisodes,
     );
   }
@@ -224,7 +228,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
         toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: 'À VOIR'), Tab(text: 'À VENIR')],
+          tabs: const [Tab(text: 'SÉRIES'), Tab(text: 'À VENIR')],
         ),
       ),
       body: TabBarView(
@@ -272,8 +276,8 @@ class _ToWatchTab extends StatefulWidget {
 class _ToWatchTabState extends State<_ToWatchTab> {
   late Future<List<_ShowEpisodesData>> _dataFuture;
   final _scrollController = ScrollController();
-  final _historyKey = GlobalKey();
-  bool _autoScrolledPastHistory = false;
+  LibrarySort _sort = LibrarySort.lastActivity;
+  _SeriesFilter _filter = _SeriesFilter.all;
 
   @override
   void initState() {
@@ -309,34 +313,67 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
     final future = _resolveAll();
-    setState(() {
-      _dataFuture = future;
-      _autoScrolledPastHistory = false;
-    });
+    setState(() => _dataFuture = future);
     await future;
   }
 
-  /// The list opens scrolled past the watch history so "À voir" is the first
-  /// thing visible — history is still there, just a scroll-up away.
-  void _autoScrollPastHistoryOnce() {
-    if (_autoScrolledPastHistory) return;
-    _autoScrolledPastHistory = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      final height = _historyKey.currentContext?.size?.height;
-      if (height != null && height > 0) {
-        _scrollController.jumpTo(height.clamp(0, _scrollController.position.maxScrollExtent));
-      }
-    });
+  Future<void> _openFilterSheet() async {
+    final result = await showLibraryFilterSheet<_SeriesFilter>(
+      context,
+      initialSort: _sort,
+      progressTitle: 'Progress',
+      filterValues: _SeriesFilter.values,
+      filterLabel: (f) => f.label,
+      initialFilter: _filter,
+      defaultFilter: _SeriesFilter.all,
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _sort = result.sort;
+        _filter = result.filter;
+      });
+    }
   }
 
-  Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
+  bool _matchesFilter(_ShowEpisodesData d) {
+    switch (_filter) {
+      case _SeriesFilter.all:
+        return true;
+      case _SeriesFilter.favorites:
+        return d.item.favorite;
+      case _SeriesFilter.inProgress:
+      case _SeriesFilter.notStarted:
+      case _SeriesFilter.upToDate:
+      case _SeriesFilter.completed:
+      case _SeriesFilter.cancelled:
+        return _categorize(d) == _filter;
+    }
+  }
+
+  List<_ShowEpisodesData> _applyFilterAndSort(List<_ShowEpisodesData> data) {
+    final filtered = data.where(_matchesFilter).toList();
+    filtered.sort((a, b) {
+      switch (_sort) {
+        case LibrarySort.lastActivity:
+          final da = a.item.lastActivityAt ?? a.item.addedAt;
+          final db = b.item.lastActivityAt ?? b.item.addedAt;
+          return db.compareTo(da);
+        case LibrarySort.lastAdded:
+          return b.item.addedAt.compareTo(a.item.addedAt);
+        case LibrarySort.alphabetical:
+          return a.showTitle.toLowerCase().compareTo(b.showTitle.toLowerCase());
+      }
+    });
+    return filtered;
+  }
+
+  Future<void> _toggleAllEpisodes(BuildContext context, _ShowEpisodesData d, bool newValue) {
     final uid = context.read<AuthProvider>().user!.uid;
-    return context.read<LibraryService>().markEpisodeWatched(
+    final keys = d.allEpisodes.map((e) => e.key).toList();
+    return context.read<LibraryService>().setEpisodesWatched(
           uid: uid,
-          tmdbId: item.tmdbId,
-          season: season,
-          episode: episode,
+          tmdbId: d.item.tmdbId,
+          episodeKeys: keys,
           watched: newValue,
         );
   }
@@ -350,6 +387,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           top: 12,
           right: 16,
           child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+        ),
+        Positioned(
+          bottom: 16,
+          left: 0,
+          right: 0,
+          child: Center(child: LibraryFilterButton(onTap: _openFilterSheet)),
         ),
       ],
     );
@@ -368,153 +411,114 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         if (!snapshot.hasData) {
           return const ScrollableCenter(child: CircularProgressIndicator());
         }
-        final data = snapshot.data!;
-        final now = DateTime.now();
-
-        final history = _buildHistory(data);
-
-        final withNext = data.where((d) => d.nextEpisode != null).toList();
-        final active = <_ShowEpisodesData>[];
-        final stale = <_ShowEpisodesData>[];
-        for (final d in withNext) {
-          final lastActivity = d.item.lastActivityAt;
-          if (lastActivity == null || now.difference(lastActivity) > _staleAfter) {
-            stale.add(d);
-          } else {
-            active.add(d);
-          }
-        }
-        active.sort((a, b) {
-          final aDate = a.nextEpisode!.airDate;
-          final bDate = b.nextEpisode!.airDate;
-          if (aDate == null && bDate == null) return 0;
-          if (aDate == null) return 1;
-          if (bDate == null) return -1;
-          return bDate.compareTo(aDate);
-        });
-
-        if (history.isEmpty && active.isEmpty && stale.isEmpty) {
-          return const ScrollableCenter(
-              child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
-        }
-
-        final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
-        if (showHistory) {
-          _autoScrollPastHistoryOnce();
-        }
-
-        return ListView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(top: 8, bottom: 16),
-          children: widget.viewMode == _ViewMode.list
-              ? [
-                  if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
-                  if (active.isNotEmpty) ..._activeSection(context, active),
-                  if (stale.isNotEmpty) ..._staleSection(context, stale),
-                ]
-              : [
-                  if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
-                  if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
-                ],
+        final visible = _applyFilterAndSort(snapshot.data!);
+        return Column(
+          children: [
+            LibraryFilterBadge(label: _filter.label, onTap: _openFilterSheet),
+            if (visible.isEmpty)
+              const Expanded(
+                child: ScrollableCenter(
+                  child: Text('Aucune série ne correspond à ce filtre.',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              )
+            else
+              Expanded(child: widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible)),
+          ],
         );
       },
     );
   }
 
-  Widget _buildCardSection(BuildContext context, String label, List<_ShowEpisodesData> rows) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader(label),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.67,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
-          ),
-          itemCount: rows.length,
-          itemBuilder: (context, index) {
-            final d = rows[index];
-            final info = _progressInfo(d);
-            return _SeriesProgressCard(
-              posterPath: d.posterPath,
-              progress: info?.ratio,
-              barColor: info?.color,
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
-            );
-          },
-        ),
-      ],
+  Widget _buildGrid(List<_ShowEpisodesData> visible) {
+    return GridView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(2),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 0.67,
+        crossAxisSpacing: 2,
+        mainAxisSpacing: 2,
+      ),
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final d = visible[index];
+        final info = _progressInfo(d);
+        return _SeriesProgressCard(
+          posterPath: d.posterPath,
+          progress: info?.ratio,
+          barColor: info?.color,
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+        );
+      },
     );
   }
 
-  Widget _sectionHeader(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-      );
-
-  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries) {
-    return [
-      _sectionHeader('HISTORIQUE DE VISIONNAGE'),
-      ...entries.map((h) {
-        final ep = h.episode;
-        final d = h.show;
-        return Opacity(
-          opacity: 0.6,
-          child: _EpisodeCard(
-            posterPath: d.posterPath,
-            showTitle: d.showTitle,
-            seasonNumber: ep.seasonNumber,
-            episodeNumber: ep.episodeNumber,
-            episodeTitle: ep.name,
-            watched: true,
-            dimmed: true,
-            onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, false),
-            onTapShow: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+  Widget _buildList(List<_ShowEpisodesData> visible) {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final d = visible[index];
+        final total = d.totalEpisodeCount;
+        final watched = d.watchedEpisodesCount;
+        final fullyWatched = total > 0 && watched >= total;
+        return InkWell(
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+          child: Container(
+            color: AppColors.surface,
+            margin: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: SizedBox(
+                    width: 56,
+                    height: 78,
+                    child: d.posterPath != null
+                        ? CachedNetworkImage(
+                            imageUrl: '${TmdbConfig.imageBaseUrl}${d.posterPath}',
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: AppColors.surfaceVariant,
+                            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(d.showTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      if (total > 0) ...[
+                        const SizedBox(height: 4),
+                        Text('$watched/$total épisodes',
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                RoundCheck(
+                  checked: fullyWatched,
+                  onTap: () => _toggleAllEpisodes(context, d, !fullyWatched),
+                ),
+              ],
+            ),
           ),
         );
-      }),
-    ];
-  }
-
-  List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows) {
-    return [
-      _sectionHeader('À VOIR'),
-      for (var i = 0; i < rows.length; i++)
-        _buildNextCard(context, rows[i], showMostRecentBadge: i == 0 && rows[i].nextEpisode!.airDate != null),
-    ];
-  }
-
-  List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows) {
-    return [
-      _sectionHeader('PAS REGARDÉ DEPUIS UN MOMENT'),
-      for (final d in rows) _buildNextCard(context, d, showMostRecentBadge: false),
-    ];
-  }
-
-  Widget _buildNextCard(BuildContext context, _ShowEpisodesData d, {required bool showMostRecentBadge}) {
-    final ep = d.nextEpisode!;
-    return _EpisodeCard(
-      posterPath: d.posterPath,
-      showTitle: d.showTitle,
-      seasonNumber: ep.seasonNumber,
-      episodeNumber: ep.episodeNumber,
-      episodeTitle: ep.name,
-      extraCount: d.extraUnwatched > 0 ? d.extraUnwatched : null,
-      watched: false,
-      badgeLabels: showMostRecentBadge ? const ['PLUS RÉCENT'] : const [],
-      onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, true),
-      onTapShow: () =>
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+      },
     );
   }
 }

@@ -102,19 +102,42 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: const InputDecoration(
-            hintText: 'Rechercher',
-            hintStyle: TextStyle(color: AppColors.textSecondary),
-            border: InputBorder.none,
+        titleSpacing: 12,
+        title: Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(21),
           ),
-          onChanged: _onQueryChanged,
-          onSubmitted: (value) {
-            _debounce?.cancel();
-            _runSearch(value);
-          },
+          child: TextField(
+            controller: _controller,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+            textAlignVertical: TextAlignVertical.center,
+            decoration: InputDecoration(
+              hintText: 'Rechercher un film, une série...',
+              hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+              prefixIconConstraints: const BoxConstraints(minWidth: 40),
+              suffixIcon: _controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 18),
+                      onPressed: () {
+                        _controller.clear();
+                        _onQueryChanged('');
+                      },
+                    ),
+              suffixIconConstraints: const BoxConstraints(minWidth: 40),
+            ),
+            onChanged: _onQueryChanged,
+            onSubmitted: (value) {
+              _debounce?.cancel();
+              _runSearch(value);
+            },
+          ),
         ),
       ),
       body: _showDiscover ? _buildDiscover() : _buildSearchResults(uid),

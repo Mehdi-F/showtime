@@ -205,10 +205,14 @@ class _ProfileBodyState extends State<_ProfileBody> {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        final series = resolved.where((r) => r.item.type == 'tv').toList();
-        final seriesFav = series.where((r) => r.item.favorite).toList();
-        final films = resolved.where((r) => r.item.type == 'movie').toList();
-        final filmsFav = films.where((r) => r.item.favorite).toList();
+        final series = resolved.where((r) => r.item.type == 'tv').toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
+        final seriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
+          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+        final films = resolved.where((r) => r.item.type == 'movie').toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
+        final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
+          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
 
         final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
         final seriesMinutes =

@@ -159,6 +159,9 @@ class LibraryService {
     required bool favorite,
   }) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: type);
-    return _libraryRef(uid).doc(docId).update({'favorite': favorite});
+    return _libraryRef(uid).doc(docId).update({
+      'favorite': favorite,
+      'favoritedAt': favorite ? DateTime.now().toIso8601String() : null,
+    });
   }
 }

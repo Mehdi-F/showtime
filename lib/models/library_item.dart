@@ -8,6 +8,7 @@ class LibraryItem {
   final bool watched; // movie only
   final DateTime? watchedAt; // movie only
   final bool favorite;
+  final DateTime? favoritedAt; // bumped whenever favorite is turned on, so "préférés" can sort by it
   final DateTime? lastActivityAt; // tv only, bumped on episode/season watch toggles
   final bool skipGapPrompt; // tv only, "never ask again" for the previous-episodes dialog
   final Map<String, int> episodeRewatchCounts; // tv only, key = "s{season}e{episode}"
@@ -24,6 +25,7 @@ class LibraryItem {
     required this.watched,
     required this.watchedAt,
     this.favorite = false,
+    this.favoritedAt,
     this.lastActivityAt,
     this.skipGapPrompt = false,
     this.episodeRewatchCounts = const {},
@@ -41,6 +43,7 @@ class LibraryItem {
         watched: watched,
         watchedAt: watchedAt,
         favorite: favorite,
+        favoritedAt: favoritedAt,
         lastActivityAt: lastActivityAt,
         skipGapPrompt: skipGapPrompt ?? this.skipGapPrompt,
         episodeRewatchCounts: episodeRewatchCounts,
@@ -60,6 +63,7 @@ class LibraryItem {
         watched: map['watched'] as bool? ?? false,
         watchedAt: map['watchedAt'] != null ? DateTime.parse(map['watchedAt'] as String) : null,
         favorite: map['favorite'] as bool? ?? false,
+        favoritedAt: map['favoritedAt'] != null ? DateTime.parse(map['favoritedAt'] as String) : null,
         lastActivityAt:
             map['lastActivityAt'] != null ? DateTime.parse(map['lastActivityAt'] as String) : null,
         skipGapPrompt: map['skipGapPrompt'] as bool? ?? false,
@@ -79,6 +83,7 @@ class LibraryItem {
         'watched': watched,
         'watchedAt': watchedAt?.toIso8601String(),
         'favorite': favorite,
+        'favoritedAt': favoritedAt?.toIso8601String(),
         'lastActivityAt': lastActivityAt?.toIso8601String(),
         'skipGapPrompt': skipGapPrompt,
         'episodeRewatchCounts': episodeRewatchCounts,
