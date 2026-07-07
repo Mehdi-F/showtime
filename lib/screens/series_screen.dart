@@ -307,6 +307,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   Future<void> _refresh() async {
+    widget.tmdb.clearCache();
     final future = _resolveAll();
     setState(() {
       _dataFuture = future;
@@ -565,6 +566,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   }
 
   Future<void> _refresh() async {
+    widget.tmdb.clearCache();
     final future = _resolveAll();
     setState(() => _rowsFuture = future);
     await future;

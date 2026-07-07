@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:provider/provider.dart';
 import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
@@ -137,6 +137,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
   }
 
   Future<void> _refresh() async {
+    widget.tmdb.clearCache();
     final future = _resolveAll();
     setState(() => _resolvedFuture = future);
     await future;
