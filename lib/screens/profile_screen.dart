@@ -813,8 +813,11 @@ class _FullListScreenState extends State<_FullListScreen> {
   _SeriesProgressFilter _seriesFilter = _SeriesProgressFilter.all;
   _FilmProgressFilter _filmFilter = _FilmProgressFilter.all;
 
+  // Series get a proportional progress bar; movies are binary (watched or
+  // not) so they get a corner check badge instead — a full-width bar reading
+  // either "empty" or "full" isn't actually communicating a progress amount.
   double? _progressRatio(_ResolvedItem r) {
-    if (r.item.type == 'movie') return r.item.watched ? 1.0 : 0.0;
+    if (r.item.type == 'movie') return null;
     if (r.totalEpisodeCount <= 0) return null;
     return (r.watchedEpisodesCount / r.totalEpisodeCount).clamp(0.0, 1.0);
   }
@@ -973,6 +976,20 @@ class _FullListScreenState extends State<_FullListScreen> {
                                     child: FractionallySizedBox(
                                       widthFactor: ratio,
                                       child: Container(color: _progressColor(resolved, ratio)),
+                                    ),
+                                  ),
+                                ),
+                              if (resolved.item.type == 'movie')
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                    child: Icon(
+                                      resolved.item.watched ? Icons.check_circle : Icons.radio_button_unchecked,
+                                      color: resolved.item.watched ? Colors.greenAccent : Colors.white70,
+                                      size: 18,
                                     ),
                                   ),
                                 ),
