@@ -45,6 +45,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   int _rewatchCount = 0;
   late Future<MovieDetails> _detailsFuture;
 
+  // Fetched once and reused across rebuilds — building these inline inside
+  // _buildBody would re-hit TMDB on every setState in this screen (e.g. every
+  // toggleWatched/toggleFavorite tap).
+  late final Future<List<WatchProvider>> _watchProvidersFuture;
+  late final Future<List<CastMember>> _creditsFuture;
+  late final Future<List<SimilarMedia>> _similarFuture;
+
   @override
   void initState() {
     super.initState();
@@ -52,7 +59,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _watched = widget.libraryItem?.watched ?? false;
     _favorite = widget.libraryItem?.favorite ?? false;
     _rewatchCount = widget.libraryItem?.movieRewatchCount ?? 0;
-    _detailsFuture = context.read<TmdbService>().getMovieDetails(widget.tmdbId);
+    final tmdb = context.read<TmdbService>();
+    _detailsFuture = tmdb.getMovieDetails(widget.tmdbId);
+    _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId);
+    _creditsFuture = tmdb.getMovieCredits(widget.tmdbId);
+    _similarFuture = tmdb.getSimilarMovies(widget.tmdbId);
+  }
+
+  void _showSaveError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Échec de la sauvegarde. Réessaie.')),
+    );
   }
 
   void _retryLoad() {
@@ -105,21 +123,27 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
-  Future<LibraryItem> _ensureFollowed() async {
+  Future<LibraryItem?> _ensureFollowed() async {
     final current = _libraryItem;
     if (current != null) return current;
     final uid = context.read<AuthProvider>().user!.uid;
-    final item = await context.read<LibraryService>().addToLibrary(
-          uid: uid,
-          tmdbId: widget.tmdbId,
-          type: 'movie',
-        );
-    if (mounted) setState(() => _libraryItem = item);
-    return item;
+    try {
+      final item = await context.read<LibraryService>().addToLibrary(
+            uid: uid,
+            tmdbId: widget.tmdbId,
+            type: 'movie',
+          );
+      if (mounted) setState(() => _libraryItem = item);
+      return item;
+    } catch (_) {
+      _showSaveError();
+      return null;
+    }
   }
 
   Future<void> _toggleWatched() async {
     final item = await _ensureFollowed();
+    if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     final library = context.read<LibraryService>();
 
@@ -127,55 +151,98 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
-        await library.incrementMovieRewatch(uid: uid, tmdbId: item.tmdbId);
+        final previousCount = _rewatchCount;
+        final previousItem = _libraryItem;
         final now = DateTime.now();
-        if (mounted) {
-          setState(() {
-            _rewatchCount++;
-            _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
-          });
+        setState(() {
+          _rewatchCount++;
+          _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
+        });
+        try {
+          await library.incrementMovieRewatch(uid: uid, tmdbId: item.tmdbId);
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              _rewatchCount = previousCount;
+              _libraryItem = previousItem;
+            });
+          }
+          _showSaveError();
         }
         return;
       }
+      final previousItem = _libraryItem;
       setState(() {
         _watched = false;
         _libraryItem = _withUpdates(item, watched: false, watchedAt: null);
       });
-      await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: false);
+      try {
+        await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: false);
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _watched = true;
+            _libraryItem = previousItem;
+          });
+        }
+        _showSaveError();
+      }
       return;
     }
 
     final now = DateTime.now();
+    final previousItem = _libraryItem;
     setState(() {
       _watched = true;
       _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
     });
-    await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: true);
+    try {
+      await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: true);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _watched = false;
+          _libraryItem = previousItem;
+        });
+      }
+      _showSaveError();
+    }
   }
 
   Future<void> _toggleFavorite() async {
     final item = await _ensureFollowed();
+    if (item == null) return;
     final newValue = !_favorite;
+    final previous = _favorite;
     setState(() => _favorite = newValue);
     final uid = context.read<AuthProvider>().user!.uid;
-    await context.read<LibraryService>().toggleFavorite(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          type: 'movie',
-          favorite: newValue,
-        );
+    try {
+      await context.read<LibraryService>().toggleFavorite(
+            uid: uid,
+            tmdbId: item.tmdbId,
+            type: 'movie',
+            favorite: newValue,
+          );
+    } catch (_) {
+      if (mounted) setState(() => _favorite = previous);
+      _showSaveError();
+    }
   }
 
   Future<void> _unfollow() async {
     final item = _libraryItem;
     if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
-    await context.read<LibraryService>().removeFromLibrary(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          type: 'movie',
-        );
-    if (mounted) Navigator.of(context).maybePop();
+    try {
+      await context.read<LibraryService>().removeFromLibrary(
+            uid: uid,
+            tmdbId: item.tmdbId,
+            type: 'movie',
+          );
+      if (mounted) Navigator.of(context).maybePop();
+    } catch (_) {
+      _showSaveError();
+    }
   }
 
   Future<void> _openSimilar(SimilarMedia media) async {
@@ -239,7 +306,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Widget _buildBody(MovieDetails movie) {
-    final tmdb = context.read<TmdbService>();
     final libraryItem = _libraryItem;
 
     return ListView(
@@ -254,7 +320,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _buildWatchedCard(),
         ),
-        WatchProvidersRow(future: tmdb.getMovieWatchProviders(widget.tmdbId)),
+        WatchProvidersRow(future: _watchProvidersFuture),
         InfoCard(
           yearRange: movie.releaseDate?.year.toString(),
           genres: movie.genres,
@@ -265,10 +331,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ? 'Ajouté à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
               : 'Pas encore suivi',
         ),
-        CastRow(future: tmdb.getMovieCredits(widget.tmdbId)),
+        CastRow(future: _creditsFuture),
         SimilarRow(
           title: 'Vous pourriez aussi aimer',
-          future: tmdb.getSimilarMovies(widget.tmdbId),
+          future: _similarFuture,
           onTap: _openSimilar,
         ),
       ],

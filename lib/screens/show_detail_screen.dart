@@ -68,6 +68,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   late TabController _tabController;
   late final ConfettiController _confettiController = ConfettiController(duration: const Duration(seconds: 3));
 
+  // Fetched once and reused across rebuilds — building these inline inside
+  // _buildAboutTab would re-hit TMDB on every setState in this screen (e.g.
+  // every episode checkbox tap), since TabBarView builds both tabs eagerly.
+  late final Future<List<WatchProvider>> _watchProvidersFuture;
+  late final Future<List<CastMember>> _creditsFuture;
+  late final Future<List<SimilarMedia>> _similarFuture;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +83,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     _rewatchCounts = Map.of(widget.libraryItem?.episodeRewatchCounts ?? {});
     _favorite = widget.libraryItem?.favorite ?? false;
     _tabController = TabController(length: 2, vsync: this);
+    final tmdb = context.read<TmdbService>();
+    _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
+    _creditsFuture = tmdb.getTvCredits(widget.tmdbId);
+    _similarFuture = tmdb.getSimilarTv(widget.tmdbId);
     _load();
   }
 
@@ -86,42 +97,65 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     super.dispose();
   }
 
-  Future<LibraryItem> _ensureFollowed() async {
+  void _showSaveError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Échec de la sauvegarde. Réessaie.')),
+    );
+  }
+
+  Future<LibraryItem?> _ensureFollowed() async {
     final current = _libraryItem;
     if (current != null) return current;
     final uid = context.read<AuthProvider>().user!.uid;
-    final item = await context.read<LibraryService>().addToLibrary(
-          uid: uid,
-          tmdbId: widget.tmdbId,
-          type: 'tv',
-        );
-    if (mounted) setState(() => _libraryItem = item);
-    return item;
+    try {
+      final item = await context.read<LibraryService>().addToLibrary(
+            uid: uid,
+            tmdbId: widget.tmdbId,
+            type: 'tv',
+          );
+      if (mounted) setState(() => _libraryItem = item);
+      return item;
+    } catch (_) {
+      _showSaveError();
+      return null;
+    }
   }
 
   Future<void> _toggleFavorite() async {
     final item = await _ensureFollowed();
+    if (item == null) return;
     final newValue = !_favorite;
+    final previous = _favorite;
     setState(() => _favorite = newValue);
     final uid = context.read<AuthProvider>().user!.uid;
-    await context.read<LibraryService>().toggleFavorite(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          type: 'tv',
-          favorite: newValue,
-        );
+    try {
+      await context.read<LibraryService>().toggleFavorite(
+            uid: uid,
+            tmdbId: item.tmdbId,
+            type: 'tv',
+            favorite: newValue,
+          );
+    } catch (_) {
+      if (mounted) setState(() => _favorite = previous);
+      _showSaveError();
+    }
   }
 
   Future<void> _unfollow() async {
     final item = _libraryItem;
     if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
-    await context.read<LibraryService>().removeFromLibrary(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          type: 'tv',
-        );
-    if (mounted) Navigator.of(context).maybePop();
+    try {
+      await context.read<LibraryService>().removeFromLibrary(
+            uid: uid,
+            tmdbId: item.tmdbId,
+            type: 'tv',
+          );
+      if (mounted) Navigator.of(context).maybePop();
+    } catch (_) {
+      _showSaveError();
+    }
   }
 
   Future<void> _load() async {
@@ -224,6 +258,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 
   Future<void> _toggleEpisode(EpisodeRef ep) async {
     final item = await _ensureFollowed();
+    if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     final library = context.read<LibraryService>();
     final wasWatched = _watchedEpisodes[ep.key] ?? false;
@@ -232,18 +267,29 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
-        await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: [ep.key]);
-        if (mounted) setState(() => _rewatchCounts[ep.key] = (_rewatchCounts[ep.key] ?? 0) + 1);
+        final previousCount = _rewatchCounts[ep.key] ?? 0;
+        setState(() => _rewatchCounts[ep.key] = previousCount + 1);
+        try {
+          await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: [ep.key]);
+        } catch (_) {
+          if (mounted) setState(() => _rewatchCounts[ep.key] = previousCount);
+          _showSaveError();
+        }
         return;
       }
       setState(() => _watchedEpisodes[ep.key] = false);
-      await library.markEpisodeWatched(
-        uid: uid,
-        tmdbId: item.tmdbId,
-        season: ep.seasonNumber,
-        episode: ep.episodeNumber,
-        watched: false,
-      );
+      try {
+        await library.markEpisodeWatched(
+          uid: uid,
+          tmdbId: item.tmdbId,
+          season: ep.seasonNumber,
+          episode: ep.episodeNumber,
+          watched: false,
+        );
+      } catch (_) {
+        if (mounted) setState(() => _watchedEpisodes[ep.key] = true);
+        _showSaveError();
+      }
       return;
     }
 
@@ -257,8 +303,12 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           final choice = await _askMarkPreviousEpisodes();
           if (!mounted) return;
           if (choice == _GapPromptChoice.never) {
-            await library.setSkipGapPrompt(uid: uid, tmdbId: item.tmdbId, skip: true);
-            if (mounted) setState(() => _libraryItem = item.copyWith(skipGapPrompt: true));
+            try {
+              await library.setSkipGapPrompt(uid: uid, tmdbId: item.tmdbId, skip: true);
+              if (mounted) setState(() => _libraryItem = item.copyWith(skipGapPrompt: true));
+            } catch (_) {
+              _showSaveError();
+            }
           } else if (choice == _GapPromptChoice.yes) {
             setState(() {
               for (final e in earlierUnwatched) {
@@ -266,14 +316,26 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               }
               _watchedEpisodes[ep.key] = true;
             });
-            await library.markSeasonWatched(
-              uid: uid,
-              tmdbId: item.tmdbId,
-              season: ep.seasonNumber,
-              episodeNumbers: [...earlierUnwatched.map((e) => e.episodeNumber), ep.episodeNumber],
-              watched: true,
-            );
-            _maybeCelebrate();
+            try {
+              await library.markSeasonWatched(
+                uid: uid,
+                tmdbId: item.tmdbId,
+                season: ep.seasonNumber,
+                episodeNumbers: [...earlierUnwatched.map((e) => e.episodeNumber), ep.episodeNumber],
+                watched: true,
+              );
+              if (mounted) _maybeCelebrate();
+            } catch (_) {
+              if (mounted) {
+                setState(() {
+                  for (final e in earlierUnwatched) {
+                    _watchedEpisodes[e.key] = false;
+                  }
+                  _watchedEpisodes[ep.key] = false;
+                });
+              }
+              _showSaveError();
+            }
             return;
           }
         }
@@ -281,14 +343,19 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     }
 
     setState(() => _watchedEpisodes[ep.key] = true);
-    await library.markEpisodeWatched(
-      uid: uid,
-      tmdbId: item.tmdbId,
-      season: ep.seasonNumber,
-      episode: ep.episodeNumber,
-      watched: true,
-    );
-    _maybeCelebrate();
+    try {
+      await library.markEpisodeWatched(
+        uid: uid,
+        tmdbId: item.tmdbId,
+        season: ep.seasonNumber,
+        episode: ep.episodeNumber,
+        watched: true,
+      );
+      if (mounted) _maybeCelebrate();
+    } catch (_) {
+      if (mounted) setState(() => _watchedEpisodes[ep.key] = false);
+      _showSaveError();
+    }
   }
 
   Future<_GapPromptChoice?> _askMarkPreviousEpisodes() {
@@ -338,6 +405,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     final season = _seasonsByNumber[seasonNumber];
     if (season == null || season.episodes.isEmpty) return;
     final item = await _ensureFollowed();
+    if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     final library = context.read<LibraryService>();
     final keys = season.episodes.map((e) => e.key).toList();
@@ -348,13 +416,23 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
-        await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
-        if (mounted) {
-          setState(() {
-            for (final k in keys) {
-              _rewatchCounts[k] = (_rewatchCounts[k] ?? 0) + 1;
-            }
-          });
+        final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
+        setState(() {
+          for (final k in keys) {
+            _rewatchCounts[k] = previousCounts[k]! + 1;
+          }
+        });
+        try {
+          await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              for (final k in keys) {
+                _rewatchCounts[k] = previousCounts[k]!;
+              }
+            });
+          }
+          _showSaveError();
         }
         return;
       }
@@ -363,13 +441,24 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           _watchedEpisodes[k] = false;
         }
       });
-      await library.markSeasonWatched(
-        uid: uid,
-        tmdbId: item.tmdbId,
-        season: seasonNumber,
-        episodeNumbers: episodeNumbers,
-        watched: false,
-      );
+      try {
+        await library.markSeasonWatched(
+          uid: uid,
+          tmdbId: item.tmdbId,
+          season: seasonNumber,
+          episodeNumbers: episodeNumbers,
+          watched: false,
+        );
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            for (final k in keys) {
+              _watchedEpisodes[k] = true;
+            }
+          });
+        }
+        _showSaveError();
+      }
       return;
     }
 
@@ -378,20 +467,32 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         _watchedEpisodes[k] = true;
       }
     });
-    await library.markSeasonWatched(
-      uid: uid,
-      tmdbId: item.tmdbId,
-      season: seasonNumber,
-      episodeNumbers: episodeNumbers,
-      watched: true,
-    );
-    _maybeCelebrate();
+    try {
+      await library.markSeasonWatched(
+        uid: uid,
+        tmdbId: item.tmdbId,
+        season: seasonNumber,
+        episodeNumbers: episodeNumbers,
+        watched: true,
+      );
+      if (mounted) _maybeCelebrate();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          for (final k in keys) {
+            _watchedEpisodes[k] = false;
+          }
+        });
+      }
+      _showSaveError();
+    }
   }
 
   Future<void> _toggleAll() async {
     final keys = _mainEpisodesInOrder.map((e) => e.key).toList();
     if (keys.isEmpty) return;
     final item = await _ensureFollowed();
+    if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     final library = context.read<LibraryService>();
 
@@ -399,13 +500,23 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
-        await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
-        if (mounted) {
-          setState(() {
-            for (final k in keys) {
-              _rewatchCounts[k] = (_rewatchCounts[k] ?? 0) + 1;
-            }
-          });
+        final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
+        setState(() {
+          for (final k in keys) {
+            _rewatchCounts[k] = previousCounts[k]! + 1;
+          }
+        });
+        try {
+          await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              for (final k in keys) {
+                _rewatchCounts[k] = previousCounts[k]!;
+              }
+            });
+          }
+          _showSaveError();
         }
         return;
       }
@@ -414,7 +525,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           _watchedEpisodes[k] = false;
         }
       });
-      await library.setEpisodesWatched(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys, watched: false);
+      try {
+        await library.setEpisodesWatched(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys, watched: false);
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            for (final k in keys) {
+              _watchedEpisodes[k] = true;
+            }
+          });
+        }
+        _showSaveError();
+      }
       return;
     }
 
@@ -423,8 +545,19 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         _watchedEpisodes[k] = true;
       }
     });
-    await library.setEpisodesWatched(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys, watched: true);
-    _maybeCelebrate();
+    try {
+      await library.setEpisodesWatched(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys, watched: true);
+      if (mounted) _maybeCelebrate();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          for (final k in keys) {
+            _watchedEpisodes[k] = false;
+          }
+        });
+      }
+      _showSaveError();
+    }
   }
 
   Future<void> _openSimilar(SimilarMedia media) async {
@@ -451,7 +584,6 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
 
   Widget _buildAboutTab(TvDetails details) {
-    final tmdb = context.read<TmdbService>();
     final String? yearRange;
     if (details.firstAirYear == null) {
       yearRange = null;
@@ -468,7 +600,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        WatchProvidersRow(future: tmdb.getTvWatchProviders(widget.tmdbId)),
+        WatchProvidersRow(future: _watchProvidersFuture),
         InfoCard(
           yearRange: yearRange,
           genres: details.genres,
@@ -479,10 +611,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               ? 'Ajoutée à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
               : 'Pas encore suivie',
         ),
-        CastRow(future: tmdb.getTvCredits(widget.tmdbId)),
+        CastRow(future: _creditsFuture),
         SimilarRow(
           title: 'Vous pourriez aussi aimer',
-          future: tmdb.getSimilarTv(widget.tmdbId),
+          future: _similarFuture,
           onTap: _openSimilar,
         ),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
@@ -82,6 +83,65 @@ class _WatchTime {
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return _ProfileBody(
+      items: context.watch<LibraryProvider>().items,
+      tmdb: context.read<TmdbService>(),
+      user: context.watch<AuthProvider>().user,
+      lists: context.watch<ListsProvider>().lists,
+    );
+  }
+}
+
+class _ProfileBody extends StatefulWidget {
+  final List<LibraryItem> items;
+  final TmdbService tmdb;
+  final User? user;
+  final List<WatchList> lists;
+
+  const _ProfileBody({required this.items, required this.tmdb, required this.user, required this.lists});
+
+  @override
+  State<_ProfileBody> createState() => _ProfileBodyState();
+}
+
+class _ProfileBodyState extends State<_ProfileBody> {
+  late Future<List<_ResolvedItem?>> _resolvedFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolvedFuture = _resolveAll();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProfileBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only the library contents changing should trigger a refetch — the
+    // pull-to-refresh setState below must not recreate this future or the
+    // page will flicker back to a loading state on every rebuild.
+    _resolvedFuture = _resolveAll();
+  }
+
+  Future<List<_ResolvedItem?>> _resolveAll() {
+    return Future.wait(widget.items.map((i) async {
+      try {
+        return await _resolveItem(widget.tmdb, i);
+      } catch (_) {
+        // A single title failing to load (TMDB hiccup) shouldn't block the
+        // rest of the profile from rendering.
+        return null;
+      }
+    }));
+  }
+
+  Future<void> _refresh() async {
+    final future = _resolveAll();
+    setState(() => _resolvedFuture = future);
+    await future;
+  }
+
   Future<void> _createList(BuildContext context) async {
     final controller = TextEditingController();
     final name = await showDialog<String>(
@@ -133,21 +193,11 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = context.watch<LibraryProvider>().items;
-    final tmdb = context.read<TmdbService>();
-    final user = context.watch<AuthProvider>().user;
-    final lists = context.watch<ListsProvider>().lists;
+    final user = widget.user;
+    final lists = widget.lists;
 
     return FutureBuilder<List<_ResolvedItem?>>(
-      future: Future.wait(items.map((i) async {
-        try {
-          return await _resolveItem(tmdb, i);
-        } catch (_) {
-          // A single title failing to load (TMDB hiccup) shouldn't block the
-          // rest of the profile from rendering.
-          return null;
-        }
-      })),
+      future: _resolvedFuture,
       builder: (context, snapshot) {
         final resolved = snapshot.data?.whereType<_ResolvedItem>().toList();
         if (resolved == null) {
@@ -174,89 +224,93 @@ class ProfileScreen extends StatelessWidget {
         final displayName = user?.displayName ?? user?.email?.split('@').first ?? 'Utilisateur';
 
         return Scaffold(
-          body: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              _ProfileHeader(
-                backdropPath: bannerBackdrop,
-                photoUrl: user?.photoURL,
-                displayName: displayName,
-                onEdit: () => _editDisplayName(context, displayName),
-                onSignOut: () => context.read<AuthProvider>().signOut(),
-                onImport: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const ImportTvTimeScreen(),
-                )),
-              ),
-              const SizedBox(height: 8),
-              _StatsRow(
-                seriesCount: series.where((r) => r.isWatched).length,
-                filmsCount: films.where((r) => r.isWatched).length,
-                episodesWatched: episodesWatched,
-              ),
-              const Divider(height: 33, indent: 16, endIndent: 16),
-              GestureDetector(
-                onTap: () =>
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FriendsScreen())),
-                child: const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          body: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                _ProfileHeader(
+                  backdropPath: bannerBackdrop,
+                  photoUrl: user?.photoURL,
+                  displayName: displayName,
+                  onEdit: () => _editDisplayName(context, displayName),
+                  onSignOut: () => context.read<AuthProvider>().signOut(),
+                  onImport: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const ImportTvTimeScreen(),
+                  )),
+                ),
+                const SizedBox(height: 8),
+                _StatsRow(
+                  seriesCount: series.where((r) => r.isWatched).length,
+                  filmsCount: films.where((r) => r.isWatched).length,
+                  episodesWatched: episodesWatched,
+                ),
+                const Divider(height: 33, indent: 16, endIndent: 16),
+                GestureDetector(
+                  onTap: () =>
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FriendsScreen())),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Amis', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                        Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                      ],
+                    ),
+                  ),
+                ),
+                const Divider(height: 33, indent: 16, endIndent: 16),
+                const _SectionHeader(title: 'Statistiques'),
+                SizedBox(
+                  height: 120,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
-                      Text('Amis', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                      Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                      _StatCard(icon: Icons.tv, label: 'Temps passé devant des séries', minutes: seriesMinutes),
+                      _StatCard(icon: Icons.movie, label: 'Temps passé devant des films', minutes: filmsMinutes),
                     ],
                   ),
                 ),
-              ),
-              const Divider(height: 33, indent: 16, endIndent: 16),
-              const _SectionHeader(title: 'Statistiques'),
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _StatCard(icon: Icons.tv, label: 'Temps passé devant des séries', minutes: seriesMinutes),
-                    _StatCard(icon: Icons.movie, label: 'Temps passé devant des films', minutes: filmsMinutes),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 33, indent: 16, endIndent: 16),
-              const _SectionHeader(title: 'Listes'),
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _CreateListCard(onTap: () => _createList(context)),
-                    ...lists.map((l) => _ListCard(
-                          list: l,
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => ListDetailScreen(listId: l.id),
+                const SizedBox(height: 12),
+                const Divider(height: 33, indent: 16, endIndent: 16),
+                const _SectionHeader(title: 'Listes'),
+                SizedBox(
+                  height: 120,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                      _CreateListCard(onTap: () => _createList(context)),
+                      ...lists.map((l) => _ListCard(
+                            list: l,
+                            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => ListDetailScreen(listId: l.id),
+                            )),
                           )),
-                        )),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 33, indent: 16, endIndent: 16),
-              _CarouselSection(title: 'Séries', items: series),
-              _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true),
-              _CarouselSection(title: 'Films', items: films),
-              _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  TmdbConfig.attribution,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 12),
+                const Divider(height: 33, indent: 16, endIndent: 16),
+                _CarouselSection(title: 'Séries', items: series),
+                _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true),
+                _CarouselSection(title: 'Films', items: films),
+                _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    TmdbConfig.attribution,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         );
       },
