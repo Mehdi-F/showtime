@@ -260,6 +260,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 ),
                 const Divider(height: 33, indent: 16, endIndent: 16),
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () =>
                       Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FriendsScreen())),
                   child: const Padding(
@@ -679,6 +680,7 @@ class _CarouselSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => _FullListScreen(title: title, items: items, readOnly: readOnly),
           )),
