@@ -14,6 +14,7 @@ import '../widgets/add_to_list_sheet.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
+import '../widgets/skeletons.dart';
 import 'show_detail_screen.dart';
 
 enum _RewatchChoice { notWatched, rewatch }
@@ -372,7 +373,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           );
         }
         if (!snapshot.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(body: DetailScreenSkeleton());
         }
         final movie = snapshot.data!;
         return Scaffold(

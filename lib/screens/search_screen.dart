@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/media_list_tile.dart';
+import '../widgets/skeletons.dart';
 import 'discover_grid_screen.dart';
 import 'movie_detail_screen.dart';
 import 'show_detail_screen.dart';
@@ -147,7 +148,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSearchResults(String uid) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const MediaListSkeleton();
     }
     if (_error != null) {
       return Center(child: Text(_error!, style: const TextStyle(color: AppColors.textSecondary)));

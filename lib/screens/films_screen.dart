@@ -14,6 +14,7 @@ import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/skeletons.dart';
 import '../widgets/view_mode_toggle.dart';
 import 'movie_detail_screen.dart';
 
@@ -190,7 +191,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       future: _rowsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const ScrollableCenter(child: CircularProgressIndicator());
+          return const PosterGridSkeleton(childAspectRatio: 0.67);
         }
         final rows = snapshot.data!.where((r) => !r.item.watched).toList()
           ..sort((a, b) {

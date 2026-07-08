@@ -18,6 +18,7 @@ import '../widgets/app_page_route.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/episode_detail_sheet.dart';
 import '../widgets/round_check.dart';
+import '../widgets/skeletons.dart';
 import 'movie_detail_screen.dart';
 
 enum _GapPromptChoice { yes, no, never }
@@ -791,7 +792,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         if (expanded && seasonDetails != null)
           ...seasonDetails.episodes.map(_buildEpisodeRow)
         else if (expanded)
-          const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
+          const EpisodeRowsSkeleton(),
         const SizedBox(height: 8),
       ],
     );
@@ -902,7 +903,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           ),
         );
       }
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: DetailScreenSkeleton());
     }
 
     return Scaffold(

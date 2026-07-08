@@ -17,6 +17,7 @@ import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/library_filter_sheet.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/skeletons.dart';
 import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
@@ -213,7 +214,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
       builder: (context, snapshot) {
         final resolved = snapshot.data?.whereType<_ResolvedItem>().toList();
         if (resolved == null) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(body: ProfileSkeleton());
         }
 
         final series = resolved.where((r) => r.item.type == 'tv').toList()
@@ -1218,7 +1219,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
             );
           }
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const ProfileSkeleton();
           }
           final libraryItems = snapshot.data!;
 
@@ -1245,7 +1246,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               }
               final resolved = resolvedSnapshot.data?.whereType<_ResolvedItem>().toList();
               if (resolved == null) {
-                return const Center(child: CircularProgressIndicator());
+                return const ProfileSkeleton();
               }
 
               final series = resolved.where((r) => r.item.type == 'tv').toList();

@@ -10,6 +10,7 @@ import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/tvtime_import_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/skeletons.dart';
 
 enum _Stage { pickFile, matching, review, importing, done }
 
@@ -419,7 +420,7 @@ class _ChangeMatchDialogState extends State<_ChangeMatchDialog> {
               const SizedBox(height: 8),
               Expanded(
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const MediaListSkeleton(itemCount: 4)
                     : ListView.builder(
                         itemCount: _results?.length ?? 0,
                         itemBuilder: (context, index) {

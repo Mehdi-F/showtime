@@ -12,6 +12,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/skeletons.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
 
@@ -85,7 +86,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
 
     if (maybeList == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: PosterGridSkeleton(childAspectRatio: 0.6));
     }
     final list = maybeList;
 

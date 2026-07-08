@@ -15,6 +15,7 @@ import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/skeletons.dart';
 import '../widgets/view_mode_toggle.dart';
 import 'show_detail_screen.dart';
 
@@ -368,7 +369,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       future: _dataFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const ScrollableCenter(child: CircularProgressIndicator());
+          return const PosterGridSkeleton(childAspectRatio: 0.67);
         }
         final data = snapshot.data!;
         final now = DateTime.now();
@@ -613,7 +614,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
       future: _rowsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const ScrollableCenter(child: CircularProgressIndicator());
+          return const PosterGridSkeleton(childAspectRatio: 0.67);
         }
         final rows = snapshot.data!.whereType<_CalendarRow>().toList()
           ..sort((a, b) {

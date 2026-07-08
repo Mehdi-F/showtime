@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/skeletons.dart';
 
 /// Full paginated browse grid over TMDB's general catalog for a media type,
 /// sorted by popularity. Reached from the Explorer "Parcourir tout" buttons.
@@ -99,10 +100,10 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: _items.isEmpty
-            ? ScrollableCenter(
-                child: _loading
-                    ? const CircularProgressIndicator()
-                    : _error
+            ? (_loading
+                ? const PosterGridSkeleton(childAspectRatio: 0.67)
+                : ScrollableCenter(
+                    child: _error
                         ? Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -113,7 +114,7 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
                             ],
                           )
                         : const Text('Aucun résultat.'),
-              )
+                  ))
             : GridView.builder(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
