@@ -170,7 +170,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
 
     final all = Future.wait(futures);
     if (isInitial) {
-      all.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+      all.timeout(const Duration(milliseconds: 600), onTimeout: () => <void>[]).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
@@ -1258,7 +1258,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
     final all = Future.wait(futures);
     if (isInitial) {
-      all.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+      all.timeout(const Duration(milliseconds: 600), onTimeout: () => <void>[]).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
