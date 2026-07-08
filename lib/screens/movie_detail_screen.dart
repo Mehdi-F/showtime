@@ -11,6 +11,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/round_check.dart';
 import 'show_detail_screen.dart';
@@ -262,12 +263,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     if (!mounted) return;
     if (matches.isNotEmpty) {
       final item = matches.first;
-      Navigator.of(context).push(MaterialPageRoute(
+      Navigator.of(context).push(appRoute(
         builder: (_) =>
             media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
       ));
     } else {
-      Navigator.of(context).push(MaterialPageRoute(
+      Navigator.of(context).push(appRoute(
         builder: (_) => media.type == 'tv'
             ? ShowDetailScreen.preview(tmdbId: media.id)
             : MovieDetailScreen.preview(tmdbId: media.id),
@@ -469,9 +470,14 @@ class _MovieBanner extends StatelessWidget {
                     children: [
                       if (followed)
                         IconButton(
-                          icon: Icon(
-                            favorite ? Icons.favorite : Icons.favorite_border,
-                            color: favorite ? Colors.redAccent : Colors.white,
+                          icon: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                            child: Icon(
+                              favorite ? Icons.favorite : Icons.favorite_border,
+                              key: ValueKey(favorite),
+                              color: favorite ? Colors.redAccent : Colors.white,
+                            ),
                           ),
                           onPressed: onToggleFavorite,
                         ),

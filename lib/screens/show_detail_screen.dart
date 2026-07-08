@@ -13,6 +13,8 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
+import '../widgets/animated_progress_bar.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/episode_detail_sheet.dart';
 import '../widgets/round_check.dart';
@@ -579,12 +581,12 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     if (!mounted) return;
     if (matches.isNotEmpty) {
       final item = matches.first;
-      Navigator.of(context).push(MaterialPageRoute(
+      Navigator.of(context).push(appRoute(
         builder: (_) =>
             media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
       ));
     } else {
-      Navigator.of(context).push(MaterialPageRoute(
+      Navigator.of(context).push(appRoute(
         builder: (_) => media.type == 'tv'
             ? ShowDetailScreen.preview(tmdbId: media.id)
             : MovieDetailScreen.preview(tmdbId: media.id),
@@ -779,11 +781,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
+            child: AnimatedProgressBar(
               value: ratio,
-              minHeight: 4,
+              color: barColor,
               backgroundColor: AppColors.surfaceVariant,
-              valueColor: AlwaysStoppedAnimation(barColor),
             ),
           ),
         ),
@@ -1026,9 +1027,14 @@ class _ShowBanner extends StatelessWidget {
                     children: [
                       if (followed)
                         IconButton(
-                          icon: Icon(
-                            favorite ? Icons.favorite : Icons.favorite_border,
-                            color: favorite ? Colors.redAccent : Colors.white,
+                          icon: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                            child: Icon(
+                              favorite ? Icons.favorite : Icons.favorite_border,
+                              key: ValueKey(favorite),
+                              color: favorite ? Colors.redAccent : Colors.white,
+                            ),
                           ),
                           onPressed: onToggleFavorite,
                         ),
@@ -1084,16 +1090,10 @@ class _ShowBanner extends StatelessWidget {
               left: 0,
               right: 0,
               bottom: 0,
-              child: Container(
-                height: 4,
-                color: Colors.black45,
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: progress!.clamp(0.0, 1.0),
-                  child: Container(
-                    color: progress! >= 1.0 ? (isEnded ? Colors.purple : Colors.green) : AppColors.accent,
-                  ),
-                ),
+              child: AnimatedProgressBar(
+                value: progress!,
+                color: progress! >= 1.0 ? (isEnded ? Colors.purple : Colors.green) : AppColors.accent,
+                backgroundColor: Colors.black45,
               ),
             ),
         ],

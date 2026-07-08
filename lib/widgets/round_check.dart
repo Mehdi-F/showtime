@@ -11,7 +11,9 @@ class RoundCheck extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
         width: 32,
         height: 32,
         decoration: BoxDecoration(
@@ -22,7 +24,14 @@ class RoundCheck extends StatelessWidget {
             width: 2,
           ),
         ),
-        child: checked ? const Icon(Icons.check, color: Colors.black, size: 18) : null,
+        child: Center(
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.elasticOut,
+            scale: checked ? 1 : 0,
+            child: const Icon(Icons.check, color: Colors.black, size: 18),
+          ),
+        ),
       ),
     );
   }

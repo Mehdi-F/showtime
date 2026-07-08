@@ -12,6 +12,8 @@ import '../services/library_service.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/animated_progress_bar.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/library_filter_sheet.dart';
 import '../widgets/scrollable_center.dart';
 import 'friends_screen.dart';
@@ -249,7 +251,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   displayName: displayName,
                   onEdit: () => _editDisplayName(context, displayName),
                   onSignOut: () => context.read<AuthProvider>().signOut(),
-                  onImport: () => Navigator.of(context).push(MaterialPageRoute(
+                  onImport: () => Navigator.of(context).push(appRoute(
                     builder: (_) => const ImportTvTimeScreen(),
                   )),
                 ),
@@ -263,7 +265,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () =>
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FriendsScreen())),
+                      Navigator.of(context).push(appRoute(builder: (_) => const FriendsScreen())),
                   child: const Padding(
                     padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
                     child: Row(
@@ -300,7 +302,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                       _CreateListCard(onTap: () => _createList(context)),
                       ...lists.map((l) => _ListCard(
                             list: l,
-                            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            onTap: () => Navigator.of(context).push(appRoute(
                               builder: (_) => ListDetailScreen(listId: l.id),
                             )),
                           )),
@@ -682,7 +684,7 @@ class _CarouselSection extends StatelessWidget {
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          onTap: () => Navigator.of(context).push(appRoute(
             builder: (_) => _FullListScreen(title: title, items: items, readOnly: readOnly),
           )),
           child: Padding(
@@ -719,7 +721,7 @@ class _CarouselSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(
+                    Navigator.of(context).push(appRoute(
                       builder: (_) => readOnly
                           ? (resolved.item.type == 'tv'
                               ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
@@ -925,7 +927,7 @@ class _FullListScreenState extends State<_FullListScreen> {
   Widget _buildTile(_ResolvedItem resolved) {
     final ratio = _progressRatio(resolved);
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+      onTap: () => Navigator.of(context).push(appRoute(
         builder: (_) => widget.readOnly
             ? (resolved.item.type == 'tv'
                 ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
@@ -954,14 +956,11 @@ class _FullListScreenState extends State<_FullListScreen> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: Container(
+              child: AnimatedProgressBar(
+                value: ratio,
+                color: _progressColor(resolved, ratio),
+                backgroundColor: Colors.black45,
                 height: 6,
-                color: Colors.black45,
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: ratio,
-                  child: Container(color: _progressColor(resolved, ratio)),
-                ),
               ),
             ),
           if (resolved.item.type == 'movie')

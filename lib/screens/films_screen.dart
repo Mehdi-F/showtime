@@ -10,6 +10,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/view_mode_toggle.dart';
@@ -236,7 +237,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         final row = visible[index];
         return GestureDetector(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
+            Navigator.of(context).push(appRoute(
               builder: (_) => MovieDetailScreen(libraryItem: row.item),
             ));
           },
@@ -268,7 +269,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         ];
         return InkWell(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
+            Navigator.of(context).push(appRoute(
               builder: (_) => MovieDetailScreen(libraryItem: row.item),
             ));
           },

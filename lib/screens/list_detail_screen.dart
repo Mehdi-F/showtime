@@ -10,6 +10,7 @@ import '../providers/lists_provider.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/scrollable_center.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
@@ -145,7 +146,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                     return GestureDetector(
                       onTap: libraryItem == null
                           ? null
-                          : () => Navigator.of(context).push(MaterialPageRoute(
+                          : () => Navigator.of(context).push(appRoute(
                                 builder: (_) => ref.type == 'tv'
                                     ? ShowDetailScreen(libraryItem: libraryItem)
                                     : MovieDetailScreen(libraryItem: libraryItem),

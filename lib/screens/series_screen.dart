@@ -11,6 +11,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/view_mode_toggle.dart';
@@ -446,7 +447,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               progress: info?.ratio,
               barColor: info?.color,
               onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+                  .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
             );
           },
         ),
@@ -479,7 +480,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             dimmed: true,
             onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, false),
             onTapShow: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+                .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
           ),
         );
       }),
@@ -514,7 +515,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       badgeLabels: showMostRecentBadge ? const ['PLUS RÉCENT'] : const [],
       onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, true),
       onTapShow: () =>
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+          Navigator.of(context).push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
     );
   }
 }
@@ -659,7 +660,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
                 onToggleWatched: () => _toggleEpisode(
                     context, row.item, row.episode.seasonNumber, row.episode.episodeNumber, !watched),
                 onTapShow: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
+                    .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
               ));
             }
           } else {
@@ -681,7 +682,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
                   posterPath: row.posterPath,
                   daysUntil: date != null ? _daysUntil(date) : null,
                   onTap: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
+                      .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
                 );
               },
             ));

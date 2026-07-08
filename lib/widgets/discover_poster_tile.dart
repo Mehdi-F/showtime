@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../theme/app_theme.dart';
+import 'app_page_route.dart';
 import '../screens/show_detail_screen.dart';
 import '../screens/movie_detail_screen.dart';
 
@@ -53,12 +54,12 @@ class DiscoverPosterTile extends StatelessWidget {
     void openDetail() {
       if (existing != null) {
         final item = existing;
-        Navigator.of(context).push(MaterialPageRoute(
+        Navigator.of(context).push(appRoute(
           builder: (_) =>
               media.type == 'tv' ? ShowDetailScreen(libraryItem: item) : MovieDetailScreen(libraryItem: item),
         ));
       } else {
-        Navigator.of(context).push(MaterialPageRoute(
+        Navigator.of(context).push(appRoute(
           builder: (_) => media.type == 'tv'
               ? ShowDetailScreen.preview(tmdbId: media.id)
               : MovieDetailScreen.preview(tmdbId: media.id),

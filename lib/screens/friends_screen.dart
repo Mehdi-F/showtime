@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/link_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/scrollable_center.dart';
 import 'profile_screen.dart';
 
@@ -140,7 +141,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               OutlinedButton(
-                                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                                onPressed: () => Navigator.of(context).push(appRoute(
                                   builder: (_) => FriendProfileScreen(
                                     friendUid: friendUid,
                                     displayName: name,

@@ -8,6 +8,7 @@ import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
 import '../services/library_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/media_list_tile.dart';
 import 'discover_grid_screen.dart';
@@ -164,7 +165,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
         void openDetail() {
           final item = existing;
-          Navigator.of(context).push(MaterialPageRoute(
+          Navigator.of(context).push(appRoute(
             builder: (_) {
               if (result.mediaType == 'tv') {
                 return item != null ? ShowDetailScreen(libraryItem: item) : ShowDetailScreen.preview(tmdbId: result.id);
@@ -294,7 +295,7 @@ class _BrowseAllButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          onTap: () => Navigator.of(context).push(appRoute(
             builder: (_) => DiscoverGridScreen(mediaType: mediaType, title: screenTitle),
           )),
           child: Padding(
