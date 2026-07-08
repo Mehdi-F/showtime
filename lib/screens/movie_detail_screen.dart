@@ -154,46 +154,52 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Future<void> _toggleWatched() async {
+    if (!_watched) {
+      // Not yet followed (e.g. browsing from Explorer/search): awaiting
+      // _ensureFollowed() before any visual change meant the checkbox sat
+      // frozen through a full addToLibrary round-trip. Flip it instantly
+      // and only roll back if adding to the library or saving actually fails.
+      final previousWatched = _watched;
+      setState(() => _watched = true);
+      final item = await _ensureFollowed();
+      if (item == null) {
+        if (mounted) setState(() => _watched = previousWatched);
+        return;
+      }
+      final uid = context.read<AuthProvider>().user!.uid;
+      final library = context.read<LibraryService>();
+      final now = DateTime.now();
+      setState(() => _libraryItem = _withUpdates(item, watched: true, watchedAt: now));
+      try {
+        await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: true);
+      } catch (_) {
+        if (mounted) setState(() => _watched = previousWatched);
+        _showSaveError();
+      }
+      return;
+    }
+
     final item = await _ensureFollowed();
     if (item == null) return;
     final uid = context.read<AuthProvider>().user!.uid;
     final library = context.read<LibraryService>();
 
-    if (_watched) {
-      final choice = await _askRewatchChoice();
-      if (!mounted || choice == null) return;
-      if (choice == _RewatchChoice.rewatch) {
-        final previousCount = _rewatchCount;
-        final previousItem = _libraryItem;
-        final now = DateTime.now();
-        setState(() {
-          _rewatchCount++;
-          _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
-        });
-        try {
-          await library.incrementMovieRewatch(uid: uid, tmdbId: item.tmdbId);
-        } catch (_) {
-          if (mounted) {
-            setState(() {
-              _rewatchCount = previousCount;
-              _libraryItem = previousItem;
-            });
-          }
-          _showSaveError();
-        }
-        return;
-      }
+    final choice = await _askRewatchChoice();
+    if (!mounted || choice == null) return;
+    if (choice == _RewatchChoice.rewatch) {
+      final previousCount = _rewatchCount;
       final previousItem = _libraryItem;
+      final now = DateTime.now();
       setState(() {
-        _watched = false;
-        _libraryItem = _withUpdates(item, watched: false, watchedAt: null);
+        _rewatchCount++;
+        _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
       });
       try {
-        await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: false);
+        await library.incrementMovieRewatch(uid: uid, tmdbId: item.tmdbId);
       } catch (_) {
         if (mounted) {
           setState(() {
-            _watched = true;
+            _rewatchCount = previousCount;
             _libraryItem = previousItem;
           });
         }
@@ -201,19 +207,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       }
       return;
     }
-
-    final now = DateTime.now();
     final previousItem = _libraryItem;
     setState(() {
-      _watched = true;
-      _libraryItem = _withUpdates(item, watched: true, watchedAt: now);
+      _watched = false;
+      _libraryItem = _withUpdates(item, watched: false, watchedAt: null);
     });
     try {
-      await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: true);
+      await library.markMovieWatched(uid: uid, tmdbId: item.tmdbId, watched: false);
     } catch (_) {
       if (mounted) {
         setState(() {
-          _watched = false;
+          _watched = true;
           _libraryItem = previousItem;
         });
       }
