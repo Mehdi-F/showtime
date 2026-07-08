@@ -6,6 +6,7 @@ import '../services/link_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/scrollable_center.dart';
+import '../widgets/skeletons.dart';
 import 'profile_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -124,6 +125,20 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     return FutureBuilder<Map<String, dynamic>?>(
                       future: linkService.getProfile(friendUid),
                       builder: (context, profileSnapshot) {
+                        // While getProfile() is still in flight, show a
+                        // skeleton rather than falling back to the raw uid
+                        // — that fallback is only correct once the future
+                        // has actually resolved (even to a missing profile).
+                        if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                          return const ListTile(
+                            leading: SkeletonBox(
+                              width: 48,
+                              height: 48,
+                              borderRadius: BorderRadius.all(Radius.circular(24)),
+                            ),
+                            title: SkeletonBox(width: 140, height: 14),
+                          );
+                        }
                         final profile = profileSnapshot.data;
                         final name =
                             profile?['displayName'] as String? ?? profile?['email'] as String? ?? friendUid;
