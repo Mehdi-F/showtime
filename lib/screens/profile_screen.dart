@@ -158,9 +158,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
     final keys = items.map(_key).toSet();
     _resolved.removeWhere((k, _) => !keys.contains(k));
 
-    final futures = items.map((item) {
+    final List<Future<void>> futures = items.map((item) {
       final key = _key(item);
-      return _resolveItem(widget.tmdb, item).then((r) {
+      return _resolveItem(widget.tmdb, item).then<void>((r) {
         if (mounted) setState(() => _resolved[key] = r);
       }).catchError((_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
@@ -1246,9 +1246,9 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     final keys = items.map(_key).toSet();
     _resolved.removeWhere((k, _) => !keys.contains(k));
 
-    final futures = items.map((item) {
+    final List<Future<void>> futures = items.map((item) {
       final key = _key(item);
-      return _resolveItem(tmdb, item).then((r) {
+      return _resolveItem(tmdb, item).then<void>((r) {
         if (mounted) setState(() => _resolved[key] = r);
       }).catchError((_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
