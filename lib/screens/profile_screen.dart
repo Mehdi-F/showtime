@@ -1015,27 +1015,34 @@ class _FullListScreenState extends State<_FullListScreen> {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
-        for (final group in groups) ...[
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyPillHeaderDelegate(label: group.key, onTap: _openFilterSheet),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.6,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
+        // Each section's pinned header + grid are grouped so the pin is
+        // released to the next section's header exactly when it arrives —
+        // separate top-level SliverPersistentHeaders never hand off and
+        // just stack forever instead of replacing one another.
+        for (final group in groups)
+          SliverMainAxisGroup(
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _StickyPillHeaderDelegate(label: group.key, onTap: _openFilterSheet),
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildTile(group.value[index]),
-                childCount: group.value.length,
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.6,
+                    crossAxisSpacing: 4,
+                    mainAxisSpacing: 4,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildTile(group.value[index]),
+                    childCount: group.value.length,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
         const SliverToBoxAdapter(child: SizedBox(height: 80)),
       ],
     );
