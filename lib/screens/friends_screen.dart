@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/link_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/scrollable_center.dart';
 import 'profile_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -55,6 +56,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
     return context.read<LinkService>().removeFriend(uid: uid, friendUid: friendUid);
   }
 
+  Future<void> _refresh() async {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = context.read<AuthProvider>().user!.uid;
@@ -96,15 +101,21 @@ class _FriendsScreenState extends State<FriendsScreen> {
               builder: (context, snapshot) {
                 final friendUids = snapshot.data ?? const [];
                 if (friendUids.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Ajoutez un ami par email pour consulter sa bibliothèque.',
-                          textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: const ScrollableCenter(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('Ajoutez un ami par email pour consulter sa bibliothèque.',
+                            textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                      ),
                     ),
                   );
                 }
-                return ListView.separated(
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: friendUids.length,
                   separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
                   itemBuilder: (context, index) {
@@ -149,6 +160,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       },
                     );
                   },
+                  ),
                 );
               },
             ),

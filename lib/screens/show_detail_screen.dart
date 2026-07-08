@@ -71,9 +71,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   // Fetched once and reused across rebuilds — building these inline inside
   // _buildAboutTab would re-hit TMDB on every setState in this screen (e.g.
   // every episode checkbox tap), since TabBarView builds both tabs eagerly.
-  late final Future<List<WatchProvider>> _watchProvidersFuture;
-  late final Future<List<CastMember>> _creditsFuture;
-  late final Future<List<SimilarMedia>> _similarFuture;
+  late Future<List<WatchProvider>> _watchProvidersFuture;
+  late Future<List<CastMember>> _creditsFuture;
+  late Future<List<SimilarMedia>> _similarFuture;
 
   @override
   void initState() {
@@ -187,6 +187,17 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     final defaultSeason =
         next?.seasonNumber ?? (details.seasons.isNotEmpty ? details.seasons.first.seasonNumber : null);
     setState(() => _expandedSeasons = defaultSeason != null ? {defaultSeason} : {});
+  }
+
+  Future<void> _refresh() async {
+    final tmdb = context.read<TmdbService>();
+    tmdb.clearCache();
+    setState(() {
+      _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
+      _creditsFuture = tmdb.getTvCredits(widget.tmdbId);
+      _similarFuture = tmdb.getSimilarTv(widget.tmdbId);
+    });
+    await _load();
   }
 
   List<EpisodeRef> get _mainEpisodesInOrder {
@@ -896,7 +907,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     return Scaffold(
       body: Stack(
         children: [
-          Column(
+          RefreshIndicator(
+            onRefresh: _refresh,
+            child: Column(
             children: [
               _ShowBanner(
                 title: details.name,
@@ -929,6 +942,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 ),
               ),
             ],
+            ),
           ),
           Align(
             alignment: Alignment.topCenter,

@@ -10,13 +10,24 @@ import '../providers/lists_provider.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/scrollable_center.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
 
-class ListDetailScreen extends StatelessWidget {
+class ListDetailScreen extends StatefulWidget {
   final String listId;
 
   const ListDetailScreen({super.key, required this.listId});
+
+  @override
+  State<ListDetailScreen> createState() => _ListDetailScreenState();
+}
+
+class _ListDetailScreenState extends State<ListDetailScreen> {
+  Future<void> _refresh() async {
+    context.read<TmdbService>().clearCache();
+    setState(() {});
+  }
 
   Future<void> _rename(BuildContext context, WatchList list) async {
     final controller = TextEditingController(text: list.name);
@@ -69,7 +80,7 @@ class ListDetailScreen extends StatelessWidget {
     final lists = context.watch<ListsProvider>().lists;
     WatchList? maybeList;
     for (final l in lists) {
-      if (l.id == listId) maybeList = l;
+      if (l.id == widget.listId) maybeList = l;
     }
 
     if (maybeList == null) {
@@ -98,11 +109,14 @@ class ListDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: list.items.isEmpty
-          ? const Center(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: list.items.isEmpty
+          ? const ScrollableCenter(
               child: Text('Cette liste est vide.', style: TextStyle(color: AppColors.textSecondary)),
             )
           : GridView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(12),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
@@ -195,6 +209,7 @@ class ListDetailScreen extends StatelessWidget {
                 );
               },
             ),
+      ),
     );
   }
 }

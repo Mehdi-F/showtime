@@ -48,9 +48,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   // Fetched once and reused across rebuilds — building these inline inside
   // _buildBody would re-hit TMDB on every setState in this screen (e.g. every
   // toggleWatched/toggleFavorite tap).
-  late final Future<List<WatchProvider>> _watchProvidersFuture;
-  late final Future<List<CastMember>> _creditsFuture;
-  late final Future<List<SimilarMedia>> _similarFuture;
+  late Future<List<WatchProvider>> _watchProvidersFuture;
+  late Future<List<CastMember>> _creditsFuture;
+  late Future<List<SimilarMedia>> _similarFuture;
 
   @override
   void initState() {
@@ -73,8 +73,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
-  void _retryLoad() {
-    setState(() => _detailsFuture = context.read<TmdbService>().getMovieDetails(widget.tmdbId));
+  Future<void> _retryLoad() async {
+    final tmdb = context.read<TmdbService>();
+    tmdb.clearCache();
+    final future = tmdb.getMovieDetails(widget.tmdbId);
+    setState(() {
+      _detailsFuture = future;
+      _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId);
+      _creditsFuture = tmdb.getMovieCredits(widget.tmdbId);
+      _similarFuture = tmdb.getSimilarMovies(widget.tmdbId);
+    });
+    await future;
   }
 
   LibraryItem _withUpdates(LibraryItem item, {required bool watched, required DateTime? watchedAt}) =>
@@ -366,25 +375,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         }
         final movie = snapshot.data!;
         return Scaffold(
-          body: Column(
-            children: [
-              _MovieBanner(
-                title: movie.title,
-                posterPath: movie.posterPath,
-                runtimeMinutes: movie.runtime,
-                genres: movie.genres,
-                favorite: _favorite,
-                followed: _libraryItem != null,
-                onToggleFavorite: _toggleFavorite,
-                onUnfollow: _unfollow,
-                onAddToList: () => showAddToListSheet(
-                  context,
-                  tmdbId: widget.tmdbId,
-                  type: 'movie',
+          body: RefreshIndicator(
+            onRefresh: _retryLoad,
+            child: Column(
+              children: [
+                _MovieBanner(
+                  title: movie.title,
+                  posterPath: movie.posterPath,
+                  runtimeMinutes: movie.runtime,
+                  genres: movie.genres,
+                  favorite: _favorite,
+                  followed: _libraryItem != null,
+                  onToggleFavorite: _toggleFavorite,
+                  onUnfollow: _unfollow,
+                  onAddToList: () => showAddToListSheet(
+                    context,
+                    tmdbId: widget.tmdbId,
+                    type: 'movie',
+                  ),
                 ),
-              ),
-              Expanded(child: _buildBody(movie)),
-            ],
+                Expanded(child: _buildBody(movie)),
+              ],
+            ),
           ),
           bottomNavigationBar:
               _libraryItem == null ? AddBar(label: 'AJOUTER LE FILM', onTap: _ensureFollowed) : null,

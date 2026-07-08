@@ -13,6 +13,7 @@ import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/library_filter_sheet.dart';
+import '../widgets/scrollable_center.dart';
 import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
@@ -809,9 +810,24 @@ class _FullListScreen extends StatefulWidget {
 
 class _FullListScreenState extends State<_FullListScreen> {
   late final bool _isSeries = widget.items.first.item.type == 'tv';
+  late List<_ResolvedItem> _items = widget.items;
   LibrarySort _sort = LibrarySort.lastActivity;
   _SeriesProgressFilter _seriesFilter = _SeriesProgressFilter.all;
   _FilmProgressFilter _filmFilter = _FilmProgressFilter.all;
+  bool _grouped = false;
+
+  Future<void> _refresh() async {
+    final tmdb = context.read<TmdbService>();
+    tmdb.clearCache();
+    final refreshed = await Future.wait(_items.map((r) async {
+      try {
+        return await _resolveItem(tmdb, r.item);
+      } catch (_) {
+        return r;
+      }
+    }));
+    if (mounted) setState(() => _items = refreshed);
+  }
 
   // Series get a proportional progress bar; movies are binary (watched or
   // not) so they get a corner check badge instead — a full-width bar reading
@@ -892,7 +908,7 @@ class _FullListScreenState extends State<_FullListScreen> {
   }
 
   List<_ResolvedItem> _applyFilterAndSort() {
-    final filtered = widget.items.where(_matchesFilter).toList();
+    final filtered = _items.where(_matchesFilter).toList();
     filtered.sort((a, b) {
       switch (_sort) {
         case LibrarySort.lastActivity:
@@ -906,100 +922,186 @@ class _FullListScreenState extends State<_FullListScreen> {
     return filtered;
   }
 
+  Widget _buildTile(_ResolvedItem resolved) {
+    final ratio = _progressRatio(resolved);
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => widget.readOnly
+            ? (resolved.item.type == 'tv'
+                ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
+                : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
+            : (resolved.item.type == 'tv'
+                ? ShowDetailScreen(libraryItem: resolved.item)
+                : MovieDetailScreen(libraryItem: resolved.item)),
+      )),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: resolved.posterPath != null
+                ? CachedNetworkImage(
+                    imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    color: AppColors.surfaceVariant,
+                    child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                  ),
+          ),
+          if (ratio != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 6,
+                color: Colors.black45,
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: ratio,
+                  child: Container(color: _progressColor(resolved, ratio)),
+                ),
+              ),
+            ),
+          if (resolved.item.type == 'movie')
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: Icon(
+                  resolved.item.watched ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: resolved.item.watched ? Colors.greenAccent : Colors.white70,
+                  size: 18,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Sticky section pills, shown when the eye toggle is on — mirrors TV
+  // Time's grouped library view. Sections are derived from progress, not
+  // from the active filter, so e.g. filtering to "Favoris" still groups the
+  // favorited titles by where they stand.
+  List<MapEntry<String, List<_ResolvedItem>>> _buildGroups(List<_ResolvedItem> visible) {
+    final groups = <MapEntry<String, List<_ResolvedItem>>>[];
+    if (_isSeries) {
+      const order = [
+        (_SeriesProgressFilter.inProgress, 'EN COURS'),
+        (_SeriesProgressFilter.notStarted, 'PAS COMMENCÉ'),
+        (_SeriesProgressFilter.upToDate, 'À JOUR'),
+        (_SeriesProgressFilter.completed, 'TERMINÉ'),
+        (_SeriesProgressFilter.cancelled, 'ARRÊTÉE'),
+      ];
+      for (final (category, label) in order) {
+        final items = visible.where((r) => _categorizeSeries(r) == category).toList();
+        if (items.isNotEmpty) groups.add(MapEntry(label, items));
+      }
+    } else {
+      final unwatched = visible.where((r) => !r.item.watched).toList();
+      final watched = visible.where((r) => r.item.watched).toList();
+      if (unwatched.isNotEmpty) groups.add(MapEntry('PAS VU', unwatched));
+      if (watched.isNotEmpty) groups.add(MapEntry('VU', watched));
+    }
+    return groups;
+  }
+
+  Widget _buildGroupedGrid(List<_ResolvedItem> visible) {
+    final groups = _buildGroups(visible);
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        for (final group in groups) ...[
+          SliverPersistentHeader(pinned: true, delegate: _StickyPillHeaderDelegate(group.key)),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.6,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildTile(group.value[index]),
+                childCount: group.value.length,
+              ),
+            ),
+          ),
+        ],
+        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final visible = _applyFilterAndSort();
     final filterLabel = _isSeries ? _seriesFilter.label : _filmFilter.label;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => setState(() => _grouped = !_grouped),
+              child: Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _grouped ? AppColors.accent : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.visibility,
+                  size: 20,
+                  color: _grouped ? Colors.black : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           Positioned.fill(
-            child: Column(
-              children: [
-                LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
-                if (visible.isEmpty)
-                  const Expanded(
-                    child: Center(
-                      child: Text('Aucun titre ne correspond à ce filtre.',
-                          style: TextStyle(color: AppColors.textSecondary)),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.all(10),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 0.6,
-                        crossAxisSpacing: 4,
-                        mainAxisSpacing: 4,
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: Column(
+                children: [
+                  LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
+                  if (visible.isEmpty)
+                    const Expanded(
+                      child: ScrollableCenter(
+                        child: Text('Aucun titre ne correspond à ce filtre.',
+                            style: TextStyle(color: AppColors.textSecondary)),
                       ),
-                      itemCount: visible.length,
-                      itemBuilder: (context, index) {
-                        final resolved = visible[index];
-                        final ratio = _progressRatio(resolved);
-                        return GestureDetector(
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => widget.readOnly
-                                ? (resolved.item.type == 'tv'
-                                    ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
-                                    : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
-                                : (resolved.item.type == 'tv'
-                                    ? ShowDetailScreen(libraryItem: resolved.item)
-                                    : MovieDetailScreen(libraryItem: resolved.item)),
-                          )),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: resolved.posterPath != null
-                                    ? CachedNetworkImage(
-                                        imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        color: AppColors.surfaceVariant,
-                                        child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                                      ),
+                    )
+                  else
+                    Expanded(
+                      child: _grouped
+                          ? _buildGroupedGrid(visible)
+                          : GridView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(10),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.6,
+                                crossAxisSpacing: 4,
+                                mainAxisSpacing: 4,
                               ),
-                              if (ratio != null)
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    height: 6,
-                                    color: Colors.black45,
-                                    alignment: Alignment.centerLeft,
-                                    child: FractionallySizedBox(
-                                      widthFactor: ratio,
-                                      child: Container(color: _progressColor(resolved, ratio)),
-                                    ),
-                                  ),
-                                ),
-                              if (resolved.item.type == 'movie')
-                                Positioned(
-                                  top: 6,
-                                  right: 6,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                    child: Icon(
-                                      resolved.item.watched ? Icons.check_circle : Icons.radio_button_unchecked,
-                                      color: resolved.item.watched ? Colors.greenAccent : Colors.white70,
-                                      size: 18,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
+                              itemCount: visible.length,
+                              itemBuilder: (context, index) => _buildTile(visible[index]),
+                            ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           Positioned(
@@ -1014,12 +1116,43 @@ class _FullListScreenState extends State<_FullListScreen> {
   }
 }
 
+class _StickyPillHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final String label;
+
+  const _StickyPillHeaderDelegate(this.label);
+
+  @override
+  double get minExtent => 52;
+
+  @override
+  double get maxExtent => 52;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: AppColors.background,
+      alignment: Alignment.center,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(20)),
+        child: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.5),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyPillHeaderDelegate oldDelegate) => oldDelegate.label != label;
+}
+
 /// Read-only view of a friend's profile, mirroring [ProfileScreen]'s layout
 /// (banner, avatar, stats, carousels) so every profile looks the same —
 /// only the data source (a friend's uid instead of the current user's) and
 /// the lack of edit affordances differ. Poster taps open detail screens in
 /// preview mode since these items belong to someone else's library.
-class FriendProfileScreen extends StatelessWidget {
+class FriendProfileScreen extends StatefulWidget {
   final String friendUid;
   final String displayName;
   final String? photoUrl;
@@ -1032,33 +1165,46 @@ class FriendProfileScreen extends StatelessWidget {
   });
 
   @override
+  State<FriendProfileScreen> createState() => _FriendProfileScreenState();
+}
+
+class _FriendProfileScreenState extends State<FriendProfileScreen> {
+  Future<void> _refresh() async {
+    context.read<TmdbService>().clearCache();
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final library = context.read<LibraryService>();
     final tmdb = context.read<TmdbService>();
 
     return Scaffold(
       body: StreamBuilder<List<LibraryItem>>(
-        stream: library.watchLibrary(friendUid),
+        stream: library.watchLibrary(widget.friendUid),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Impossible d'accéder à ce profil.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                    ),
-                  ],
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ScrollableCenter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Impossible d'accéder à ce profil.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1078,11 +1224,14 @@ class FriendProfileScreen extends StatelessWidget {
             })),
             builder: (context, resolvedSnapshot) {
               if (resolvedSnapshot.hasError) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text("Impossible d'accéder à ce profil.",
-                        textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: const ScrollableCenter(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text("Impossible d'accéder à ce profil.",
+                          textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                    ),
                   ),
                 );
               }
@@ -1103,27 +1252,31 @@ class FriendProfileScreen extends StatelessWidget {
                 bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
               }
 
-              return ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _FriendProfileHeader(
-                    backdropPath: bannerBackdrop,
-                    photoUrl: photoUrl,
-                    displayName: displayName,
-                  ),
-                  const SizedBox(height: 8),
-                  _StatsRow(
-                    seriesCount: series.where((r) => r.isWatched).length,
-                    filmsCount: films.where((r) => r.isWatched).length,
-                    episodesWatched: episodesWatched,
-                  ),
-                  const Divider(height: 33, indent: 16, endIndent: 16),
-                  _CarouselSection(title: 'Séries', items: series, readOnly: true),
-                  _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true, readOnly: true),
-                  _CarouselSection(title: 'Films', items: films, readOnly: true),
-                  _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true, readOnly: true),
-                  const SizedBox(height: 24),
-                ],
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    _FriendProfileHeader(
+                      backdropPath: bannerBackdrop,
+                      photoUrl: widget.photoUrl,
+                      displayName: widget.displayName,
+                    ),
+                    const SizedBox(height: 8),
+                    _StatsRow(
+                      seriesCount: series.where((r) => r.isWatched).length,
+                      filmsCount: films.where((r) => r.isWatched).length,
+                      episodesWatched: episodesWatched,
+                    ),
+                    const Divider(height: 33, indent: 16, endIndent: 16),
+                    _CarouselSection(title: 'Séries', items: series, readOnly: true),
+                    _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true, readOnly: true),
+                    _CarouselSection(title: 'Films', items: films, readOnly: true),
+                    _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true, readOnly: true),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               );
             },
           );
