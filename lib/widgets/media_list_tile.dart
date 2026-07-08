@@ -73,7 +73,7 @@ class MediaListTile extends StatelessWidget {
   Widget _poster() {
     final image = posterPath != null
         ? CachedNetworkImage(
-            imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+            imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
             fit: BoxFit.cover,
           )
         : Container(

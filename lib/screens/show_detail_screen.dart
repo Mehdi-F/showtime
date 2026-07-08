@@ -130,11 +130,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   }
 
   Future<void> _toggleFavorite() async {
-    final item = await _ensureFollowed();
-    if (item == null) return;
+    // Flip instantly, even if not followed yet — same fix as the watched
+    // checkmarks: awaiting _ensureFollowed() first meant favoriting a
+    // preview show waited on a full addToLibrary round-trip before the
+    // heart visually changed at all.
     final newValue = !_favorite;
     final previous = _favorite;
     setState(() => _favorite = newValue);
+    final item = await _ensureFollowed();
+    if (item == null) {
+      if (mounted) setState(() => _favorite = previous);
+      return;
+    }
     final uid = context.read<AuthProvider>().user!.uid;
     try {
       await context.read<LibraryService>().toggleFavorite(
@@ -708,7 +715,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 width: 96,
                 height: 60,
                 child: ep.stillPath != null
-                    ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrl}${ep.stillPath}', fit: BoxFit.cover)
+                    ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlSmall}${ep.stillPath}', fit: BoxFit.cover)
                     : Container(color: AppColors.surface, child: const Icon(Icons.tv, color: AppColors.textSecondary)),
               ),
             ),
@@ -771,7 +778,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           width: 64,
           height: 40,
           child: ep.stillPath != null
-              ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrl}${ep.stillPath}', fit: BoxFit.cover)
+              ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlSmall}${ep.stillPath}', fit: BoxFit.cover)
               : Container(
                   color: AppColors.surfaceVariant,
                   child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 18),
@@ -1055,7 +1062,7 @@ class _ShowBanner extends StatelessWidget {
             tag: heroTag,
             child: posterPath != null
                 ? CachedNetworkImage(
-                    imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                    imageUrl: '${TmdbConfig.imageBaseUrlLarge}$posterPath',
                     fit: BoxFit.cover,
                   )
                 : Container(color: AppColors.surfaceVariant),

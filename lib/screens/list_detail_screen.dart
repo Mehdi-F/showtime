@@ -166,7 +166,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                                     tag: posterHeroTag(ref.type, ref.tmdbId),
                                     child: posterPath != null
                                         ? CachedNetworkImage(
-                                            imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                                            imageUrl: '${TmdbConfig.imageBaseUrlMedium}$posterPath',
                                             fit: BoxFit.cover,
                                           )
                                         : Container(

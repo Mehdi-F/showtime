@@ -783,7 +783,7 @@ class _EpisodeCard extends StatelessWidget {
               height: 100,
               child: posterPath != null
                   ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                      imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
                       fit: BoxFit.cover,
                     )
                   : Container(
@@ -948,7 +948,7 @@ class _SeriesProgressCard extends StatelessWidget {
   Widget _posterImage(String? heroTag) {
     final image = posterPath != null
         ? CachedNetworkImage(
-            imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+            imageUrl: '${TmdbConfig.imageBaseUrlMedium}$posterPath',
             fit: BoxFit.cover,
           )
         : Container(

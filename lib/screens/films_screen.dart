@@ -264,7 +264,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               tag: posterHeroTag('movie', row.item.tmdbId),
               child: row.details.posterPath != null
                   ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                      imageUrl: '${TmdbConfig.imageBaseUrlMedium}${row.details.posterPath}',
                       fit: BoxFit.cover,
                     )
                   : Container(
@@ -311,7 +311,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                       tag: posterHeroTag('movie', row.item.tmdbId),
                       child: row.details.posterPath != null
                           ? CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                              imageUrl: '${TmdbConfig.imageBaseUrlTiny}${row.details.posterPath}',
                               fit: BoxFit.cover,
                             )
                           : Container(

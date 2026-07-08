@@ -74,7 +74,7 @@ class DiscoverPosterTile extends StatelessWidget {
 
     final posterImage = media.posterPath != null
         ? CachedNetworkImage(
-            imageUrl: '${TmdbConfig.imageBaseUrl}${media.posterPath}',
+            imageUrl: '${TmdbConfig.imageBaseUrlMedium}${media.posterPath}',
             fit: BoxFit.cover,
             width: width,
             height: height,

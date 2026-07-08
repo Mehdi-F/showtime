@@ -79,7 +79,7 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                     aspectRatio: 16 / 9,
                     child: ep.stillPath != null
                         ? CachedNetworkImage(
-                            imageUrl: '${TmdbConfig.imageBaseUrl}${ep.stillPath}',
+                            imageUrl: '${TmdbConfig.imageBaseUrlSmall}${ep.stillPath}',
                             fit: BoxFit.cover,
                           )
                         : Container(

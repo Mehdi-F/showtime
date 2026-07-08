@@ -380,7 +380,7 @@ class _ProfileHeader extends StatelessWidget {
                 children: [
                   if (backdropPath != null)
                     CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}$backdropPath',
+                      imageUrl: '${TmdbConfig.imageBaseUrlLarge}$backdropPath',
                       fit: BoxFit.cover,
                     )
                   else
@@ -747,7 +747,7 @@ class _CarouselSection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       child: resolved.posterPath != null
                           ? CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
+                              imageUrl: '${TmdbConfig.imageBaseUrlSmall}${resolved.posterPath}',
                               fit: BoxFit.cover,
                               height: 130,
                               width: 90,
@@ -955,7 +955,7 @@ class _FullListScreenState extends State<_FullListScreen> {
               tag: posterHeroTag(resolved.item.type, resolved.item.tmdbId),
               child: resolved.posterPath != null
                   ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
+                      imageUrl: '${TmdbConfig.imageBaseUrlMedium}${resolved.posterPath}',
                       fit: BoxFit.cover,
                     )
                   : Container(
@@ -1336,7 +1336,7 @@ class _FriendProfileHeader extends StatelessWidget {
                 children: [
                   if (backdropPath != null)
                     CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrl}$backdropPath',
+                      imageUrl: '${TmdbConfig.imageBaseUrlLarge}$backdropPath',
                       fit: BoxFit.cover,
                     )
                   else

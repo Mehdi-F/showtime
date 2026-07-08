@@ -45,7 +45,7 @@ class WatchProvidersRow extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrl}${provider.logoPath}',
+                              imageUrl: '${TmdbConfig.imageBaseUrlTiny}${provider.logoPath}',
                               width: 20,
                               height: 20,
                               fit: BoxFit.cover,
@@ -184,7 +184,7 @@ class CastRow extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                             child: member.profilePath != null
                                 ? CachedNetworkImage(
-                                    imageUrl: '${TmdbConfig.imageBaseUrl}${member.profilePath}',
+                                    imageUrl: '${TmdbConfig.imageBaseUrlTiny}${member.profilePath}',
                                     fit: BoxFit.cover,
                                     height: 100,
                                     width: 100,
@@ -262,7 +262,7 @@ class SimilarRow extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           child: media.posterPath != null
                               ? CachedNetworkImage(
-                                  imageUrl: '${TmdbConfig.imageBaseUrl}${media.posterPath}',
+                                  imageUrl: '${TmdbConfig.imageBaseUrlSmall}${media.posterPath}',
                                   fit: BoxFit.cover,
                                   height: 130,
                                   width: 90,

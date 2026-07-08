@@ -274,7 +274,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: CachedNetworkImage(
-                                imageUrl: '${TmdbConfig.imageBaseUrl}${match!.posterPath}',
+                                imageUrl: '${TmdbConfig.imageBaseUrlTiny}${match!.posterPath}',
                                 fit: BoxFit.cover,
                               ),
                             )
@@ -431,7 +431,7 @@ class _ChangeMatchDialogState extends State<_ChangeMatchDialog> {
                               height: 50,
                               child: r.posterPath != null
                                   ? CachedNetworkImage(
-                                      imageUrl: '${TmdbConfig.imageBaseUrl}${r.posterPath}', fit: BoxFit.cover)
+                                      imageUrl: '${TmdbConfig.imageBaseUrlTiny}${r.posterPath}', fit: BoxFit.cover)
                                   : Container(color: AppColors.surfaceVariant),
                             ),
                             title: Text(r.title),

@@ -230,11 +230,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Future<void> _toggleFavorite() async {
-    final item = await _ensureFollowed();
-    if (item == null) return;
+    // Flip instantly, even if not followed yet — same fix as the watched
+    // checkmark: awaiting _ensureFollowed() first meant favoriting a
+    // preview movie waited on a full addToLibrary round-trip before the
+    // heart visually changed at all.
     final newValue = !_favorite;
     final previous = _favorite;
     setState(() => _favorite = newValue);
+    final item = await _ensureFollowed();
+    if (item == null) {
+      if (mounted) setState(() => _favorite = previous);
+      return;
+    }
     final uid = context.read<AuthProvider>().user!.uid;
     try {
       await context.read<LibraryService>().toggleFavorite(
@@ -455,7 +462,7 @@ class _MovieBanner extends StatelessWidget {
             tag: heroTag,
             child: posterPath != null
                 ? CachedNetworkImage(
-                    imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                    imageUrl: '${TmdbConfig.imageBaseUrlLarge}$posterPath',
                     fit: BoxFit.cover,
                   )
                 : Container(color: AppColors.surfaceVariant),

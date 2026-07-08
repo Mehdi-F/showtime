@@ -50,7 +50,7 @@ class ImageGalleryRow extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(6),
                         child: CachedNetworkImage(
-                          imageUrl: '${TmdbConfig.imageBaseUrl}${paths[index]}',
+                          imageUrl: '${TmdbConfig.imageBaseUrlSmall}${paths[index]}',
                           fit: BoxFit.cover,
                           width: isBackdrop ? 160 : 64,
                           height: 90,
@@ -118,7 +118,7 @@ class _ImageGalleryViewerState extends State<_ImageGalleryViewer> {
               maxScale: 4,
               child: Center(
                 child: CachedNetworkImage(
-                  imageUrl: '${TmdbConfig.imageBaseUrl}${widget.paths[index]}',
+                  imageUrl: '${TmdbConfig.imageBaseUrlOriginal}${widget.paths[index]}',
                   fit: BoxFit.contain,
                 ),
               ),
