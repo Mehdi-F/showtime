@@ -9,6 +9,7 @@ class MediaListTile extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final String? heroTag;
 
   const MediaListTile({
     super.key,
@@ -17,6 +18,7 @@ class MediaListTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.heroTag,
   });
 
   @override
@@ -34,15 +36,7 @@ class MediaListTile extends StatelessWidget {
               child: SizedBox(
                 width: 56,
                 height: 78,
-                child: posterPath != null
-                    ? CachedNetworkImage(
-                        imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        color: AppColors.surfaceVariant,
-                        child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                      ),
+                child: _poster(),
               ),
             ),
             const SizedBox(width: 12),
@@ -74,5 +68,18 @@ class MediaListTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _poster() {
+    final image = posterPath != null
+        ? CachedNetworkImage(
+            imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+            fit: BoxFit.cover,
+          )
+        : Container(
+            color: AppColors.surfaceVariant,
+            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+          );
+    return heroTag != null ? Hero(tag: heroTag!, child: image) : image;
   }
 }

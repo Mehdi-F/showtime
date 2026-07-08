@@ -13,6 +13,7 @@ import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/media_info_sections.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
 import '../widgets/skeletons.dart';
 import 'show_detail_screen.dart';
@@ -382,6 +383,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             child: Column(
               children: [
                 _MovieBanner(
+                  heroTag: posterHeroTag('movie', widget.tmdbId),
                   title: movie.title,
                   posterPath: movie.posterPath,
                   runtimeMinutes: movie.runtime,
@@ -409,6 +411,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 }
 
 class _MovieBanner extends StatelessWidget {
+  final String heroTag;
   final String title;
   final String? posterPath;
   final int runtimeMinutes;
@@ -420,6 +423,7 @@ class _MovieBanner extends StatelessWidget {
   final VoidCallback onAddToList;
 
   const _MovieBanner({
+    required this.heroTag,
     required this.title,
     required this.posterPath,
     required this.runtimeMinutes,
@@ -438,13 +442,15 @@ class _MovieBanner extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (posterPath != null)
-            CachedNetworkImage(
-              imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
-              fit: BoxFit.cover,
-            )
-          else
-            Container(color: AppColors.surfaceVariant),
+          Hero(
+            tag: heroTag,
+            child: posterPath != null
+                ? CachedNetworkImage(
+                    imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                    fit: BoxFit.cover,
+                  )
+                : Container(color: AppColors.surfaceVariant),
+          ),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(

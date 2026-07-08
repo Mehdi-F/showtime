@@ -11,6 +11,7 @@ import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
 import 'show_detail_screen.dart';
@@ -161,15 +162,18 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(6),
-                                  child: posterPath != null
-                                      ? CachedNetworkImage(
-                                          imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          color: AppColors.surfaceVariant,
-                                          child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                                        ),
+                                  child: Hero(
+                                    tag: posterHeroTag(ref.type, ref.tmdbId),
+                                    child: posterPath != null
+                                        ? CachedNetworkImage(
+                                            imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            color: AppColors.surfaceVariant,
+                                            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                                          ),
+                                  ),
                                 ),
                                 Positioned(
                                   top: 2,

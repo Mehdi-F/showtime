@@ -17,6 +17,7 @@ import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/episode_detail_sheet.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
 import '../widgets/skeletons.dart';
 import 'movie_detail_screen.dart';
@@ -914,6 +915,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             child: Column(
             children: [
               _ShowBanner(
+                heroTag: posterHeroTag('tv', widget.tmdbId),
                 title: details.name,
                 posterPath: details.posterPath,
                 isEnded: details.isEnded,
@@ -964,6 +966,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 }
 
 class _ShowBanner extends StatelessWidget {
+  final String heroTag;
   final String title;
   final String? posterPath;
   final bool isEnded;
@@ -976,6 +979,7 @@ class _ShowBanner extends StatelessWidget {
   final VoidCallback onAddToList;
 
   const _ShowBanner({
+    required this.heroTag,
     required this.title,
     required this.posterPath,
     required this.isEnded,
@@ -995,13 +999,15 @@ class _ShowBanner extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (posterPath != null)
-            CachedNetworkImage(
-              imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
-              fit: BoxFit.cover,
-            )
-          else
-            Container(color: AppColors.surfaceVariant),
+          Hero(
+            tag: heroTag,
+            child: posterPath != null
+                ? CachedNetworkImage(
+                    imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+                    fit: BoxFit.cover,
+                  )
+                : Container(color: AppColors.surfaceVariant),
+          ),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(

@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/media_list_tile.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/skeletons.dart';
 import 'discover_grid_screen.dart';
 import 'movie_detail_screen.dart';
@@ -180,6 +181,7 @@ class _SearchScreenState extends State<SearchScreen> {
           posterPath: result.posterPath,
           title: result.year != null ? '${result.title} (${result.year})' : result.title,
           subtitle: result.mediaType == 'tv' ? 'Series' : 'Film',
+          heroTag: posterHeroTag(result.mediaType, result.id),
           onTap: openDetail,
           trailing: IconButton(
             icon: Icon(

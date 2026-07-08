@@ -12,6 +12,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
@@ -245,16 +246,19 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                 builder: (_) => MovieDetailScreen(libraryItem: row.item),
               ));
             },
-            child: row.details.posterPath != null
-                ? CachedNetworkImage(
-                    imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    color: AppColors.surfaceVariant,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.movie, color: AppColors.textSecondary),
-                  ),
+            child: Hero(
+              tag: posterHeroTag('movie', row.item.tmdbId),
+              child: row.details.posterPath != null
+                  ? CachedNetworkImage(
+                      imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      color: AppColors.surfaceVariant,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                    ),
+            ),
           ),
         );
       },
@@ -289,15 +293,18 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                   child: SizedBox(
                     width: 56,
                     height: 78,
-                    child: row.details.posterPath != null
-                        ? CachedNetworkImage(
-                            imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            color: AppColors.surfaceVariant,
-                            child: const Icon(Icons.movie, color: AppColors.textSecondary),
-                          ),
+                    child: Hero(
+                      tag: posterHeroTag('movie', row.item.tmdbId),
+                      child: row.details.posterPath != null
+                          ? CachedNetworkImage(
+                              imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              color: AppColors.surfaceVariant,
+                              child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                            ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

@@ -5,6 +5,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/fade_in_entry.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
 
@@ -128,7 +129,11 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
                 itemCount: _items.length,
                 itemBuilder: (context, index) => FadeInEntry(
                   index: index,
-                  child: DiscoverPosterTile(media: _items[index], showFollowBadge: false),
+                  child: DiscoverPosterTile(
+                    media: _items[index],
+                    showFollowBadge: false,
+                    heroTag: posterHeroTag(_items[index].type, _items[index].id),
+                  ),
                 ),
               ),
       ),

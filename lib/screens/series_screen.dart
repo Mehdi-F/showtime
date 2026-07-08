@@ -13,6 +13,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
@@ -447,6 +448,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             return FadeInEntry(
               index: index,
               child: _SeriesProgressCard(
+                heroTag: posterHeroTag('tv', d.item.tmdbId),
                 posterPath: d.posterPath,
                 progress: info?.ratio,
                 barColor: info?.color,
@@ -686,6 +688,10 @@ class _UpcomingTabState extends State<_UpcomingTab> {
                 return FadeInEntry(
                   index: index,
                   child: _SeriesProgressCard(
+                    // No heroTag here: this "à venir" grid and the "à voir"
+                    // grid are both built at once by TabBarView, and a show
+                    // can be in both simultaneously — only one tab may claim
+                    // the shared tag without risking a duplicate-Hero error.
                     posterPath: row.posterPath,
                     daysUntil: date != null ? _daysUntil(date) : null,
                     onTap: () => Navigator.of(context)
@@ -860,6 +866,12 @@ class _EpisodeCard extends StatelessWidget {
 }
 
 class _SeriesProgressCard extends StatelessWidget {
+  // Nullable — the "à voir" and "à venir" tabs are both built simultaneously
+  // by TabBarView, so a show that's in both at once would register two
+  // Heroes with the same tag in the same route. Only one tab (whichever
+  // passes a tag) gets the animated transition; the other still navigates
+  // normally, just without the morph.
+  final String? heroTag;
   final String? posterPath;
   final VoidCallback onTap;
   final double? progress;
@@ -867,6 +879,7 @@ class _SeriesProgressCard extends StatelessWidget {
   final int? daysUntil;
 
   const _SeriesProgressCard({
+    this.heroTag,
     required this.posterPath,
     required this.onTap,
     this.progress,
@@ -904,15 +917,7 @@ class _SeriesProgressCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: posterPath != null
-                ? CachedNetworkImage(
-                    imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    color: AppColors.surfaceVariant,
-                    child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                  ),
+            child: _posterImage(heroTag),
           ),
           if (dayBadge != null)
             Positioned(
@@ -938,5 +943,18 @@ class _SeriesProgressCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _posterImage(String? heroTag) {
+    final image = posterPath != null
+        ? CachedNetworkImage(
+            imageUrl: '${TmdbConfig.imageBaseUrl}$posterPath',
+            fit: BoxFit.cover,
+          )
+        : Container(
+            color: AppColors.surfaceVariant,
+            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+          );
+    return heroTag != null ? Hero(tag: heroTag, child: image) : image;
   }
 }

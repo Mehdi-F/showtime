@@ -20,6 +20,10 @@ class DiscoverPosterTile extends StatelessWidget {
   final double? width;
   final double? height;
   final bool showFollowBadge;
+  // Opt-in only — callers that render more than one row/category of tiles
+  // at once (a title can plausibly appear in two categories at the same
+  // time) must leave this null to avoid a duplicate-Hero-tag error.
+  final String? heroTag;
 
   const DiscoverPosterTile({
     super.key,
@@ -27,6 +31,7 @@ class DiscoverPosterTile extends StatelessWidget {
     this.width,
     this.height,
     this.showFollowBadge = true,
+    this.heroTag,
   });
 
   @override
@@ -67,21 +72,23 @@ class DiscoverPosterTile extends StatelessWidget {
       }
     }
 
+    final posterImage = media.posterPath != null
+        ? CachedNetworkImage(
+            imageUrl: '${TmdbConfig.imageBaseUrl}${media.posterPath}',
+            fit: BoxFit.cover,
+            width: width,
+            height: height,
+          )
+        : Container(
+            color: AppColors.surfaceVariant,
+            width: width,
+            height: height,
+            child: Icon(media.type == 'tv' ? Icons.tv : Icons.movie, color: AppColors.textSecondary),
+          );
+
     final poster = ClipRRect(
       borderRadius: BorderRadius.circular(6),
-      child: media.posterPath != null
-          ? CachedNetworkImage(
-              imageUrl: '${TmdbConfig.imageBaseUrl}${media.posterPath}',
-              fit: BoxFit.cover,
-              width: width,
-              height: height,
-            )
-          : Container(
-              color: AppColors.surfaceVariant,
-              width: width,
-              height: height,
-              child: Icon(media.type == 'tv' ? Icons.tv : Icons.movie, color: AppColors.textSecondary),
-            ),
+      child: heroTag != null ? Hero(tag: heroTag!, child: posterImage) : posterImage,
     );
 
     return GestureDetector(

@@ -16,6 +16,7 @@ import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/library_filter_sheet.dart';
+import '../widgets/poster_hero_tag.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
 import 'friends_screen.dart';
@@ -943,15 +944,18 @@ class _FullListScreenState extends State<_FullListScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: resolved.posterPath != null
-                ? CachedNetworkImage(
-                    imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    color: AppColors.surfaceVariant,
-                    child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                  ),
+            child: Hero(
+              tag: posterHeroTag(resolved.item.type, resolved.item.tmdbId),
+              child: resolved.posterPath != null
+                  ? CachedNetworkImage(
+                      imageUrl: '${TmdbConfig.imageBaseUrl}${resolved.posterPath}',
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      color: AppColors.surfaceVariant,
+                      child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                    ),
+            ),
           ),
           if (ratio != null)
             Positioned(
