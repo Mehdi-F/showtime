@@ -15,6 +15,7 @@ import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/image_gallery.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/episode_detail_sheet.dart';
 import '../widgets/poster_hero_tag.dart';
@@ -78,6 +79,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   late Future<List<WatchProvider>> _watchProvidersFuture;
   late Future<List<CastMember>> _creditsFuture;
   late Future<List<SimilarMedia>> _similarFuture;
+  late Future<TitleImages> _imagesFuture;
 
   @override
   void initState() {
@@ -91,6 +93,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
     _creditsFuture = tmdb.getTvCredits(widget.tmdbId);
     _similarFuture = tmdb.getSimilarTv(widget.tmdbId);
+    _imagesFuture = tmdb.getTvImages(widget.tmdbId);
     _load();
   }
 
@@ -200,6 +203,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
       _creditsFuture = tmdb.getTvCredits(widget.tmdbId);
       _similarFuture = tmdb.getSimilarTv(widget.tmdbId);
+      _imagesFuture = tmdb.getTvImages(widget.tmdbId);
     });
     await _load();
   }
@@ -673,6 +677,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               ? 'Ajoutée à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
               : 'Pas encore suivie',
         ),
+        ImageGalleryRow(future: _imagesFuture),
         CastRow(future: _creditsFuture),
         SimilarRow(
           title: 'Vous pourriez aussi aimer',

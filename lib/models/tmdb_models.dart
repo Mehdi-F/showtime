@@ -274,3 +274,18 @@ class WatchProvider {
         logoPath: json['logo_path'] as String?,
       );
 }
+
+class TitleImages {
+  final List<String> backdropPaths;
+  final List<String> posterPaths;
+
+  TitleImages({required this.backdropPaths, required this.posterPaths});
+
+  factory TitleImages.fromJson(Map<String, dynamic> json) {
+    List<String> paths(String key) => (json[key] as List<dynamic>? ?? [])
+        .map((i) => (i as Map<String, dynamic>)['file_path'] as String?)
+        .whereType<String>()
+        .toList();
+    return TitleImages(backdropPaths: paths('backdrops'), posterPaths: paths('posters'));
+  }
+}

@@ -202,4 +202,15 @@ class TmdbService {
     final flatrate = country['flatrate'] as List<dynamic>? ?? [];
     return flatrate.map((p) => WatchProvider.fromJson(p as Map<String, dynamic>)).toList();
   }
+
+  Future<TitleImages> getTvImages(int id) => _getImages('tv', id);
+
+  Future<TitleImages> getMovieImages(int id) => _getImages('movie', id);
+
+  Future<TitleImages> _getImages(String mediaType, int id) async {
+    final uri = Uri.parse('${TmdbConfig.baseUrl}/$mediaType/$id/images')
+        .replace(queryParameters: {'api_key': TmdbConfig.apiKey, 'include_image_language': 'en,null'});
+    final body = await _cachedBody('images:$mediaType:$id', uri, 'TMDB $mediaType images');
+    return TitleImages.fromJson(jsonDecode(body) as Map<String, dynamic>);
+  }
 }

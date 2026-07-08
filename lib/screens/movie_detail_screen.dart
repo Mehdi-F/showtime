@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/image_gallery.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
@@ -54,6 +55,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   late Future<List<WatchProvider>> _watchProvidersFuture;
   late Future<List<CastMember>> _creditsFuture;
   late Future<List<SimilarMedia>> _similarFuture;
+  late Future<TitleImages> _imagesFuture;
 
   @override
   void initState() {
@@ -67,6 +69,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId);
     _creditsFuture = tmdb.getMovieCredits(widget.tmdbId);
     _similarFuture = tmdb.getSimilarMovies(widget.tmdbId);
+    _imagesFuture = tmdb.getMovieImages(widget.tmdbId);
   }
 
   void _showSaveError() {
@@ -85,6 +88,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId);
       _creditsFuture = tmdb.getMovieCredits(widget.tmdbId);
       _similarFuture = tmdb.getSimilarMovies(widget.tmdbId);
+      _imagesFuture = tmdb.getMovieImages(widget.tmdbId);
     });
     await future;
   }
@@ -347,6 +351,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ? 'Ajouté à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
               : 'Pas encore suivi',
         ),
+        ImageGalleryRow(future: _imagesFuture),
         CastRow(future: _creditsFuture),
         SimilarRow(
           title: 'Vous pourriez aussi aimer',
