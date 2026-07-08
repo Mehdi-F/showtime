@@ -3,11 +3,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
 
-/// A horizontally-scrolling strip of backdrops + posters for a show/movie —
-/// tapping any thumbnail opens the full gallery in a swipeable, zoomable
-/// full-screen viewer.
+/// A horizontally-scrolling strip of actual scene shots (backdrops) for a
+/// show/movie — tapping any thumbnail opens the full gallery in a
+/// swipeable, zoomable full-screen viewer.
 class ImageGalleryRow extends StatelessWidget {
   final Future<TitleImages> future;
+  static const _maxPhotos = 20;
 
   const ImageGalleryRow({super.key, required this.future});
 
@@ -18,11 +19,14 @@ class ImageGalleryRow extends StatelessWidget {
       builder: (context, snapshot) {
         final images = snapshot.data;
         if (images == null) return const SizedBox.shrink();
-        // Backdrops first — they're widescreen "scene" shots, closer to
-        // what TV Time's photo section leads with — then posters.
-        final paths = [...images.backdropPaths, ...images.posterPaths];
+        // Posters are mostly redundant promotional art repeated per
+        // language/region (which is why the row felt overwhelming) — only
+        // fall back to them if a title has no backdrops (actual scenes) at
+        // all, and cap the total so it stays a quick scroll either way.
+        final source = images.backdropPaths.isNotEmpty ? images.backdropPaths : images.posterPaths;
+        final paths = source.take(_maxPhotos).toList();
         if (paths.isEmpty) return const SizedBox.shrink();
-        final backdropCount = images.backdropPaths.length;
+        final backdropCount = images.backdropPaths.isNotEmpty ? paths.length : 0;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
