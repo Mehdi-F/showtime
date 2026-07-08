@@ -234,28 +234,50 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 }
 
-class _CategoryRow extends StatelessWidget {
+class _CategoryRow extends StatefulWidget {
   final String title;
   final Future<List<SimilarMedia>> future;
 
   const _CategoryRow({required this.title, required this.future});
 
   @override
-  Widget build(BuildContext context) {
+  State<_CategoryRow> createState() => _CategoryRowState();
+}
+
+class _CategoryRowState extends State<_CategoryRow> {
+  Future<List<SimilarMedia>>? _resolvedFor;
+  List<SimilarMedia>? _visibleItems;
+
+  // The already-followed filter is only applied once, the moment this row's
+  // data is fetched — not re-applied on every rebuild. Otherwise tapping the
+  // + badge (which adds to the library and notifies LibraryProvider) yanked
+  // the title out of the row before the user ever saw it flip to a
+  // checkmark. It now stays in place until the row's future is replaced by
+  // a fresh fetch (pull-to-refresh), at which point it's correctly excluded.
+  void _captureBaseline(List<SimilarMedia> data) {
+    if (identical(_resolvedFor, widget.future)) return;
+    _resolvedFor = widget.future;
     final followedKeys =
-        context.watch<LibraryProvider>().items.map((i) => '${i.type}_${i.tmdbId}').toSet();
+        context.read<LibraryProvider>().items.map((i) => '${i.type}_${i.tmdbId}').toSet();
+    _visibleItems = data.where((m) => !followedKeys.contains('${m.type}_${m.id}')).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<List<SimilarMedia>>(
-      future: future,
+      future: widget.future,
       builder: (context, snapshot) {
-        final items =
-            (snapshot.data ?? const []).where((m) => !followedKeys.contains('${m.type}_${m.id}')).toList();
+        final data = snapshot.data;
+        if (data == null) return const SizedBox.shrink();
+        _captureBaseline(data);
+        final items = _visibleItems ?? const <SimilarMedia>[];
         if (items.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              child: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             ),
             SizedBox(
               height: 150,
