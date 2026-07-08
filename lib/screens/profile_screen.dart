@@ -1016,7 +1016,10 @@ class _FullListScreenState extends State<_FullListScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         for (final group in groups) ...[
-          SliverPersistentHeader(pinned: true, delegate: _StickyPillHeaderDelegate(group.key)),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickyPillHeaderDelegate(label: group.key, onTap: _openFilterSheet),
+          ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
             sliver: SliverGrid(
@@ -1075,7 +1078,10 @@ class _FullListScreenState extends State<_FullListScreen> {
               onRefresh: _refresh,
               child: Column(
                 children: [
-                  LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
+                  // In grouped mode, the sticky per-section pills (En cours,
+                  // Pas commencé...) take over as the top badge — showing
+                  // both would mean two stacked pills before any content.
+                  if (!_grouped) LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
                   if (visible.isEmpty)
                     const Expanded(
                       child: ScrollableCenter(
@@ -1118,8 +1124,9 @@ class _FullListScreenState extends State<_FullListScreen> {
 
 class _StickyPillHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String label;
+  final VoidCallback onTap;
 
-  const _StickyPillHeaderDelegate(this.label);
+  const _StickyPillHeaderDelegate({required this.label, required this.onTap});
 
   @override
   double get minExtent => 52;
@@ -1127,24 +1134,17 @@ class _StickyPillHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   double get maxExtent => 52;
 
+  // Transparent everywhere but the pill itself, so it reads as a floating
+  // badge over the scrolling posters (matching LibraryFilterBadge) rather
+  // than a solid bar painted across the header's whole width.
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: AppColors.background,
-      alignment: Alignment.center,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(20)),
-        child: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.5),
-        ),
-      ),
-    );
+    return LibraryFilterBadge(label: label, onTap: onTap);
   }
 
   @override
-  bool shouldRebuild(covariant _StickyPillHeaderDelegate oldDelegate) => oldDelegate.label != label;
+  bool shouldRebuild(covariant _StickyPillHeaderDelegate oldDelegate) =>
+      oldDelegate.label != label || oldDelegate.onTap != onTap;
 }
 
 /// Read-only view of a friend's profile, mirroring [ProfileScreen]'s layout
