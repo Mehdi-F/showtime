@@ -131,10 +131,17 @@ class _ProfileBodyState extends State<_ProfileBody> {
   @override
   void didUpdateWidget(covariant _ProfileBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only the library contents changing should trigger a refetch — the
-    // pull-to-refresh setState below must not recreate this future or the
-    // page will flicker back to a loading state on every rebuild.
-    _resolvedFuture = _resolveAll();
+    // ProfileScreen watches Library, Auth, and Lists providers together, so
+    // this widget rebuilds whenever any of them changes — not just when the
+    // library actually did. LibraryProvider only hands out a new `items`
+    // list when its own Firestore listener fires, so an unrelated rebuild
+    // (renaming a list, editing the display name) passes the exact same
+    // list reference back down. Re-resolving anyway discarded the already-
+    // rendered profile back to the loading skeleton for no reason, which is
+    // what made it feel like every visit had to re-fetch from scratch.
+    if (!identical(oldWidget.items, widget.items)) {
+      _resolvedFuture = _resolveAll();
+    }
   }
 
   Future<List<_ResolvedItem?>> _resolveAll() {
