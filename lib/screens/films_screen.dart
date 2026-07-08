@@ -109,6 +109,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   final _scrollController = ScrollController();
   int _visibleCount = _pageSize;
   late Future<List<_MovieRow>> _rowsFuture;
+  // Marking a movie watched only disappears from this list once the
+  // Firestore write round-trips back through LibraryProvider's stream and
+  // didUpdateWidget below reruns _resolveAll() — a real network delay that
+  // read as the whole screen lagging. Hiding the tapped row immediately and
+  // clearing this once fresh data arrives makes it feel instant.
+  final Set<int> _pendingWatchedIds = {};
 
   @override
   void initState() {
@@ -123,6 +129,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     // Only the library contents changing should trigger a refetch — the scroll-driven
     // pagination setState below must not recreate this future or the grid will flicker.
     _rowsFuture = _resolveAll();
+    _pendingWatchedIds.clear();
   }
 
   @override
@@ -158,13 +165,18 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     }
   }
 
-  Future<void> _toggleWatched(LibraryItem item, bool newValue) {
+  Future<void> _toggleWatched(LibraryItem item, bool newValue) async {
+    if (newValue) setState(() => _pendingWatchedIds.add(item.tmdbId));
     final uid = context.read<AuthProvider>().user!.uid;
-    return context.read<LibraryService>().markMovieWatched(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          watched: newValue,
-        );
+    try {
+      await context.read<LibraryService>().markMovieWatched(
+            uid: uid,
+            tmdbId: item.tmdbId,
+            watched: newValue,
+          );
+    } catch (_) {
+      if (mounted && newValue) setState(() => _pendingWatchedIds.remove(item.tmdbId));
+    }
   }
 
   @override
@@ -194,7 +206,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         if (!snapshot.hasData) {
           return const PosterGridSkeleton(childAspectRatio: 0.67);
         }
-        final rows = snapshot.data!.where((r) => !r.item.watched).toList()
+        final rows = snapshot.data!
+            .where((r) => !r.item.watched && !_pendingWatchedIds.contains(r.item.tmdbId))
+            .toList()
           ..sort((a, b) {
             final dateA = a.details.releaseDate ?? DateTime(0);
             final dateB = b.details.releaseDate ?? DateTime(0);
