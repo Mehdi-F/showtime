@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/watch_list.dart';
 import '../providers/auth_provider.dart';
 import '../providers/lists_provider.dart';
 import '../services/lists_service.dart';
@@ -34,6 +35,27 @@ class AddToListSheet extends StatefulWidget {
 class _AddToListSheetState extends State<AddToListSheet> {
   final _controller = TextEditingController();
   bool _creating = false;
+  // list.containsItem() reflects Firestore's live data, so the checkbox
+  // otherwise sat unmoved until the write round-tripped back through
+  // ListsProvider's stream — the same lag already fixed elsewhere for
+  // watched/favorite toggles. Overrides here give instant feedback; a
+  // failed write just falls back to the (unchanged) real value.
+  final Map<String, bool> _pendingOverrides = {};
+
+  Future<void> _toggleItem(WatchList list, bool checked) async {
+    setState(() => _pendingOverrides[list.id] = checked);
+    final uid = context.read<AuthProvider>().user!.uid;
+    final listsService = context.read<ListsService>();
+    try {
+      if (checked) {
+        await listsService.addItem(uid: uid, listId: list.id, tmdbId: widget.tmdbId, type: widget.type);
+      } else {
+        await listsService.removeItem(uid: uid, listId: list.id, tmdbId: widget.tmdbId, type: widget.type);
+      }
+    } finally {
+      if (mounted) setState(() => _pendingOverrides.remove(list.id));
+    }
+  }
 
   @override
   void dispose() {
@@ -57,9 +79,7 @@ class _AddToListSheetState extends State<AddToListSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = context.watch<AuthProvider>().user!.uid;
     final lists = context.watch<ListsProvider>().lists;
-    final listsService = context.read<ListsService>();
 
     return SafeArea(
       child: Padding(
@@ -90,7 +110,8 @@ class _AddToListSheetState extends State<AddToListSheet> {
                   itemCount: lists.length,
                   itemBuilder: (context, index) {
                     final list = lists[index];
-                    final checked = list.containsItem(widget.tmdbId, widget.type);
+                    final checked =
+                        _pendingOverrides[list.id] ?? list.containsItem(widget.tmdbId, widget.type);
                     return CheckboxListTile(
                       value: checked,
                       title: Text(list.name),
@@ -98,15 +119,7 @@ class _AddToListSheetState extends State<AddToListSheet> {
                           style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       contentPadding: EdgeInsets.zero,
                       controlAffinity: ListTileControlAffinity.leading,
-                      onChanged: (value) {
-                        if (value == true) {
-                          listsService.addItem(
-                              uid: uid, listId: list.id, tmdbId: widget.tmdbId, type: widget.type);
-                        } else {
-                          listsService.removeItem(
-                              uid: uid, listId: list.id, tmdbId: widget.tmdbId, type: widget.type);
-                        }
-                      },
+                      onChanged: (value) => _toggleItem(list, value ?? false),
                     );
                   },
                 ),
