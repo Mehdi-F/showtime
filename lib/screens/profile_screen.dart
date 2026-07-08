@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
@@ -120,12 +121,15 @@ class _ProfileBody extends StatefulWidget {
 }
 
 class _ProfileBodyState extends State<_ProfileBody> {
-  late Future<List<_ResolvedItem?>> _resolvedFuture;
+  final Map<String, _ResolvedItem> _resolved = {};
+  bool _showContent = false;
+
+  String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
 
   @override
   void initState() {
     super.initState();
-    _resolvedFuture = _resolveAll();
+    _resolveAll(widget.items, isInitial: true);
   }
 
   @override
@@ -140,27 +144,42 @@ class _ProfileBodyState extends State<_ProfileBody> {
     // rendered profile back to the loading skeleton for no reason, which is
     // what made it feel like every visit had to re-fetch from scratch.
     if (!identical(oldWidget.items, widget.items)) {
-      _resolvedFuture = _resolveAll();
+      _resolveAll(widget.items, isInitial: false);
     }
   }
 
-  Future<List<_ResolvedItem?>> _resolveAll() {
-    return Future.wait(widget.items.map((i) async {
-      try {
-        return await _resolveItem(widget.tmdb, i);
-      } catch (_) {
+  // Each title resolves and renders independently the moment it's ready,
+  // instead of the old all-or-nothing Future.wait that held the entire
+  // profile back on the single slowest/cold-cache title. On first load we
+  // still give the batch a brief head start so a warm cache paints in one
+  // shot with no skeleton flash at all, while a cold one shows whatever's
+  // ready after 600ms and lets the rest pop in.
+  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
+    final keys = items.map(_key).toSet();
+    _resolved.removeWhere((k, _) => !keys.contains(k));
+
+    final futures = items.map((item) {
+      final key = _key(item);
+      return _resolveItem(widget.tmdb, item).then((r) {
+        if (mounted) setState(() => _resolved[key] = r);
+      }).catchError((_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
         // rest of the profile from rendering.
-        return null;
-      }
-    }));
+      });
+    }).toList();
+
+    final all = Future.wait(futures);
+    if (isInitial) {
+      all.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+        if (mounted) setState(() => _showContent = true);
+      });
+    }
+    return all;
   }
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    final future = _resolveAll();
-    setState(() => _resolvedFuture = future);
-    await future;
+    await _resolveAll(widget.items, isInitial: false);
   }
 
   Future<void> _createList(BuildContext context) async {
@@ -217,13 +236,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
     final user = widget.user;
     final lists = widget.lists;
 
-    return FutureBuilder<List<_ResolvedItem?>>(
-      future: _resolvedFuture,
-      builder: (context, snapshot) {
-        final resolved = snapshot.data?.whereType<_ResolvedItem>().toList();
-        if (resolved == null) {
-          return const Scaffold(body: ProfileSkeleton());
-        }
+    if (!_showContent) {
+      return const Scaffold(body: ProfileSkeleton());
+    }
+
+    final resolved = widget.items.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
 
         final series = resolved.where((r) => r.item.type == 'tv').toList()
           ..sort((a, b) => b.recency.compareTo(a.recency));
@@ -339,8 +356,6 @@ class _ProfileBodyState extends State<_ProfileBody> {
             ),
           ),
         );
-      },
-    );
   }
 }
 
@@ -1189,118 +1204,146 @@ class FriendProfileScreen extends StatefulWidget {
 }
 
 class _FriendProfileScreenState extends State<FriendProfileScreen> {
+  StreamSubscription<List<LibraryItem>>? _subscription;
+  List<LibraryItem> _libraryItems = [];
+  final Map<String, _ResolvedItem> _resolved = {};
+  bool _hasData = false;
+  bool _showContent = false;
+  Object? _streamError;
+
+  String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = context.read<LibraryService>().watchLibrary(widget.friendUid).listen(
+      (items) {
+        final isInitial = !_hasData;
+        _libraryItems = items;
+        _hasData = true;
+        _streamError = null;
+        if (mounted) setState(() {});
+        _resolveAll(items, isInitial: isInitial);
+      },
+      onError: (e) {
+        if (mounted) setState(() => _streamError = e);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  // Same progressive-resolution approach as ProfileScreen: each title
+  // renders as soon as it resolves instead of the whole profile waiting on
+  // Future.wait, and — unlike the old StreamBuilder+FutureBuilder nesting —
+  // resolving isn't rebuilt from scratch on every single Firestore emission.
+  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
+    final tmdb = context.read<TmdbService>();
+    final keys = items.map(_key).toSet();
+    _resolved.removeWhere((k, _) => !keys.contains(k));
+
+    final futures = items.map((item) {
+      final key = _key(item);
+      return _resolveItem(tmdb, item).then((r) {
+        if (mounted) setState(() => _resolved[key] = r);
+      }).catchError((_) {
+        // A single title failing to load (TMDB hiccup) shouldn't block the
+        // rest of the profile from rendering.
+      });
+    }).toList();
+
+    final all = Future.wait(futures);
+    if (isInitial) {
+      all.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+        if (mounted) setState(() => _showContent = true);
+      });
+    }
+    return all;
+  }
+
   Future<void> _refresh() async {
     context.read<TmdbService>().clearCache();
-    setState(() {});
+    await _resolveAll(_libraryItems, isInitial: false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final library = context.read<LibraryService>();
-    final tmdb = context.read<TmdbService>();
+    if (_streamError != null) {
+      return Scaffold(
+        body: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ScrollableCenter(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Impossible d'accéder à ce profil.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$_streamError',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    if (!_hasData || !_showContent) {
+      return const Scaffold(body: ProfileSkeleton());
+    }
+
+    final resolved = _libraryItems.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
+
+    final series = resolved.where((r) => r.item.type == 'tv').toList();
+    final seriesFav = series.where((r) => r.item.favorite).toList();
+    final films = resolved.where((r) => r.item.type == 'movie').toList();
+    final filmsFav = films.where((r) => r.item.favorite).toList();
+    final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
+
+    String? bannerBackdrop;
+    if (resolved.isNotEmpty) {
+      final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
+      bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
+    }
 
     return Scaffold(
-      body: StreamBuilder<List<LibraryItem>>(
-        stream: library.watchLibrary(widget.friendUid),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ScrollableCenter(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "Impossible d'accéder à ce profil.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${snapshot.error}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const ProfileSkeleton();
-          }
-          final libraryItems = snapshot.data!;
-
-          return FutureBuilder<List<_ResolvedItem?>>(
-            future: Future.wait(libraryItems.map((i) async {
-              try {
-                return await _resolveItem(tmdb, i);
-              } catch (_) {
-                return null;
-              }
-            })),
-            builder: (context, resolvedSnapshot) {
-              if (resolvedSnapshot.hasError) {
-                return RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: const ScrollableCenter(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text("Impossible d'accéder à ce profil.",
-                          textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
-                    ),
-                  ),
-                );
-              }
-              final resolved = resolvedSnapshot.data?.whereType<_ResolvedItem>().toList();
-              if (resolved == null) {
-                return const ProfileSkeleton();
-              }
-
-              final series = resolved.where((r) => r.item.type == 'tv').toList();
-              final seriesFav = series.where((r) => r.item.favorite).toList();
-              final films = resolved.where((r) => r.item.type == 'movie').toList();
-              final filmsFav = films.where((r) => r.item.favorite).toList();
-              final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
-
-              String? bannerBackdrop;
-              if (resolved.isNotEmpty) {
-                final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
-                bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
-              }
-
-              return RefreshIndicator(
-                onRefresh: _refresh,
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: [
-                    _FriendProfileHeader(
-                      backdropPath: bannerBackdrop,
-                      photoUrl: widget.photoUrl,
-                      displayName: widget.displayName,
-                    ),
-                    const SizedBox(height: 8),
-                    _StatsRow(
-                      seriesCount: series.where((r) => r.isWatched).length,
-                      filmsCount: films.where((r) => r.isWatched).length,
-                      episodesWatched: episodesWatched,
-                    ),
-                    const Divider(height: 33, indent: 16, endIndent: 16),
-                    _CarouselSection(title: 'Séries', items: series, readOnly: true),
-                    _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true, readOnly: true),
-                    _CarouselSection(title: 'Films', items: films, readOnly: true),
-                    _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true, readOnly: true),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            _FriendProfileHeader(
+              backdropPath: bannerBackdrop,
+              photoUrl: widget.photoUrl,
+              displayName: widget.displayName,
+            ),
+            const SizedBox(height: 8),
+            _StatsRow(
+              seriesCount: series.where((r) => r.isWatched).length,
+              filmsCount: films.where((r) => r.isWatched).length,
+              episodesWatched: episodesWatched,
+            ),
+            const Divider(height: 33, indent: 16, endIndent: 16),
+            _CarouselSection(title: 'Séries', items: series, readOnly: true),
+            _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true, readOnly: true),
+            _CarouselSection(title: 'Films', items: films, readOnly: true),
+            _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true, readOnly: true),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
