@@ -14,6 +14,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/fade_in_entry.dart';
 import '../widgets/library_filter_sheet.dart';
 import '../widgets/scrollable_center.dart';
 import 'friends_screen.dart';
@@ -1035,7 +1036,7 @@ class _FullListScreenState extends State<_FullListScreen> {
                     mainAxisSpacing: 4,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildTile(group.value[index]),
+                    (context, index) => FadeInEntry(index: index, child: _buildTile(group.value[index])),
                     childCount: group.value.length,
                   ),
                 ),
@@ -1109,7 +1110,8 @@ class _FullListScreenState extends State<_FullListScreen> {
                                 mainAxisSpacing: 4,
                               ),
                               itemCount: visible.length,
-                              itemBuilder: (context, index) => _buildTile(visible[index]),
+                              itemBuilder: (context, index) =>
+                                  FadeInEntry(index: index, child: _buildTile(visible[index])),
                             ),
                     ),
                 ],

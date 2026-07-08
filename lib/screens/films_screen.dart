@@ -11,6 +11,7 @@ import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/fade_in_entry.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/view_mode_toggle.dart';
@@ -235,22 +236,25 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       itemCount: visible.length,
       itemBuilder: (context, index) {
         final row = visible[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(appRoute(
-              builder: (_) => MovieDetailScreen(libraryItem: row.item),
-            ));
-          },
-          child: row.details.posterPath != null
-              ? CachedNetworkImage(
-                  imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
-                  fit: BoxFit.cover,
-                )
-              : Container(
-                  color: AppColors.surfaceVariant,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.movie, color: AppColors.textSecondary),
-                ),
+        return FadeInEntry(
+          index: index,
+          child: GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(appRoute(
+                builder: (_) => MovieDetailScreen(libraryItem: row.item),
+              ));
+            },
+            child: row.details.posterPath != null
+                ? CachedNetworkImage(
+                    imageUrl: '${TmdbConfig.imageBaseUrl}${row.details.posterPath}',
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    color: AppColors.surfaceVariant,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                  ),
+          ),
         );
       },
     );

@@ -4,6 +4,7 @@ import '../models/tmdb_models.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/discover_poster_tile.dart';
+import '../widgets/fade_in_entry.dart';
 import '../widgets/scrollable_center.dart';
 
 /// Full paginated browse grid over TMDB's general catalog for a media type,
@@ -124,8 +125,10 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
                   mainAxisSpacing: 2,
                 ),
                 itemCount: _items.length,
-                itemBuilder: (context, index) =>
-                    DiscoverPosterTile(media: _items[index], showFollowBadge: false),
+                itemBuilder: (context, index) => FadeInEntry(
+                  index: index,
+                  child: DiscoverPosterTile(media: _items[index], showFollowBadge: false),
+                ),
               ),
       ),
     );
