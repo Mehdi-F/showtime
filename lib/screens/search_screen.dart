@@ -254,24 +254,33 @@ class _CategoryRowState extends State<_CategoryRow> {
   // the title out of the row before the user ever saw it flip to a
   // checkmark. It now stays in place until the row's future is replaced by
   // a fresh fetch (pull-to-refresh), at which point it's correctly excluded.
-  void _captureBaseline(List<SimilarMedia> data) {
+  //
+  // Freezing on the first rebuild also means we must wait for the library's
+  // real first snapshot before doing it — right after a fresh app launch,
+  // LibraryProvider briefly reports an empty `items` list before Firestore's
+  // stream connects, and this TMDB fetch (often served from cache) can well
+  // resolve first. Freezing against that transient empty list would lock in
+  // "nothing followed", permanently re-showing titles added in past sessions
+  // for the rest of that session.
+  void _captureBaseline(List<SimilarMedia> data, LibraryProvider library) {
     if (identical(_resolvedFor, widget.future)) return;
+    if (!library.isLoaded) return;
     _resolvedFor = widget.future;
-    final followedKeys =
-        context.read<LibraryProvider>().items.map((i) => '${i.type}_${i.tmdbId}').toSet();
+    final followedKeys = library.items.map((i) => '${i.type}_${i.tmdbId}').toSet();
     _visibleItems = data.where((m) => !followedKeys.contains('${m.type}_${m.id}')).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final library = context.watch<LibraryProvider>();
     return FutureBuilder<List<SimilarMedia>>(
       future: widget.future,
       builder: (context, snapshot) {
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
-        _captureBaseline(data);
-        final items = _visibleItems ?? const <SimilarMedia>[];
-        if (items.isEmpty) return const SizedBox.shrink();
+        _captureBaseline(data, library);
+        final items = _visibleItems;
+        if (items == null || items.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
