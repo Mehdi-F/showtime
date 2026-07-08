@@ -272,13 +272,17 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   }
 
   Future<void> _toggleEpisode(EpisodeRef ep) async {
-    final item = await _ensureFollowed();
-    if (item == null) return;
-    final uid = context.read<AuthProvider>().user!.uid;
-    final library = context.read<LibraryService>();
     final wasWatched = _watchedEpisodes[ep.key] ?? false;
 
     if (wasWatched) {
+      // Already watched implies already followed (you can't be watched
+      // without a library entry), so _ensureFollowed() resolves instantly
+      // here — no need for the optimistic-before-follow treatment below.
+      final item = await _ensureFollowed();
+      if (item == null) return;
+      final uid = context.read<AuthProvider>().user!.uid;
+      final library = context.read<LibraryService>();
+
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
@@ -307,6 +311,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       }
       return;
     }
+
+    // Not yet watched: check the box instantly, even if the show isn't
+    // followed yet — otherwise a first tap on a preview show waits through
+    // a full addToLibrary round-trip before anything visibly happens.
+    setState(() => _watchedEpisodes[ep.key] = true);
+    final item = await _ensureFollowed();
+    if (item == null) {
+      if (mounted) setState(() => _watchedEpisodes[ep.key] = false);
+      return;
+    }
+    final uid = context.read<AuthProvider>().user!.uid;
+    final library = context.read<LibraryService>();
 
     if (!item.skipGapPrompt) {
       final season = _seasonsByNumber[ep.seasonNumber];
@@ -357,7 +373,6 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       }
     }
 
-    setState(() => _watchedEpisodes[ep.key] = true);
     try {
       await library.markEpisodeWatched(
         uid: uid,
@@ -419,15 +434,17 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Future<void> _toggleSeason(int seasonNumber) async {
     final season = _seasonsByNumber[seasonNumber];
     if (season == null || season.episodes.isEmpty) return;
-    final item = await _ensureFollowed();
-    if (item == null) return;
-    final uid = context.read<AuthProvider>().user!.uid;
-    final library = context.read<LibraryService>();
     final keys = season.episodes.map((e) => e.key).toList();
     final episodeNumbers = season.episodes.map((e) => e.episodeNumber).toList();
     final fullyWatched = keys.every((k) => _watchedEpisodes[k] ?? false);
 
     if (fullyWatched) {
+      // Already fully watched implies already followed.
+      final item = await _ensureFollowed();
+      if (item == null) return;
+      final uid = context.read<AuthProvider>().user!.uid;
+      final library = context.read<LibraryService>();
+
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
@@ -477,11 +494,25 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       return;
     }
 
+    // Not fully watched yet: mark it instantly, even if not followed yet.
     setState(() {
       for (final k in keys) {
         _watchedEpisodes[k] = true;
       }
     });
+    final item = await _ensureFollowed();
+    if (item == null) {
+      if (mounted) {
+        setState(() {
+          for (final k in keys) {
+            _watchedEpisodes[k] = false;
+          }
+        });
+      }
+      return;
+    }
+    final uid = context.read<AuthProvider>().user!.uid;
+    final library = context.read<LibraryService>();
     try {
       await library.markSeasonWatched(
         uid: uid,
@@ -506,12 +537,14 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Future<void> _toggleAll() async {
     final keys = _mainEpisodesInOrder.map((e) => e.key).toList();
     if (keys.isEmpty) return;
-    final item = await _ensureFollowed();
-    if (item == null) return;
-    final uid = context.read<AuthProvider>().user!.uid;
-    final library = context.read<LibraryService>();
 
     if (_isFullyWatched) {
+      // Already fully watched implies already followed.
+      final item = await _ensureFollowed();
+      if (item == null) return;
+      final uid = context.read<AuthProvider>().user!.uid;
+      final library = context.read<LibraryService>();
+
       final choice = await _askRewatchChoice();
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
@@ -555,11 +588,25 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       return;
     }
 
+    // Not fully watched yet: mark it instantly, even if not followed yet.
     setState(() {
       for (final k in keys) {
         _watchedEpisodes[k] = true;
       }
     });
+    final item = await _ensureFollowed();
+    if (item == null) {
+      if (mounted) {
+        setState(() {
+          for (final k in keys) {
+            _watchedEpisodes[k] = false;
+          }
+        });
+      }
+      return;
+    }
+    final uid = context.read<AuthProvider>().user!.uid;
+    final library = context.read<LibraryService>();
     try {
       await library.setEpisodesWatched(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys, watched: true);
       if (mounted) _maybeCelebrate();
