@@ -154,6 +154,12 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_error != null) {
       return Center(child: Text(_error!, style: const TextStyle(color: AppColors.textSecondary)));
     }
+    if (_results.isEmpty) {
+      return Center(
+        child: Text('Aucun résultat pour "${_controller.text.trim()}".',
+            textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
     final libraryItems = context.watch<LibraryProvider>().items;
     return ListView.builder(
       itemCount: _results.length,
