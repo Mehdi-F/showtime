@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../models/watch_list.dart';
@@ -85,79 +83,6 @@ class _ResolvedItem {
   DateTime get recency => item.lastActivityAt ?? item.watchedAt ?? item.addedAt;
 }
 
-// A frozen snapshot of the profile's aggregate numbers (not the per-title
-// carousels, which are fine to grow progressively). Streaming these in as
-// each title resolves made counters visibly climb, which read as broken
-// rather than "loading" — so they're only ever replaced once every title in
-// the batch has settled (success or failure), never mid-batch. `fromJson`/
-// `toJson` let ProfileScreen persist the last-known values to disk so a
-// fresh app launch can paint real numbers immediately instead of starting
-// from zero while the network catches up.
-class _ProfileStatsSnapshot {
-  final int seriesCount;
-  final int filmsCount;
-  final int episodesWatched;
-  final int seriesMinutes;
-  final int filmsMinutes;
-  final String? bannerBackdrop;
-
-  const _ProfileStatsSnapshot({
-    required this.seriesCount,
-    required this.filmsCount,
-    required this.episodesWatched,
-    required this.seriesMinutes,
-    required this.filmsMinutes,
-    required this.bannerBackdrop,
-  });
-
-  const _ProfileStatsSnapshot.empty()
-      : seriesCount = 0,
-        filmsCount = 0,
-        episodesWatched = 0,
-        seriesMinutes = 0,
-        filmsMinutes = 0,
-        bannerBackdrop = null;
-
-  Map<String, dynamic> toJson() => {
-        'seriesCount': seriesCount,
-        'filmsCount': filmsCount,
-        'episodesWatched': episodesWatched,
-        'seriesMinutes': seriesMinutes,
-        'filmsMinutes': filmsMinutes,
-        'bannerBackdrop': bannerBackdrop,
-      };
-
-  factory _ProfileStatsSnapshot.fromJson(Map<String, dynamic> json) => _ProfileStatsSnapshot(
-        seriesCount: json['seriesCount'] as int? ?? 0,
-        filmsCount: json['filmsCount'] as int? ?? 0,
-        episodesWatched: json['episodesWatched'] as int? ?? 0,
-        seriesMinutes: json['seriesMinutes'] as int? ?? 0,
-        filmsMinutes: json['filmsMinutes'] as int? ?? 0,
-        bannerBackdrop: json['bannerBackdrop'] as String?,
-      );
-}
-
-_ProfileStatsSnapshot _computeStatsSnapshot(List<_ResolvedItem> resolved) {
-  final series = resolved.where((r) => r.item.type == 'tv').toList();
-  final films = resolved.where((r) => r.item.type == 'movie').toList();
-  final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
-  final seriesMinutes = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount * r.runtimeMinutes);
-  final filmsMinutes = films.fold<int>(0, (sum, r) => sum + (r.item.watched ? r.runtimeMinutes : 0));
-  String? bannerBackdrop;
-  if (resolved.isNotEmpty) {
-    final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
-    bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
-  }
-  return _ProfileStatsSnapshot(
-    seriesCount: series.where((r) => r.isWatched).length,
-    filmsCount: films.where((r) => r.isWatched).length,
-    episodesWatched: episodesWatched,
-    seriesMinutes: seriesMinutes,
-    filmsMinutes: filmsMinutes,
-    bannerBackdrop: bannerBackdrop,
-  );
-}
-
 class _WatchTime {
   final int months;
   final int days;
@@ -196,42 +121,15 @@ class _ProfileBody extends StatefulWidget {
 }
 
 class _ProfileBodyState extends State<_ProfileBody> {
-  static const _statsPrefsPrefix = 'profile_stats:';
-
   final Map<String, _ResolvedItem> _resolved = {};
-  final Set<String> _settled = {};
   bool _showContent = false;
-  _ProfileStatsSnapshot? _lastSnapshot;
 
   String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
-
-  bool get _allSettled => _settled.length >= widget.items.length;
 
   @override
   void initState() {
     super.initState();
-    _loadCachedStats();
     _resolveAll(widget.items, isInitial: true);
-  }
-
-  // Paints the last session's real numbers immediately instead of a bare
-  // zero while the network catches up. Skipped if this batch has already
-  // fully settled by the time it resolves — fresh data always wins.
-  Future<void> _loadCachedStats() async {
-    final uid = widget.user?.uid;
-    if (uid == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('$_statsPrefsPrefix$uid');
-    if (raw == null || !mounted || _allSettled) return;
-    setState(() => _lastSnapshot = _ProfileStatsSnapshot.fromJson(jsonDecode(raw) as Map<String, dynamic>));
-  }
-
-  Future<void> _saveStatsSnapshot() async {
-    final uid = widget.user?.uid;
-    if (uid == null) return;
-    final resolved = widget.items.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_statsPrefsPrefix$uid', jsonEncode(_computeStatsSnapshot(resolved).toJson()));
   }
 
   @override
@@ -259,22 +157,14 @@ class _ProfileBodyState extends State<_ProfileBody> {
   Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
     final keys = items.map(_key).toSet();
     _resolved.removeWhere((k, _) => !keys.contains(k));
-    _settled.removeWhere((k) => !keys.contains(k));
 
     final List<Future<void>> futures = items.map((item) {
       final key = _key(item);
       return _resolveItem(widget.tmdb, item).then<void>((r) {
-        if (mounted) {
-          setState(() {
-            _resolved[key] = r;
-            _settled.add(key);
-          });
-        }
+        if (mounted) setState(() => _resolved[key] = r);
       }).catchError((_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
-        // rest of the profile from rendering — but it still counts as
-        // "settled" so the stats snapshot isn't stuck waiting forever.
-        if (mounted) setState(() => _settled.add(key));
+        // rest of the profile from rendering.
       });
     }).toList();
 
@@ -284,7 +174,6 @@ class _ProfileBodyState extends State<_ProfileBody> {
         if (mounted) setState(() => _showContent = true);
       });
     }
-    unawaited(all.whenComplete(_saveStatsSnapshot));
     return all;
   }
 
@@ -362,20 +251,17 @@ class _ProfileBodyState extends State<_ProfileBody> {
         final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
           ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
 
-        // See _ProfileStatsSnapshot: these numbers only move once every title
-        // in the batch has settled, never mid-stream, and fall back to the
-        // last known-good values (this session's, or disk-cached from a
-        // previous one) instead of climbing from zero in the meantime.
-        final statsSnapshot =
-            _allSettled ? _computeStatsSnapshot(resolved) : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
-        if (_allSettled) _lastSnapshot = statsSnapshot;
+        final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
+        final seriesMinutes =
+            series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount * r.runtimeMinutes);
+        final filmsMinutes =
+            films.fold<int>(0, (sum, r) => sum + (r.item.watched ? r.runtimeMinutes : 0));
 
-        String? liveBannerBackdrop;
+        String? bannerBackdrop;
         if (resolved.isNotEmpty) {
           final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
-          liveBannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
+          bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
         }
-        final bannerBackdrop = liveBannerBackdrop ?? statsSnapshot.bannerBackdrop;
 
         final displayName = user?.displayName ?? user?.email?.split('@').first ?? 'Utilisateur';
 
@@ -398,9 +284,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 ),
                 const SizedBox(height: 8),
                 _StatsRow(
-                  seriesCount: statsSnapshot.seriesCount,
-                  filmsCount: statsSnapshot.filmsCount,
-                  episodesWatched: statsSnapshot.episodesWatched,
+                  seriesCount: series.where((r) => r.isWatched).length,
+                  filmsCount: films.where((r) => r.isWatched).length,
+                  episodesWatched: episodesWatched,
                 ),
                 const Divider(height: 33, indent: 16, endIndent: 16),
                 GestureDetector(
@@ -426,14 +312,8 @@ class _ProfileBodyState extends State<_ProfileBody> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
-                      _StatCard(
-                          icon: Icons.tv,
-                          label: 'Temps passé devant des séries',
-                          minutes: statsSnapshot.seriesMinutes),
-                      _StatCard(
-                          icon: Icons.movie,
-                          label: 'Temps passé devant des films',
-                          minutes: statsSnapshot.filmsMinutes),
+                      _StatCard(icon: Icons.tv, label: 'Temps passé devant des séries', minutes: seriesMinutes),
+                      _StatCard(icon: Icons.movie, label: 'Temps passé devant des films', minutes: filmsMinutes),
                     ],
                   ),
                 ),
@@ -1327,15 +1207,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
   StreamSubscription<List<LibraryItem>>? _subscription;
   List<LibraryItem> _libraryItems = [];
   final Map<String, _ResolvedItem> _resolved = {};
-  final Set<String> _settled = {};
   bool _hasData = false;
   bool _showContent = false;
   Object? _streamError;
-  _ProfileStatsSnapshot? _lastSnapshot;
 
   String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
-
-  bool get _allSettled => _settled.length >= _libraryItems.length;
 
   @override
   void initState() {
@@ -1369,22 +1245,14 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     final tmdb = context.read<TmdbService>();
     final keys = items.map(_key).toSet();
     _resolved.removeWhere((k, _) => !keys.contains(k));
-    _settled.removeWhere((k) => !keys.contains(k));
 
     final List<Future<void>> futures = items.map((item) {
       final key = _key(item);
       return _resolveItem(tmdb, item).then<void>((r) {
-        if (mounted) {
-          setState(() {
-            _resolved[key] = r;
-            _settled.add(key);
-          });
-        }
+        if (mounted) setState(() => _resolved[key] = r);
       }).catchError((_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
-        // rest of the profile from rendering — but it still counts as
-        // "settled" so the stats snapshot isn't stuck waiting forever.
-        if (mounted) setState(() => _settled.add(key));
+        // rest of the profile from rendering.
       });
     }).toList();
 
@@ -1442,17 +1310,13 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     final seriesFav = series.where((r) => r.item.favorite).toList();
     final films = resolved.where((r) => r.item.type == 'movie').toList();
     final filmsFav = films.where((r) => r.item.favorite).toList();
+    final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
 
-    final statsSnapshot =
-        _allSettled ? _computeStatsSnapshot(resolved) : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
-    if (_allSettled) _lastSnapshot = statsSnapshot;
-
-    String? liveBannerBackdrop;
+    String? bannerBackdrop;
     if (resolved.isNotEmpty) {
       final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
-      liveBannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
+      bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
     }
-    final bannerBackdrop = liveBannerBackdrop ?? statsSnapshot.bannerBackdrop;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -1468,9 +1332,9 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
             ),
             const SizedBox(height: 8),
             _StatsRow(
-              seriesCount: statsSnapshot.seriesCount,
-              filmsCount: statsSnapshot.filmsCount,
-              episodesWatched: statsSnapshot.episodesWatched,
+              seriesCount: series.where((r) => r.isWatched).length,
+              filmsCount: films.where((r) => r.isWatched).length,
+              episodesWatched: episodesWatched,
             ),
             const Divider(height: 33, indent: 16, endIndent: 16),
             _CarouselSection(title: 'Séries', items: series, readOnly: true),
