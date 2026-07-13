@@ -17,6 +17,9 @@ class TmdbService {
 
   static const _prefsKeyPrefix = 'tmdb_cache:';
   static const _prefsTtl = Duration(hours: 6);
+  // Without this, a request on a slow/flaky connection could hang
+  // indefinitely instead of failing fast enough to fall back to cache below.
+  static const _requestTimeout = Duration(seconds: 12);
 
   // Per-id lookups (show/movie details, credits, similar, watch providers)
   // are effectively static — every screen that shows a given title re-fetches
@@ -63,19 +66,28 @@ class TmdbService {
 
     final prefsKey = '$_prefsKeyPrefix$key';
     final cachedAt = prefs.getInt('$prefsKey:at');
-    if (cachedAt != null) {
+    final cachedBody = prefs.getString(prefsKey);
+    if (cachedAt != null && cachedBody != null) {
       final age = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(cachedAt));
-      final cachedBody = prefs.getString(prefsKey);
-      if (cachedBody != null && age < _prefsTtl) return cachedBody;
+      if (age < _prefsTtl) return cachedBody;
     }
 
-    final response = await _client.get(uri);
-    if (response.statusCode != 200) {
-      throw Exception('$errorLabel failed: ${response.statusCode}');
+    try {
+      final response = await _client.get(uri).timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        throw Exception('$errorLabel failed: ${response.statusCode}');
+      }
+      unawaited(prefs.setString(prefsKey, response.body));
+      unawaited(prefs.setInt('$prefsKey:at', DateTime.now().millisecondsSinceEpoch));
+      return response.body;
+    } catch (e) {
+      // On a slow or flaky connection, a stale cached copy (even past its
+      // normal TTL) is far more useful than an outright failure — the title
+      // still opens, just with slightly older data, instead of erroring or
+      // silently vanishing from whatever list was showing it.
+      if (cachedBody != null) return cachedBody;
+      rethrow;
     }
-    unawaited(prefs.setString(prefsKey, response.body));
-    unawaited(prefs.setInt('$prefsKey:at', DateTime.now().millisecondsSinceEpoch));
-    return response.body;
   }
 
   Future<List<TmdbSearchResult>> search(String query) async {
@@ -83,7 +95,7 @@ class TmdbService {
       queryParameters: {'api_key': TmdbConfig.apiKey, 'query': query},
     );
 
-    final response = await _client.get(uri);
+    final response = await _client.get(uri).timeout(_requestTimeout);
     if (response.statusCode != 200) {
       throw Exception('TMDB search failed: ${response.statusCode}');
     }
@@ -157,7 +169,7 @@ class TmdbService {
       'include_video': 'false',
       'vote_count.gte': '10',
     });
-    final response = await _client.get(uri);
+    final response = await _client.get(uri).timeout(_requestTimeout);
     if (response.statusCode != 200) {
       throw Exception('TMDB discover $mediaType failed: ${response.statusCode}');
     }
@@ -178,7 +190,7 @@ class TmdbService {
       'api_key': TmdbConfig.apiKey,
       'page': '$page',
     });
-    final response = await _client.get(uri);
+    final response = await _client.get(uri).timeout(_requestTimeout);
     if (response.statusCode != 200) {
       throw Exception('TMDB $path failed: ${response.statusCode}');
     }
