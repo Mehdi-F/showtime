@@ -111,7 +111,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         movieRewatchCount: _rewatchCount,
       );
 
-  Future<_RewatchChoice?> _askRewatchChoice() {
+  // "Vu une fois" only makes sense — and only appears, matching TV Time —
+  // once there's an actual rewatch count to reset back down.
+  Future<_RewatchChoice?> _askRewatchChoice({required bool showWatchedOnce}) {
     return showDialog<_RewatchChoice>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -134,14 +136,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               Text('+1 Revu'),
             ]),
           ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
-            child: const Row(children: [
-              Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
-              SizedBox(width: 12),
-              Text('Vu une fois'),
-            ]),
-          ),
+          if (showWatchedOnce)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
+              child: const Row(children: [
+                Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+                SizedBox(width: 12),
+                Text('Vu une fois'),
+              ]),
+            ),
         ],
       ),
     );
@@ -196,7 +199,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final uid = context.read<AuthProvider>().user!.uid;
     final library = context.read<LibraryService>();
 
-    final choice = await _askRewatchChoice();
+    final choice = await _askRewatchChoice(showWatchedOnce: _rewatchCount > 0);
     if (!mounted || choice == null) return;
     if (choice == _RewatchChoice.rewatch) {
       final previousCount = _rewatchCount;
@@ -220,7 +223,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       return;
     }
     if (choice == _RewatchChoice.watchedOnce) {
-      if (_rewatchCount == 0) return;
       final previousCount = _rewatchCount;
       final previousItem = _libraryItem;
       setState(() {

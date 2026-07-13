@@ -254,7 +254,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     }
   }
 
-  Future<_RewatchChoice?> _askRewatchChoice() {
+  // "Vue une fois" only makes sense — and only appears, matching TV Time —
+  // once there's an actual rewatch count to reset back down; otherwise it'd
+  // be a no-op sitting next to "Pas vue" and "+1 Revue".
+  Future<_RewatchChoice?> _askRewatchChoice({required bool showWatchedOnce}) {
     return showDialog<_RewatchChoice>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -277,14 +280,15 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               Text('+1 Revue'),
             ]),
           ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
-            child: const Row(children: [
-              Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
-              SizedBox(width: 12),
-              Text('Vue une fois'),
-            ]),
-          ),
+          if (showWatchedOnce)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
+              child: const Row(children: [
+                Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+                SizedBox(width: 12),
+                Text('Vue une fois'),
+              ]),
+            ),
         ],
       ),
     );
@@ -302,7 +306,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       final uid = context.read<AuthProvider>().user!.uid;
       final library = context.read<LibraryService>();
 
-      final choice = await _askRewatchChoice();
+      final choice = await _askRewatchChoice(showWatchedOnce: (_rewatchCounts[ep.key] ?? 0) > 0);
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
         final previousCount = _rewatchCounts[ep.key] ?? 0;
@@ -317,7 +321,6 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       }
       if (choice == _RewatchChoice.watchedOnce) {
         final previousCount = _rewatchCounts[ep.key] ?? 0;
-        if (previousCount == 0) return;
         setState(() => _rewatchCounts[ep.key] = 0);
         try {
           await library.resetRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: [ep.key]);
@@ -476,7 +479,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       final uid = context.read<AuthProvider>().user!.uid;
       final library = context.read<LibraryService>();
 
-      final choice = await _askRewatchChoice();
+      final choice = await _askRewatchChoice(
+        showWatchedOnce: keys.any((k) => (_rewatchCounts[k] ?? 0) > 0),
+      );
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
         final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
@@ -501,7 +506,6 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       }
       if (choice == _RewatchChoice.watchedOnce) {
         final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
-        if (previousCounts.values.every((c) => c == 0)) return;
         setState(() {
           for (final k in keys) {
             _rewatchCounts[k] = 0;
@@ -598,7 +602,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       final uid = context.read<AuthProvider>().user!.uid;
       final library = context.read<LibraryService>();
 
-      final choice = await _askRewatchChoice();
+      final choice = await _askRewatchChoice(
+        showWatchedOnce: keys.any((k) => (_rewatchCounts[k] ?? 0) > 0),
+      );
       if (!mounted || choice == null) return;
       if (choice == _RewatchChoice.rewatch) {
         final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
@@ -623,7 +629,6 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       }
       if (choice == _RewatchChoice.watchedOnce) {
         final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
-        if (previousCounts.values.every((c) => c == 0)) return;
         setState(() {
           for (final k in keys) {
             _rewatchCounts[k] = 0;
