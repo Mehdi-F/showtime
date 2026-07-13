@@ -10,6 +10,8 @@ void main() {
         episodeNumber: episode,
         name: 'S${season}E$episode',
         airDate: airDate ?? DateTime.utc(2020, 1, 1),
+        overview: '',
+        stillPath: null,
       );
 
   test('returns the first unwatched aired episode in order', () {
