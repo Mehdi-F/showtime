@@ -20,16 +20,90 @@ class OfflineBanner extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: const [
+            SizedBox(width: 12),
             Icon(Icons.cloud_off, size: 14, color: Colors.black),
             SizedBox(width: 6),
-            Text(
-              'Hors ligne — les changements seront synchronisés au retour de la connexion',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w700),
+            Expanded(
+              child: _MarqueeText(
+                'Hors ligne — les changements seront synchronisés au retour de la connexion',
+              ),
             ),
+            SizedBox(width: 12),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Scrolls its text horizontally in a seamless loop — the banner's message
+/// is too long to fit on a phone-width bar without wrapping to several
+/// lines, and a ticker reads better here than a taller multi-line banner.
+class _MarqueeText extends StatefulWidget {
+  final String text;
+
+  const _MarqueeText(this.text);
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText> with SingleTickerProviderStateMixin {
+  static const _style = TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w700);
+  static const _gap = 48.0; // space between the two looping copies of the text
+  static const _pixelsPerSecond = 40.0;
+
+  late final AnimationController _controller;
+  late final double _textWidth;
+
+  @override
+  void initState() {
+    super.initState();
+    final painter = TextPainter(
+      text: TextSpan(text: widget.text, style: _style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _textWidth = painter.width;
+    final loopDistance = _textWidth + _gap;
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: (loopDistance / _pixelsPerSecond * 1000).round()),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 16,
+      child: ClipRect(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final dx = -_controller.value * (_textWidth + _gap);
+            return Stack(
+              children: [
+                Positioned(
+                  left: dx,
+                  top: 0,
+                  bottom: 0,
+                  child: Row(
+                    children: [
+                      Text(widget.text, style: _style, maxLines: 1, softWrap: false),
+                      const SizedBox(width: _gap),
+                      Text(widget.text, style: _style, maxLines: 1, softWrap: false),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
