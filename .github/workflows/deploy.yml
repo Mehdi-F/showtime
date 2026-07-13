@@ -23,14 +23,14 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build web --release --base-href /showtime/ --pwa-strategy=none --dart-define=TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
-
-      - name: Cache-bust JS asset references
-        run: |
-          cd build/web
-          SHA_SHORT=${GITHUB_SHA::8}
-          sed -i "s/main\.dart\.js/main.dart.js?v=$SHA_SHORT/g" flutter_bootstrap.js
-          sed -i "s/flutter_bootstrap\.js\"/flutter_bootstrap.js?v=$SHA_SHORT\"/" index.html
+      # offline-first lets the service worker precache the app shell so it can
+      # still boot with no connection at all, not just tolerate a flaky one.
+      # Flutter's generated service worker versions its own cache by content
+      # hash (via flutter_service_worker.js + version.json), which is why the
+      # old manual "?v=<sha>" query-string busting is gone: it rewrote the
+      # same file references the service worker's manifest keys off of,
+      # which would have fought the built-in versioning instead of helping it.
+      - run: flutter build web --release --base-href /showtime/ --pwa-strategy=offline-first --dart-define=TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
 
       - uses: peaceiris/actions-gh-pages@1ef5a1b1df4c63fe21a2242edbee6cac921ece01 # v4.1.0
         with:

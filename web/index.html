@@ -32,24 +32,6 @@
 
   <title>Showtime</title>
   <link rel="manifest" href="manifest.json">
-  <script>
-    // Older deploys registered a caching service worker; unregister it so
-    // every visit fetches the latest build instead of a stale cached one.
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function (registrations) {
-        for (const registration of registrations) {
-          registration.unregister();
-        }
-      });
-      if ('caches' in window) {
-        caches.keys().then(function (names) {
-          for (const name of names) {
-            caches.delete(name);
-          }
-        });
-      }
-    }
-  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
