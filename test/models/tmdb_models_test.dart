@@ -169,5 +169,42 @@ void main() {
       expect(details.title, 'Fight Club');
       expect(details.releaseDate, DateTime.parse('1999-10-15'));
     });
+
+    test('treats an empty release_date string as null instead of throwing', () {
+      final details = MovieDetails.fromJson({
+        'id': 1,
+        'title': 'Unreleased',
+        'poster_path': null,
+        'release_date': '',
+      });
+
+      expect(details.releaseDate, isNull);
+    });
+  });
+
+  group('TitleImages', () {
+    test('extracts file paths from backdrops and posters', () {
+      final json = {
+        'backdrops': [
+          {'file_path': '/backdrop1.jpg'},
+          {'file_path': '/backdrop2.jpg'},
+        ],
+        'posters': [
+          {'file_path': '/poster1.jpg'},
+        ],
+      };
+
+      final images = TitleImages.fromJson(json);
+
+      expect(images.backdropPaths, ['/backdrop1.jpg', '/backdrop2.jpg']);
+      expect(images.posterPaths, ['/poster1.jpg']);
+    });
+
+    test('defaults to empty lists when both keys are missing', () {
+      final images = TitleImages.fromJson({});
+
+      expect(images.backdropPaths, isEmpty);
+      expect(images.posterPaths, isEmpty);
+    });
   });
 }

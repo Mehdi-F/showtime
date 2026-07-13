@@ -23,6 +23,8 @@ jobs:
 
       - run: flutter pub get
 
+      - run: flutter test
+
       # offline-first lets the service worker precache the app shell so it can
       # still boot with no connection at all, not just tolerate a flaky one.
       # Flutter's generated service worker versions its own cache by content
