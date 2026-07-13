@@ -124,6 +124,21 @@ class LibraryService {
     return _libraryRef(uid).doc(docId).update(updates);
   }
 
+  /// Resets the rewatch counters for the given episodes back to zero (i.e.
+  /// "watched once") without touching their watched state — used by "Vue une
+  /// fois" to correct an accidental rewatch count.
+  Future<void> resetRewatch({
+    required String uid,
+    required int tmdbId,
+    required List<String> episodeKeys,
+  }) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    final updates = <String, dynamic>{
+      for (final key in episodeKeys) 'episodeRewatchCounts.$key': FieldValue.delete(),
+    };
+    return _libraryRef(uid).doc(docId).update(updates);
+  }
+
   Future<void> markMovieWatched({required String uid, required int tmdbId, required bool watched}) {
     final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'movie');
     return _libraryRef(uid).doc(docId).update({
@@ -140,6 +155,12 @@ class LibraryService {
       'movieRewatchCount': FieldValue.increment(1),
       'watchedAt': DateTime.now().toIso8601String(),
     });
+  }
+
+  /// Resets a movie's rewatch counter back to zero ("watched once").
+  Future<void> resetMovieRewatch({required String uid, required int tmdbId}) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'movie');
+    return _libraryRef(uid).doc(docId).update({'movieRewatchCount': 0});
   }
 
   Future<void> removeFromLibrary({required String uid, required int tmdbId, required String type}) {

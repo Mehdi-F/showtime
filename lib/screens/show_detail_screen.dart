@@ -25,7 +25,7 @@ import 'movie_detail_screen.dart';
 
 enum _GapPromptChoice { yes, no, never }
 
-enum _RewatchChoice { notWatched, rewatch }
+enum _RewatchChoice { notWatched, rewatch, watchedOnce }
 
 Future<void> _forEachBounded<T>(List<T> items, int concurrency, Future<void> Function(T item) action) async {
   var index = 0;
@@ -277,6 +277,14 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               Text('+1 Revue'),
             ]),
           ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
+            child: const Row(children: [
+              Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+              SizedBox(width: 12),
+              Text('Vue une fois'),
+            ]),
+          ),
         ],
       ),
     );
@@ -301,6 +309,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         setState(() => _rewatchCounts[ep.key] = previousCount + 1);
         try {
           await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: [ep.key]);
+        } catch (_) {
+          if (mounted) setState(() => _rewatchCounts[ep.key] = previousCount);
+          _showSaveError();
+        }
+        return;
+      }
+      if (choice == _RewatchChoice.watchedOnce) {
+        final previousCount = _rewatchCounts[ep.key] ?? 0;
+        if (previousCount == 0) return;
+        setState(() => _rewatchCounts[ep.key] = 0);
+        try {
+          await library.resetRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: [ep.key]);
         } catch (_) {
           if (mounted) setState(() => _rewatchCounts[ep.key] = previousCount);
           _showSaveError();
@@ -479,6 +499,28 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         }
         return;
       }
+      if (choice == _RewatchChoice.watchedOnce) {
+        final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
+        if (previousCounts.values.every((c) => c == 0)) return;
+        setState(() {
+          for (final k in keys) {
+            _rewatchCounts[k] = 0;
+          }
+        });
+        try {
+          await library.resetRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              for (final k in keys) {
+                _rewatchCounts[k] = previousCounts[k]!;
+              }
+            });
+          }
+          _showSaveError();
+        }
+        return;
+      }
       setState(() {
         for (final k in keys) {
           _watchedEpisodes[k] = false;
@@ -567,6 +609,28 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         });
         try {
           await library.incrementRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              for (final k in keys) {
+                _rewatchCounts[k] = previousCounts[k]!;
+              }
+            });
+          }
+          _showSaveError();
+        }
+        return;
+      }
+      if (choice == _RewatchChoice.watchedOnce) {
+        final previousCounts = {for (final k in keys) k: _rewatchCounts[k] ?? 0};
+        if (previousCounts.values.every((c) => c == 0)) return;
+        setState(() {
+          for (final k in keys) {
+            _rewatchCounts[k] = 0;
+          }
+        });
+        try {
+          await library.resetRewatch(uid: uid, tmdbId: item.tmdbId, episodeKeys: keys);
         } catch (_) {
           if (mounted) {
             setState(() {

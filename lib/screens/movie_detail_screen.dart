@@ -19,7 +19,7 @@ import '../widgets/round_check.dart';
 import '../widgets/skeletons.dart';
 import 'show_detail_screen.dart';
 
-enum _RewatchChoice { notWatched, rewatch }
+enum _RewatchChoice { notWatched, rewatch, watchedOnce }
 
 class MovieDetailScreen extends StatefulWidget {
   final LibraryItem? libraryItem;
@@ -134,6 +134,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               Text('+1 Revu'),
             ]),
           ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
+            child: const Row(children: [
+              Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+              SizedBox(width: 12),
+              Text('Vu une fois'),
+            ]),
+          ),
         ],
       ),
     );
@@ -200,6 +208,27 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       });
       try {
         await library.incrementMovieRewatch(uid: uid, tmdbId: item.tmdbId);
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _rewatchCount = previousCount;
+            _libraryItem = previousItem;
+          });
+        }
+        _showSaveError();
+      }
+      return;
+    }
+    if (choice == _RewatchChoice.watchedOnce) {
+      if (_rewatchCount == 0) return;
+      final previousCount = _rewatchCount;
+      final previousItem = _libraryItem;
+      setState(() {
+        _rewatchCount = 0;
+        _libraryItem = _withUpdates(item, watched: true, watchedAt: item.watchedAt);
+      });
+      try {
+        await library.resetMovieRewatch(uid: uid, tmdbId: item.tmdbId);
       } catch (_) {
         if (mounted) {
           setState(() {
