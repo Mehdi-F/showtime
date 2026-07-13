@@ -10,6 +10,7 @@ import 'services/link_service.dart';
 import 'services/lists_service.dart';
 import 'services/tmdb_service.dart';
 import 'providers/auth_provider.dart';
+import 'providers/connectivity_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/lists_provider.dart';
 import 'screens/login_screen.dart';
@@ -34,6 +35,7 @@ class ShowtimeApp extends StatelessWidget {
         Provider(create: (_) => ListsService()),
         Provider(create: (_) => LinkService()),
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (context) => LibraryProvider(context.read<LibraryService>())),
         ChangeNotifierProvider(create: (context) => ListsProvider(context.read<ListsService>())),
       ],
