@@ -349,7 +349,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
     if (isInitial) {
       future.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
-        if (mounted) setState(() => _showContent = true);
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _autoScrollPastHistoryOnce();
+            if (mounted) setState(() => _showContent = true);
+          });
+        }
       });
     }
     return future;
