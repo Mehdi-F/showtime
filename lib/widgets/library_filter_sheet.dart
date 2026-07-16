@@ -182,9 +182,8 @@ class LibraryFilterButton extends StatelessWidget {
 class LibraryFilterBadge extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-  final bool isDefault;
 
-  const LibraryFilterBadge({super.key, required this.label, required this.onTap, this.isDefault = false});
+  const LibraryFilterBadge({super.key, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -195,16 +194,11 @@ class LibraryFilterBadge extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: isDefault ? AppColors.surfaceVariant.withOpacity(0.3) : AppColors.surfaceVariant,
+            color: AppColors.surfaceVariant,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(label.toUpperCase(),
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-                letterSpacing: 0.5,
-                color: isDefault ? AppColors.textSecondary : Colors.white,
-              )),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.5)),
         ),
       ),
     );
