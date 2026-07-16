@@ -295,6 +295,7 @@ class MovieDetails {
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
     );
   }
+}
 
 class WatchProvider {
   final int id;
