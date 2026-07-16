@@ -191,7 +191,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
       final seasonDetails = await tmdb.getSeasonDetails(item.tmdbId, details.seasons[i].seasonNumber);
       episodesBySeason[i] = seasonDetails.episodes;
     });
-    final allEpisodes = <EpisodeRef>[for (final episodes in episodesBySeason) ...episodes!];
+    final allEpisodes = <EpisodeRef>[for (final episodes in episodesBySeason) if (episodes != null) ...episodes];
     final now = DateTime.now();
     final next = nextUnwatchedEpisode(episodesInOrder: allEpisodes, watchedEpisodes: item.watchedEpisodes, now: now);
     final unwatchedCount = allEpisodes.where((e) {
