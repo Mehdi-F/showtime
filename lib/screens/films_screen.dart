@@ -236,22 +236,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
         }
         final visible = rows.take(_visibleCount).toList();
-        return Column(
-          children: [
-            _sectionHeader('À VOIR'),
-            Expanded(child: widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible)),
-          ],
-        );
+        return widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible);
       },
     );
   }
-
-  Widget _sectionHeader(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-      );
 
   Widget _buildGrid(List<_MovieRow> visible) {
     return GridView.builder(
