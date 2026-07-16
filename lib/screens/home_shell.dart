@@ -16,10 +16,10 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
   static const _screens = [
+    ProfileScreen(),
     SeriesScreen(),
     FilmsScreen(),
     SearchScreen(),
-    ProfileScreen(),
   ];
 
   @override
@@ -35,10 +35,10 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
+          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
           NavigationDestination(icon: Icon(Icons.tv_outlined), label: 'Séries'),
           NavigationDestination(icon: Icon(Icons.movie_outlined), label: 'Films'),
           NavigationDestination(icon: Icon(Icons.search), label: 'Explorer'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
         ],
       ),
     );
