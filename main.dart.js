@@ -112218,8 +112218,7 @@ s=4
 return A.l(A.Qv(a,4,new A.aPw(a0,a1,f,c)),$async$xN)
 case 4:e=A.b([],t.hl)
 for(o=0;o<d;++o){n=c[o]
-n.toString
-B.b.P(e,n)}m=new A.bZ(Date.now(),0,!1)
+if(n!=null)B.b.P(e,n)}m=new A.bZ(Date.now(),0,!1)
 l=A.b05(e,m,a1.f)
 k=new A.aq(e,new A.aPx(a1,m),t.do).gu(0)
 d=f.b
