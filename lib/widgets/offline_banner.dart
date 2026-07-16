@@ -93,7 +93,13 @@ class _MarqueeTextState extends State<_MarqueeText> with SingleTickerProviderSta
                   left: dx,
                   top: 0,
                   bottom: 0,
+                  // Positioned with only `left` set gives its child unbounded
+                  // width constraints; Row defaults to mainAxisSize.max, which
+                  // throws under an unbounded width — happening on every
+                  // single animation frame, which is exactly what flooded the
+                  // console. mainAxisSize.min sizes it to its children instead.
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(widget.text, style: _style, maxLines: 1, softWrap: false),
                       const SizedBox(width: _gap),
