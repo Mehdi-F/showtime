@@ -35,13 +35,19 @@ class FilmsScreen extends StatefulWidget {
   State<FilmsScreen> createState() => _FilmsScreenState();
 }
 
-class _FilmsScreenState extends State<FilmsScreen> {
+class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStateMixin {
   static const _prefsKey = 'films_view_mode';
+  late final TabController _tabController;
   _ViewMode _viewMode = _ViewMode.grid;
 
   @override
   void initState() {
     super.initState();
+    // Only one tab today, but sharing the TabBar (rather than a plain Text
+    // header) keeps the top of Films visually identical to Séries, whose
+    // "À VOIR" is a real tab — matching what the design should look like
+    // even with a single entry.
+    _tabController = TabController(length: 1, vsync: this);
     _loadViewMode();
   }
 
@@ -66,19 +72,30 @@ class _FilmsScreenState extends State<FilmsScreen> {
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final movieItems = context.watch<LibraryProvider>().items.where((i) => i.type == 'movie').toList();
     final tmdb = context.read<TmdbService>();
 
     return Scaffold(
-      body: SafeArea(
-        child: _ToWatchTab(
-          movieItems: movieItems,
-          tmdb: tmdb,
-          resolveRow: _resolveRow,
-          viewMode: _viewMode,
-          onToggleViewMode: _toggleViewMode,
+      appBar: AppBar(
+        toolbarHeight: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [Tab(text: 'À VOIR')],
         ),
+      ),
+      body: _ToWatchTab(
+        movieItems: movieItems,
+        tmdb: tmdb,
+        resolveRow: _resolveRow,
+        viewMode: _viewMode,
+        onToggleViewMode: _toggleViewMode,
       ),
     );
   }

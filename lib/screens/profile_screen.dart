@@ -1231,41 +1231,42 @@ class _FullListScreenState extends State<_FullListScreen> {
           Positioned.fill(
             child: RefreshIndicator(
               onRefresh: _refresh,
-              child: Column(
-                children: [
-                  // In grouped mode, the sticky per-section pills (En cours,
-                  // Pas commencé...) take over as the top badge — showing
-                  // both would mean two stacked pills before any content.
-                  if (!_grouped) LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
-                  if (visible.isEmpty)
-                    const Expanded(
-                      child: ScrollableCenter(
-                        child: Text('Aucun titre ne correspond à ce filtre.',
-                            style: TextStyle(color: AppColors.textSecondary)),
-                      ),
+              child: visible.isEmpty
+                  ? const ScrollableCenter(
+                      child: Text('Aucun titre ne correspond à ce filtre.',
+                          style: TextStyle(color: AppColors.textSecondary)),
                     )
-                  else
-                    Expanded(
-                      child: _grouped
-                          ? _buildGroupedGrid(visible)
-                          : GridView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(10),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 0.6,
-                                crossAxisSpacing: 4,
-                                mainAxisSpacing: 4,
-                              ),
-                              itemCount: visible.length,
-                              itemBuilder: (context, index) =>
-                                  FadeInEntry(index: index, child: _buildTile(visible[index])),
-                            ),
-                    ),
-                ],
-              ),
+                  : _grouped
+                      ? _buildGroupedGrid(visible)
+                      : GridView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          // Extra top padding clears the floating filter badge
+                          // overlaid above the grid (see Positioned below) —
+                          // the grid scrolls underneath it, same "floaty" look
+                          // as the grouped mode's sticky pills.
+                          padding: const EdgeInsets.fromLTRB(10, 56, 10, 10),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            childAspectRatio: 0.6,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
+                          ),
+                          itemCount: visible.length,
+                          itemBuilder: (context, index) =>
+                              FadeInEntry(index: index, child: _buildTile(visible[index])),
+                        ),
             ),
           ),
+          // In grouped mode, the sticky per-section pills (En cours, Pas
+          // commencé...) take over as the top badge — showing both would
+          // mean two stacked pills before any content.
+          if (!_grouped)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
+            ),
           Positioned(
             bottom: 16,
             left: 0,
