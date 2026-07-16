@@ -274,7 +274,14 @@ class _ToWatchTab extends StatefulWidget {
 }
 
 class _ToWatchTabState extends State<_ToWatchTab> {
-  late Future<List<_ShowEpisodesData>> _dataFuture;
+  // A show can need several TMDB calls (details + one per season), so with a
+  // library of any real size, waiting on every show before rendering any of
+  // them made this screen feel far slower than Films. Each show now renders
+  // as soon as it resolves instead, while still bounding how many are
+  // in-flight at once (5 shows, each internally capped at 4 seasons) so a
+  // big library doesn't fire off an unbounded burst of requests.
+  final Map<int, _ShowEpisodesData> _resolved = {};
+  bool _showContent = false;
   final _scrollController = ScrollController();
   final _historyKey = GlobalKey();
   bool _autoScrolledPastHistory = false;
@@ -282,13 +289,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   @override
   void initState() {
     super.initState();
-    _dataFuture = _resolveAll();
+    _resolveAll(widget.tvItems, isInitial: true);
   }
 
   @override
   void didUpdateWidget(covariant _ToWatchTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _dataFuture = _resolveAll();
+    _resolveAll(widget.tvItems, isInitial: false);
   }
 
   @override
@@ -297,27 +304,32 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     super.dispose();
   }
 
-  Future<List<_ShowEpisodesData>> _resolveAll() async {
-    final results = List<_ShowEpisodesData?>.filled(widget.tvItems.length, null);
-    await _forEachBounded(List.generate(widget.tvItems.length, (i) => i), 5, (i) async {
+  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
+    final ids = items.map((i) => i.tmdbId).toSet();
+    _resolved.removeWhere((k, _) => !ids.contains(k));
+
+    final future = _forEachBounded(items, 5, (item) async {
       try {
-        results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+        final data = await widget.resolveRow(widget.tmdb, item);
+        if (mounted) setState(() => _resolved[item.tmdbId] = data);
       } catch (_) {
         // A single show failing to load (TMDB hiccup, rate limit) shouldn't
         // block the rest of the list from rendering.
       }
     });
-    return results.whereType<_ShowEpisodesData>().toList();
+
+    if (isInitial) {
+      future.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+        if (mounted) setState(() => _showContent = true);
+      });
+    }
+    return future;
   }
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    final future = _resolveAll();
-    setState(() {
-      _dataFuture = future;
-      _autoScrolledPastHistory = false;
-    });
-    await future;
+    setState(() => _autoScrolledPastHistory = false);
+    await _resolveAll(widget.tvItems, isInitial: false);
   }
 
   /// The list opens scrolled past the watch history so "À voir" is the first
@@ -366,63 +378,58 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             style: TextStyle(color: AppColors.textSecondary)),
       );
     }
-    return FutureBuilder<List<_ShowEpisodesData>>(
-      future: _dataFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const PosterGridSkeleton(childAspectRatio: 0.67);
-        }
-        final data = snapshot.data!;
-        final now = DateTime.now();
+    if (!_showContent) {
+      return const PosterGridSkeleton(childAspectRatio: 0.67);
+    }
+    final data = widget.tvItems.map((i) => _resolved[i.tmdbId]).whereType<_ShowEpisodesData>().toList();
+    final now = DateTime.now();
 
-        final history = _buildHistory(data);
+    final history = _buildHistory(data);
 
-        final withNext = data.where((d) => d.nextEpisode != null).toList();
-        final active = <_ShowEpisodesData>[];
-        final stale = <_ShowEpisodesData>[];
-        for (final d in withNext) {
-          final lastActivity = d.item.lastActivityAt;
-          if (lastActivity == null || now.difference(lastActivity) > _staleAfter) {
-            stale.add(d);
-          } else {
-            active.add(d);
-          }
-        }
-        active.sort((a, b) {
-          final aDate = a.nextEpisode!.airDate;
-          final bDate = b.nextEpisode!.airDate;
-          if (aDate == null && bDate == null) return 0;
-          if (aDate == null) return 1;
-          if (bDate == null) return -1;
-          return bDate.compareTo(aDate);
-        });
+    final withNext = data.where((d) => d.nextEpisode != null).toList();
+    final active = <_ShowEpisodesData>[];
+    final stale = <_ShowEpisodesData>[];
+    for (final d in withNext) {
+      final lastActivity = d.item.lastActivityAt;
+      if (lastActivity == null || now.difference(lastActivity) > _staleAfter) {
+        stale.add(d);
+      } else {
+        active.add(d);
+      }
+    }
+    active.sort((a, b) {
+      final aDate = a.nextEpisode!.airDate;
+      final bDate = b.nextEpisode!.airDate;
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate);
+    });
 
-        if (history.isEmpty && active.isEmpty && stale.isEmpty) {
-          return const ScrollableCenter(
-              child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
-        }
+    if (history.isEmpty && active.isEmpty && stale.isEmpty) {
+      return const ScrollableCenter(
+          child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
+    }
 
-        final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
-        if (showHistory) {
-          _autoScrollPastHistoryOnce();
-        }
+    final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
+    if (showHistory) {
+      _autoScrollPastHistoryOnce();
+    }
 
-        return ListView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(top: 8, bottom: 16),
-          children: widget.viewMode == _ViewMode.list
-              ? [
-                  if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
-                  if (active.isNotEmpty) ..._activeSection(context, active),
-                  if (stale.isNotEmpty) ..._staleSection(context, stale),
-                ]
-              : [
-                  if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
-                  if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
-                ],
-        );
-      },
+    return ListView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      children: widget.viewMode == _ViewMode.list
+          ? [
+              if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
+              if (active.isNotEmpty) ..._activeSection(context, active),
+              if (stale.isNotEmpty) ..._staleSection(context, stale),
+            ]
+          : [
+              if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
+              if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
+            ],
     );
   }
 
@@ -547,37 +554,45 @@ class _UpcomingTab extends StatefulWidget {
 }
 
 class _UpcomingTabState extends State<_UpcomingTab> {
-  late Future<List<_CalendarRow?>> _rowsFuture;
+  final Map<int, _CalendarRow> _resolved = {};
+  bool _showContent = false;
 
   @override
   void initState() {
     super.initState();
-    _rowsFuture = _resolveAll();
+    _resolveAll(widget.tvItems, isInitial: true);
   }
 
   @override
   void didUpdateWidget(covariant _UpcomingTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _rowsFuture = _resolveAll();
+    _resolveAll(widget.tvItems, isInitial: false);
   }
 
-  Future<List<_CalendarRow?>> _resolveAll() async {
-    final results = List<_CalendarRow?>.filled(widget.tvItems.length, null);
-    await _forEachBounded(List.generate(widget.tvItems.length, (i) => i), 8, (i) async {
+  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
+    final ids = items.map((i) => i.tmdbId).toSet();
+    _resolved.removeWhere((k, _) => !ids.contains(k));
+
+    final future = _forEachBounded(items, 8, (item) async {
       try {
-        results[i] = await widget.resolveRow(widget.tmdb, widget.tvItems[i]);
+        final row = await widget.resolveRow(widget.tmdb, item);
+        if (row != null && mounted) setState(() => _resolved[item.tmdbId] = row);
       } catch (_) {
         // A single show failing to load shouldn't block the rest of the list.
       }
     });
-    return results;
+
+    if (isInitial) {
+      future.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+        if (mounted) setState(() => _showContent = true);
+      });
+    }
+    return future;
   }
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    final future = _resolveAll();
-    setState(() => _rowsFuture = future);
-    await future;
+    await _resolveAll(widget.tvItems, isInitial: false);
   }
 
   Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
@@ -612,25 +627,22 @@ class _UpcomingTabState extends State<_UpcomingTab> {
             style: TextStyle(color: AppColors.textSecondary)),
       );
     }
-    return FutureBuilder<List<_CalendarRow?>>(
-      future: _rowsFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const PosterGridSkeleton(childAspectRatio: 0.67);
-        }
-        final rows = snapshot.data!.whereType<_CalendarRow>().toList()
-          ..sort((a, b) {
-            final aDate = a.episode.airDate;
-            final bDate = b.episode.airDate;
-            if (aDate == null && bDate == null) return 0;
-            if (aDate == null) return 1;
-            if (bDate == null) return -1;
-            return aDate.compareTo(bDate);
-          });
-        if (rows.isEmpty) {
-          return const ScrollableCenter(
-              child: Text('No upcoming episodes scheduled.', style: TextStyle(color: AppColors.textSecondary)));
-        }
+    if (!_showContent) {
+      return const PosterGridSkeleton(childAspectRatio: 0.67);
+    }
+    final rows = widget.tvItems.map((i) => _resolved[i.tmdbId]).whereType<_CalendarRow>().toList()
+      ..sort((a, b) {
+        final aDate = a.episode.airDate;
+        final bDate = b.episode.airDate;
+        if (aDate == null && bDate == null) return 0;
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        return aDate.compareTo(bDate);
+      });
+    if (rows.isEmpty) {
+      return const ScrollableCenter(
+          child: Text('No upcoming episodes scheduled.', style: TextStyle(color: AppColors.textSecondary)));
+    }
 
         final now = DateTime.now();
         final groups = <String, List<_CalendarRow>>{};
@@ -708,8 +720,6 @@ class _UpcomingTabState extends State<_UpcomingTab> {
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: children,
         );
-      },
-    );
   }
 }
 
