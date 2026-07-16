@@ -350,8 +350,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     if (isInitial) {
       future.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
         if (mounted) {
+          // Trigger auto-scroll as soon as the current page of shows is fully loaded,
+          // then show the content. This ensures the scroll happens before rendering.
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _autoScrollPastHistoryOnce();
             if (mounted) setState(() => _showContent = true);
           });
         }
