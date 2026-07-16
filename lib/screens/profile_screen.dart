@@ -1200,6 +1200,7 @@ class _FullListScreenState extends State<_FullListScreen> {
     final visible = _applyFilterAndSort();
     final filterLabel = _isSeries ? _seriesFilter.label : _filmFilter.label;
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
