@@ -58,12 +58,22 @@ class NextEpisode {
 
   String get key => 's${seasonNumber}e$episodeNumber';
 
-  factory NextEpisode.fromJson(Map<String, dynamic> json) => NextEpisode(
-        seasonNumber: json['season_number'] as int,
-        episodeNumber: json['episode_number'] as int,
-        name: json['name'] as String,
-        airDate: json['air_date'] != null ? DateTime.parse(json['air_date'] as String) : null,
-      );
+  factory NextEpisode.fromJson(Map<String, dynamic> json) {
+    DateTime? airDate;
+    if (json['air_date'] != null) {
+      try {
+        airDate = DateTime.parse(json['air_date'] as String);
+      } catch (_) {
+        airDate = null;
+      }
+    }
+    return NextEpisode(
+      seasonNumber: json['season_number'] as int,
+      episodeNumber: json['episode_number'] as int,
+      name: json['name'] as String,
+      airDate: airDate,
+    );
+  }
 }
 
 class TvDetails {
@@ -165,15 +175,23 @@ class SimilarMedia {
     this.releaseDate,
   });
 
-  factory SimilarMedia.fromJson(Map<String, dynamic> json, String type) => SimilarMedia(
-        id: json['id'] as int,
-        type: type,
-        title: (type == 'tv' ? json['name'] : json['title']) as String,
-        posterPath: json['poster_path'] as String?,
-        releaseDate: json['release_date'] != null && (json['release_date'] as String).isNotEmpty
-            ? DateTime.parse(json['release_date'] as String)
-            : null,
-      );
+  factory SimilarMedia.fromJson(Map<String, dynamic> json, String type) {
+    DateTime? releaseDate;
+    if (json['release_date'] != null && (json['release_date'] as String).isNotEmpty) {
+      try {
+        releaseDate = DateTime.parse(json['release_date'] as String);
+      } catch (_) {
+        releaseDate = null;
+      }
+    }
+    return SimilarMedia(
+      id: json['id'] as int,
+      type: type,
+      title: (type == 'tv' ? json['name'] : json['title']) as String,
+      posterPath: json['poster_path'] as String?,
+      releaseDate: releaseDate,
+    );
+  }
 }
 
 class EpisodeRef {
@@ -195,14 +213,25 @@ class EpisodeRef {
 
   String get key => 's${seasonNumber}e$episodeNumber';
 
-  factory EpisodeRef.fromJson(int seasonNumber, Map<String, dynamic> json) => EpisodeRef(
-        seasonNumber: seasonNumber,
-        episodeNumber: json['episode_number'] as int,
-        name: json['name'] as String,
-        airDate: json['air_date'] != null ? DateTime.parse(json['air_date'] as String) : null,
-        overview: json['overview'] as String? ?? '',
-        stillPath: json['still_path'] as String?,
-      );
+  factory EpisodeRef.fromJson(int seasonNumber, Map<String, dynamic> json) {
+    DateTime? airDate;
+    if (json['air_date'] != null) {
+      try {
+        airDate = DateTime.parse(json['air_date'] as String);
+      } catch (_) {
+        // Ignore malformed dates from TMDB
+        airDate = null;
+      }
+    }
+    return EpisodeRef(
+      seasonNumber: seasonNumber,
+      episodeNumber: json['episode_number'] as int,
+      name: json['name'] as String,
+      airDate: airDate,
+      overview: json['overview'] as String? ?? '',
+      stillPath: json['still_path'] as String?,
+    );
+  }
 }
 
 class SeasonDetails {
@@ -243,23 +272,29 @@ class MovieDetails {
     required this.voteAverage,
   });
 
-  factory MovieDetails.fromJson(Map<String, dynamic> json) => MovieDetails(
-        id: json['id'] as int,
-        title: json['title'] as String,
-        posterPath: json['poster_path'] as String?,
-        backdropPath: json['backdrop_path'] as String?,
-        releaseDate:
-            json['release_date'] != null && (json['release_date'] as String).isNotEmpty
-                ? DateTime.parse(json['release_date'] as String)
-                : null,
-        runtime: json['runtime'] as int? ?? 0,
-        genres: (json['genres'] as List<dynamic>? ?? [])
-            .map((g) => (g as Map<String, dynamic>)['name'] as String)
-            .toList(),
-        overview: json['overview'] as String? ?? '',
-        voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
-      );
-}
+  factory MovieDetails.fromJson(Map<String, dynamic> json) {
+    DateTime? releaseDate;
+    if (json['release_date'] != null && (json['release_date'] as String).isNotEmpty) {
+      try {
+        releaseDate = DateTime.parse(json['release_date'] as String);
+      } catch (_) {
+        releaseDate = null;
+      }
+    }
+    return MovieDetails(
+      id: json['id'] as int,
+      title: json['title'] as String,
+      posterPath: json['poster_path'] as String?,
+      backdropPath: json['backdrop_path'] as String?,
+      releaseDate: releaseDate,
+      runtime: json['runtime'] as int? ?? 0,
+      genres: (json['genres'] as List<dynamic>? ?? [])
+          .map((g) => (g as Map<String, dynamic>)['name'] as String)
+          .toList(),
+      overview: json['overview'] as String? ?? '',
+      voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
+    );
+  }
 
 class WatchProvider {
   final int id;
