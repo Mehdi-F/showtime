@@ -1235,7 +1235,14 @@ class _FullListScreenState extends State<_FullListScreen> {
                   // In grouped mode, the sticky per-section pills (En cours,
                   // Pas commencé...) take over as the top badge — showing
                   // both would mean two stacked pills before any content.
-                  if (!_grouped) LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
+                  if (!_grouped)
+                    LibraryFilterBadge(
+                      label: filterLabel,
+                      onTap: _openFilterSheet,
+                      isDefault: _isSeries
+                          ? _seriesFilter == _SeriesProgressFilter.all
+                          : _filmFilter == _FilmProgressFilter.all,
+                    ),
                   if (visible.isEmpty)
                     const Expanded(
                       child: ScrollableCenter(
