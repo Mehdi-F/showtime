@@ -274,47 +274,76 @@ class _ToWatchTab extends StatefulWidget {
 }
 
 class _ToWatchTabState extends State<_ToWatchTab> {
-  // A show can need several TMDB calls (details + one per season), so with a
-  // library of any real size, waiting on every show before rendering any of
-  // them made this screen feel far slower than Films. Each show now renders
-  // as soon as it resolves instead, while still bounding how many are
-  // in-flight at once (5 shows, each internally capped at 4 seasons) so a
-  // big library doesn't fire off an unbounded burst of requests.
+  // A show can need several TMDB calls (details + one per season), so
+  // fetching every show in the library on open — even progressively — was
+  // still a lot of network work for a big library. Only the first page of
+  // shows (sorted by most recent activity, which needs no network call) is
+  // fetched now; more load in as the user scrolls near the bottom, same as
+  // Films' pagination. Each show still renders as soon as it resolves, and
+  // in-flight requests stay bounded (5 shows at once, each internally capped
+  // at 4 seasons).
+  static const _pageSize = 20;
+
   final Map<int, _ShowEpisodesData> _resolved = {};
+  final Set<int> _settled = {};
   bool _showContent = false;
+  int _visibleCount = _pageSize;
   final _scrollController = ScrollController();
   final _historyKey = GlobalKey();
   bool _autoScrolledPastHistory = false;
 
+  List<LibraryItem> _sortedItems() {
+    final sorted = widget.tvItems.toList();
+    sorted.sort((a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(a.lastActivityAt ?? a.addedAt));
+    return sorted;
+  }
+
   @override
   void initState() {
     super.initState();
-    _resolveAll(widget.tvItems, isInitial: true);
+    _scrollController.addListener(_onScroll);
+    _resolveVisible(isInitial: true);
   }
 
   @override
   void didUpdateWidget(covariant _ToWatchTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _resolveAll(widget.tvItems, isInitial: false);
+    _resolveVisible(isInitial: false);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
-    final ids = items.map((i) => i.tmdbId).toSet();
-    _resolved.removeWhere((k, _) => !ids.contains(k));
+  void _onScroll() {
+    if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
+    if (_visibleCount >= widget.tvItems.length) return;
+    setState(() => _visibleCount += _pageSize);
+    _resolveVisible(isInitial: false);
+  }
 
-    final future = _forEachBounded(items, 5, (item) async {
+  Future<void> _resolveVisible({required bool isInitial}) {
+    final allIds = widget.tvItems.map((i) => i.tmdbId).toSet();
+    _resolved.removeWhere((k, _) => !allIds.contains(k));
+    _settled.removeWhere((k) => !allIds.contains(k));
+
+    final visible = _sortedItems().take(_visibleCount).toList();
+    final future = _forEachBounded(visible, 5, (item) async {
       try {
         final data = await widget.resolveRow(widget.tmdb, item);
-        if (mounted) setState(() => _resolved[item.tmdbId] = data);
+        if (mounted) {
+          setState(() {
+            _resolved[item.tmdbId] = data;
+            _settled.add(item.tmdbId);
+          });
+        }
       } catch (_) {
         // A single show failing to load (TMDB hiccup, rate limit) shouldn't
         // block the rest of the list from rendering.
+        if (mounted) setState(() => _settled.add(item.tmdbId));
       }
     });
 
@@ -329,13 +358,19 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
     setState(() => _autoScrolledPastHistory = false);
-    await _resolveAll(widget.tvItems, isInitial: false);
+    await _resolveVisible(isInitial: false);
   }
 
   /// The list opens scrolled past the watch history so "À voir" is the first
-  /// thing visible — history is still there, just a scroll-up away.
+  /// thing visible — history is still there, just a scroll-up away. Waits
+  /// for the current page to fully settle first: jumping based on a still-
+  /// growing history section (shows are still streaming in) would measure
+  /// the wrong height and land the scroll partway through it instead of
+  /// past it.
   void _autoScrollPastHistoryOnce() {
     if (_autoScrolledPastHistory) return;
+    final visibleIds = _sortedItems().take(_visibleCount).map((i) => i.tmdbId);
+    if (!visibleIds.every(_settled.contains)) return;
     _autoScrolledPastHistory = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
@@ -381,7 +416,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     if (!_showContent) {
       return const PosterGridSkeleton(childAspectRatio: 0.67);
     }
-    final data = widget.tvItems.map((i) => _resolved[i.tmdbId]).whereType<_ShowEpisodesData>().toList();
+    final data =
+        _sortedItems().take(_visibleCount).map((i) => _resolved[i.tmdbId]).whereType<_ShowEpisodesData>().toList();
     final now = DateTime.now();
 
     final history = _buildHistory(data);
@@ -554,26 +590,52 @@ class _UpcomingTab extends StatefulWidget {
 }
 
 class _UpcomingTabState extends State<_UpcomingTab> {
+  static const _pageSize = 20;
+
   final Map<int, _CalendarRow> _resolved = {};
   bool _showContent = false;
+  int _visibleCount = _pageSize;
+  final _scrollController = ScrollController();
+
+  List<LibraryItem> _sortedItems() {
+    final sorted = widget.tvItems.toList();
+    sorted.sort((a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(a.lastActivityAt ?? a.addedAt));
+    return sorted;
+  }
 
   @override
   void initState() {
     super.initState();
-    _resolveAll(widget.tvItems, isInitial: true);
+    _scrollController.addListener(_onScroll);
+    _resolveVisible(isInitial: true);
   }
 
   @override
   void didUpdateWidget(covariant _UpcomingTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _resolveAll(widget.tvItems, isInitial: false);
+    _resolveVisible(isInitial: false);
   }
 
-  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
-    final ids = items.map((i) => i.tmdbId).toSet();
-    _resolved.removeWhere((k, _) => !ids.contains(k));
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-    final future = _forEachBounded(items, 8, (item) async {
+  void _onScroll() {
+    if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
+    if (_visibleCount >= widget.tvItems.length) return;
+    setState(() => _visibleCount += _pageSize);
+    _resolveVisible(isInitial: false);
+  }
+
+  Future<void> _resolveVisible({required bool isInitial}) {
+    final allIds = widget.tvItems.map((i) => i.tmdbId).toSet();
+    _resolved.removeWhere((k, _) => !allIds.contains(k));
+
+    final visible = _sortedItems().take(_visibleCount).toList();
+    final future = _forEachBounded(visible, 8, (item) async {
       try {
         final row = await widget.resolveRow(widget.tmdb, item);
         if (row != null && mounted) setState(() => _resolved[item.tmdbId] = row);
@@ -592,7 +654,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    await _resolveAll(widget.tvItems, isInitial: false);
+    await _resolveVisible(isInitial: false);
   }
 
   Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
@@ -630,7 +692,11 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     if (!_showContent) {
       return const PosterGridSkeleton(childAspectRatio: 0.67);
     }
-    final rows = widget.tvItems.map((i) => _resolved[i.tmdbId]).whereType<_CalendarRow>().toList()
+    final rows = _sortedItems()
+        .take(_visibleCount)
+        .map((i) => _resolved[i.tmdbId])
+        .whereType<_CalendarRow>()
+        .toList()
       ..sort((a, b) {
         final aDate = a.episode.airDate;
         final bDate = b.episode.airDate;
@@ -716,6 +782,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
         });
 
         return ListView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(top: 8, bottom: 16),
           children: children,
