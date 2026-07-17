@@ -291,6 +291,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   final _scrollController = ScrollController();
   final _historyKey = GlobalKey();
   bool _autoScrolledPastHistory = false;
+  bool _loadHistory = false;
 
   List<LibraryItem> _sortedItems() {
     final sorted = widget.tvItems.toList();
@@ -319,6 +320,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   void _onScroll() {
+    // Load history when user scrolls toward the top
+    if (_scrollController.position.pixels < 200 && !_loadHistory) {
+      setState(() => _loadHistory = true);
+    }
+
+    // Load more shows when scrolling near bottom
     if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
     if (_visibleCount >= widget.tvItems.length) return;
     setState(() => _visibleCount += _pageSize);
@@ -363,7 +370,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    setState(() => _autoScrolledPastHistory = false);
+    setState(() {
+      _autoScrolledPastHistory = false;
+      _loadHistory = false;
+    });
     await _resolveVisible(isInitial: false);
   }
 
@@ -374,7 +384,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   /// the wrong height and land the scroll partway through it instead of
   /// past it.
   void _autoScrollPastHistoryOnce() {
-    if (_autoScrolledPastHistory) return;
+    if (_autoScrolledPastHistory || !_loadHistory) return;
     final visibleIds = _sortedItems().take(_visibleCount).map((i) => i.tmdbId);
     if (!visibleIds.every(_settled.contains)) return;
     _autoScrolledPastHistory = true;
@@ -426,7 +436,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         _sortedItems().take(_visibleCount).map((i) => _resolved[i.tmdbId]).whereType<_ShowEpisodesData>().toList();
     final now = DateTime.now();
 
-    final history = _buildHistory(data);
+    final history = _loadHistory ? _buildHistory(data) : [];
 
     final withNext = data.where((d) => d.nextEpisode != null).toList();
     final active = <_ShowEpisodesData>[];
