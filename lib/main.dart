@@ -13,6 +13,7 @@ import 'providers/auth_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/lists_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_shell.dart';
 
@@ -36,13 +37,27 @@ class ShowtimeApp extends StatelessWidget {
         Provider(create: (_) => LinkService()),
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (context) => LibraryProvider(context.read<LibraryService>())),
         ChangeNotifierProvider(create: (context) => ListsProvider(context.read<ListsService>())),
       ],
-      child: MaterialApp(
-        title: 'Showtime',
-        theme: buildAppTheme(),
-        home: const AuthGate(),
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, _) {
+          ThemeMode themeMode = ThemeMode.dark;
+          if (settings.themeMode == ThemeMode.light) {
+            themeMode = ThemeMode.light;
+          } else if (settings.themeMode == ThemeMode.auto) {
+            themeMode = ThemeMode.system;
+          }
+
+          return MaterialApp(
+            title: 'Showtime',
+            theme: buildAppTheme(isDark: false),
+            darkTheme: buildAppTheme(isDark: true),
+            themeMode: themeMode,
+            home: const AuthGate(),
+          );
+        },
       ),
     );
   }

@@ -25,6 +25,7 @@ import '../widgets/skeletons.dart';
 import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
+import 'settings_screen.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
 
@@ -395,6 +396,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   onImport: () => Navigator.of(context).push(appRoute(
                     builder: (_) => const ImportTvTimeScreen(),
                   )),
+                  onSettings: () => Navigator.of(context).push(appRoute(
+                    builder: (_) => const SettingsScreen(),
+                  )),
                 ),
                 const SizedBox(height: 8),
                 _StatsRow(
@@ -486,6 +490,7 @@ class _ProfileHeader extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onSignOut;
   final VoidCallback onImport;
+  final VoidCallback onSettings;
 
   const _ProfileHeader({
     required this.backdropPath,
@@ -494,6 +499,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.onEdit,
     required this.onSignOut,
     required this.onImport,
+    required this.onSettings,
   });
 
   @override
@@ -538,6 +544,7 @@ class _ProfileHeader extends StatelessWidget {
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         color: AppColors.surface,
                         itemBuilder: (context) => [
+                          PopupMenuItem(onTap: onSettings, child: const Text('Paramètres')),
                           PopupMenuItem(onTap: onImport, child: const Text('Importer depuis TV Time')),
                           PopupMenuItem(onTap: onSignOut, child: const Text('Se déconnecter')),
                         ],
