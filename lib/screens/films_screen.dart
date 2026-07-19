@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../l10n/localization_context.dart';
+import '../providers/settings_provider.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
@@ -79,6 +81,7 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     final movieItems = context.watch<LibraryProvider>().items.where((i) => i.type == 'movie').toList();
     final tmdb = context.read<TmdbService>();
 
@@ -87,7 +90,7 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
         toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: 'À VOIR')],
+          tabs: [Tab(text: context.tr('films.toWatch'))],
         ),
       ),
       body: _ToWatchTab(
@@ -212,14 +215,15 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   Widget _buildBody() {
     if (widget.movieItems.isEmpty) {
-      return const ScrollableCenter(
-        child: Text('Track a movie from Explorer to see it here.',
-            style: TextStyle(color: AppColors.textSecondary)),
+      return ScrollableCenter(
+        child: Text(context.tr('series.trackShow'),
+            style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     return FutureBuilder<List<_MovieRow>>(
       future: _rowsFuture,
       builder: (context, snapshot) {
+        context.watch<SettingsProvider>();
         if (!snapshot.hasData) {
           return const PosterGridSkeleton(childAspectRatio: 0.67);
         }
@@ -232,8 +236,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             return dateB.compareTo(dateA);
           });
         if (rows.isEmpty) {
-          return const ScrollableCenter(
-              child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
+          return ScrollableCenter(
+              child: Text(context.tr('series.allCaughtUp'), style: const TextStyle(color: AppColors.textSecondary)));
         }
         final visible = rows.take(_visibleCount).toList();
         return widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible);

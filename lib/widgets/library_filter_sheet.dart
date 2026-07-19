@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
+import '../providers/settings_provider.dart';
 
 enum LibrarySort { lastActivity, lastAdded, alphabetical }
-
-const _sortLabels = {
-  LibrarySort.lastActivity: 'Dernier visionnage',
-  LibrarySort.lastAdded: 'Dernier ajout',
-  LibrarySort.alphabetical: 'Ordre alphabétique',
-};
 
 class LibraryFilterResult<T> {
   final LibrarySort sort;
@@ -69,8 +66,21 @@ class _LibraryFilterSheetState<T> extends State<_LibraryFilterSheet<T>> {
   late LibrarySort _sort = widget.initialSort;
   late T _filter = widget.initialFilter;
 
+  String _getSortLabel(BuildContext context, LibrarySort sort) {
+    switch (sort) {
+      case LibrarySort.lastActivity:
+        return context.tr('sort.lastActivity');
+      case LibrarySort.lastAdded:
+        return context.tr('sort.lastAdded');
+      case LibrarySort.alphabetical:
+        return context.tr('sort.alphabetical');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Watch language changes
+    context.watch<SettingsProvider>();
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
@@ -78,7 +88,7 @@ class _LibraryFilterSheetState<T> extends State<_LibraryFilterSheet<T>> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Trier par', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            Text(context.tr('common.sortBy'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -88,7 +98,7 @@ class _LibraryFilterSheetState<T> extends State<_LibraryFilterSheet<T>> {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(_sortLabels[option]!),
+                        label: Text(_getSortLabel(context, option)),
                         selected: _sort == option,
                         onSelected: (_) => setState(() => _sort = option),
                         selectedColor: AppColors.accent,
@@ -123,7 +133,7 @@ class _LibraryFilterSheetState<T> extends State<_LibraryFilterSheet<T>> {
                       _sort = LibrarySort.lastActivity;
                       _filter = widget.defaultFilter;
                     }),
-                    child: const Text('RÉINITIALISER'),
+                    child: Text(context.tr('common.reset').toUpperCase()),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -132,7 +142,7 @@ class _LibraryFilterSheetState<T> extends State<_LibraryFilterSheet<T>> {
                     onPressed: () => Navigator.of(context).pop(
                       LibraryFilterResult<T>(sort: _sort, filter: _filter),
                     ),
-                    child: const Text('APPLIQUER'),
+                    child: Text(context.tr('common.apply').toUpperCase()),
                   ),
                 ),
               ],
@@ -154,6 +164,7 @@ class LibraryFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     return Material(
       color: AppColors.accent,
       borderRadius: BorderRadius.circular(24),
@@ -161,14 +172,14 @@ class LibraryFilterButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.tune, color: Colors.black, size: 18),
-              SizedBox(width: 8),
-              Text('FILTRES', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 13)),
+              const Icon(Icons.tune, color: Colors.black, size: 18),
+              const SizedBox(width: 8),
+              Text(context.tr('common.filters'), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 13)),
             ],
           ),
         ),

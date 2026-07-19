@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../l10n/localization_context.dart';
+import '../providers/settings_provider.dart';
 import '../models/library_item.dart';
 import '../models/watch_list.dart';
 import '../providers/auth_provider.dart';
@@ -300,17 +302,17 @@ class _ProfileBodyState extends State<_ProfileBody> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Nouvelle liste'),
+        title: Text(context.tr('list.createNew')),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Nom de la liste'),
+          decoration: InputDecoration(hintText: context.tr('list.createNew')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Créer'),
+            child: Text(context.tr('common.done')),
           ),
         ],
       ),
@@ -327,13 +329,13 @@ class _ProfileBodyState extends State<_ProfileBody> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Modifier le profil'),
+        title: Text(context.tr('dialog.editProfileName')),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Enregistrer'),
+            child: Text(context.tr('common.save')),
           ),
         ],
       ),
@@ -378,7 +380,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         }
         final bannerBackdrop = liveBannerBackdrop ?? statsSnapshot.bannerBackdrop;
 
-        final displayName = user?.displayName ?? user?.email?.split('@').first ?? 'Utilisateur';
+        final displayName = user?.displayName ?? user?.email?.split('@').first ?? context.tr('profile.user');
 
         return Scaffold(
           body: RefreshIndicator(
@@ -411,19 +413,19 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   behavior: HitTestBehavior.opaque,
                   onTap: () =>
                       Navigator.of(context).push(appRoute(builder: (_) => const FriendsScreen())),
-                  child: const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Amis', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                        Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                        Text(context.tr('profile.friends'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                        const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                       ],
                     ),
                   ),
                 ),
                 const Divider(height: 33, indent: 16, endIndent: 16),
-                const _SectionHeader(title: 'Statistiques'),
+                _SectionHeader(title: context.tr('profile.stats')),
                 SizedBox(
                   height: 120,
                   child: ListView(
@@ -432,18 +434,18 @@ class _ProfileBodyState extends State<_ProfileBody> {
                     children: [
                       _StatCard(
                           icon: Icons.tv,
-                          label: 'Temps passé devant des séries',
+                          label: context.tr('profile.timeSpentSeries'),
                           minutes: statsSnapshot.seriesMinutes),
                       _StatCard(
                           icon: Icons.movie,
-                          label: 'Temps passé devant des films',
+                          label: context.tr('profile.timeSpentFilms'),
                           minutes: statsSnapshot.filmsMinutes),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
                 const Divider(height: 33, indent: 16, endIndent: 16),
-                const _SectionHeader(title: 'Listes'),
+                _SectionHeader(title: context.tr('profile.lists')),
                 SizedBox(
                   height: 120,
                   child: ListView(
@@ -462,10 +464,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 ),
                 const SizedBox(height: 12),
                 const Divider(height: 33, indent: 16, endIndent: 16),
-                _CarouselSection(title: 'Séries', items: series),
-                _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true),
-                _CarouselSection(title: 'Films', items: films),
-                _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true),
+                _CarouselSection(title: context.tr('profile.series'), items: series),
+                _CarouselSection(title: context.tr('profile.seriesFavorite'), items: seriesFav, showHeart: true),
+                _CarouselSection(title: context.tr('profile.films'), items: films),
+                _CarouselSection(title: context.tr('profile.filmsFavorite'), items: filmsFav, showHeart: true),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -504,6 +506,7 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     const bannerHeight = 220.0;
     const avatarSize = 84.0;
     const spacer = 48.0;
@@ -544,9 +547,9 @@ class _ProfileHeader extends StatelessWidget {
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         color: AppColors.surface,
                         itemBuilder: (context) => [
-                          PopupMenuItem(onTap: onSettings, child: const Text('Paramètres')),
-                          PopupMenuItem(onTap: onImport, child: const Text('Importer depuis TV Time')),
-                          PopupMenuItem(onTap: onSignOut, child: const Text('Se déconnecter')),
+                          PopupMenuItem(onTap: onSettings, child: Text(context.tr('settings.title'))),
+                          PopupMenuItem(onTap: onImport, child: Text(context.tr('profile.import'))),
+                          PopupMenuItem(onTap: onSignOut, child: Text(context.tr('profile.signOut'))),
                         ],
                       ),
                     ),
@@ -601,7 +604,7 @@ class _ProfileHeader extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
-                    child: const Text('MODIFIER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    child: Text(context.tr('profile.editProfile'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
@@ -622,15 +625,16 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Expanded(child: _StatColumn(value: seriesCount, label: 'séries vues')),
+          Expanded(child: _StatColumn(value: seriesCount, label: context.tr('profile.seriesWatched'))),
           const SizedBox(height: 40, child: VerticalDivider(width: 1)),
-          Expanded(child: _StatColumn(value: filmsCount, label: 'films vus')),
+          Expanded(child: _StatColumn(value: filmsCount, label: context.tr('profile.filmsWatched'))),
           const SizedBox(height: 40, child: VerticalDivider(width: 1)),
-          Expanded(child: _StatColumn(value: episodesWatched, label: 'épisodes vus')),
+          Expanded(child: _StatColumn(value: episodesWatched, label: context.tr('profile.episodesWatched'))),
         ],
       ),
     );
@@ -684,6 +688,7 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     final time = _WatchTime(minutes);
     return Container(
       width: 260,
@@ -712,9 +717,9 @@ class _StatCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _TimeUnit(value: time.months, label: 'MOIS'),
-              _TimeUnit(value: time.days, label: 'JOURS'),
-              _TimeUnit(value: time.hours, label: 'HEURES'),
+              _TimeUnit(value: time.months, label: context.tr('time.months')),
+              _TimeUnit(value: time.days, label: context.tr('time.days')),
+              _TimeUnit(value: time.hours, label: context.tr('time.hours')),
             ],
           ),
         ],
@@ -747,6 +752,7 @@ class _CreateListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -756,17 +762,17 @@ class _CreateListCard extends StatelessWidget {
           color: AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 28),
-            SizedBox(height: 8),
+            const Icon(Icons.add, size: 28),
+            const SizedBox(height: 8),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                'CRÉER UNE LISTE',
+                context.tr('profile.createList'),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
               ),
             ),
           ],
@@ -784,6 +790,7 @@ class _ListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -803,7 +810,7 @@ class _ListCard extends StatelessWidget {
             Text(list.name,
                 maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            Text('${list.items.length} élément(s)',
+            Text('${list.items.length} ${context.tr('list.items')}',
                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
           ],
         ),
@@ -969,6 +976,26 @@ class _FullListScreenState extends State<_FullListScreen> {
   _SeriesProgressFilter _seriesFilter = _SeriesProgressFilter.all;
   _FilmProgressFilter _filmFilter = _FilmProgressFilter.all;
   bool _grouped = false;
+
+  String _getGroupLabel(BuildContext context, dynamic filter) {
+    if (filter is _SeriesProgressFilter) {
+      return switch (filter) {
+        _SeriesProgressFilter.inProgress => context.tr('group.inProgress'),
+        _SeriesProgressFilter.notStarted => context.tr('group.notStarted'),
+        _SeriesProgressFilter.upToDate => context.tr('group.upToDate'),
+        _SeriesProgressFilter.completed => context.tr('group.completed'),
+        _SeriesProgressFilter.cancelled => context.tr('group.cancelled'),
+        _ => '',
+      };
+    } else if (filter is _FilmProgressFilter) {
+      return switch (filter) {
+        _FilmProgressFilter.watched => context.tr('group.watched'),
+        _FilmProgressFilter.unwatched => context.tr('group.notWatched'),
+        _ => '',
+      };
+    }
+    return '';
+  }
 
   Future<void> _refresh() async {
     final tmdb = context.read<TmdbService>();
@@ -1141,31 +1168,31 @@ class _FullListScreenState extends State<_FullListScreen> {
   // Time's grouped library view. Sections are derived from progress, not
   // from the active filter, so e.g. filtering to "Favoris" still groups the
   // favorited titles by where they stand.
-  List<MapEntry<String, List<_ResolvedItem>>> _buildGroups(List<_ResolvedItem> visible) {
+  List<MapEntry<String, List<_ResolvedItem>>> _buildGroups(BuildContext context, List<_ResolvedItem> visible) {
     final groups = <MapEntry<String, List<_ResolvedItem>>>[];
     if (_isSeries) {
       const order = [
-        (_SeriesProgressFilter.inProgress, 'EN COURS'),
-        (_SeriesProgressFilter.notStarted, 'PAS COMMENCÉ'),
-        (_SeriesProgressFilter.upToDate, 'À JOUR'),
-        (_SeriesProgressFilter.completed, 'TERMINÉ'),
-        (_SeriesProgressFilter.cancelled, 'ARRÊTÉE'),
+        _SeriesProgressFilter.inProgress,
+        _SeriesProgressFilter.notStarted,
+        _SeriesProgressFilter.upToDate,
+        _SeriesProgressFilter.completed,
+        _SeriesProgressFilter.cancelled,
       ];
-      for (final (category, label) in order) {
+      for (final category in order) {
         final items = visible.where((r) => _categorizeSeries(r) == category).toList();
-        if (items.isNotEmpty) groups.add(MapEntry(label, items));
+        if (items.isNotEmpty) groups.add(MapEntry(_getGroupLabel(context, category), items));
       }
     } else {
       final unwatched = visible.where((r) => !r.item.watched).toList();
       final watched = visible.where((r) => r.item.watched).toList();
-      if (unwatched.isNotEmpty) groups.add(MapEntry('PAS VU', unwatched));
-      if (watched.isNotEmpty) groups.add(MapEntry('VU', watched));
+      if (unwatched.isNotEmpty) groups.add(MapEntry(_getGroupLabel(context, _FilmProgressFilter.unwatched), unwatched));
+      if (watched.isNotEmpty) groups.add(MapEntry(_getGroupLabel(context, _FilmProgressFilter.watched), watched));
     }
     return groups;
   }
 
-  Widget _buildGroupedGrid(List<_ResolvedItem> visible) {
-    final groups = _buildGroups(visible);
+  Widget _buildGroupedGrid(BuildContext context, List<_ResolvedItem> visible) {
+    final groups = _buildGroups(context, visible);
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
@@ -1204,6 +1231,7 @@ class _FullListScreenState extends State<_FullListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     final visible = _applyFilterAndSort();
     final filterLabel = _isSeries ? _seriesFilter.label : _filmFilter.label;
     return Scaffold(
@@ -1239,12 +1267,12 @@ class _FullListScreenState extends State<_FullListScreen> {
             child: RefreshIndicator(
               onRefresh: _refresh,
               child: visible.isEmpty
-                  ? const ScrollableCenter(
-                      child: Text('Aucun titre ne correspond à ce filtre.',
-                          style: TextStyle(color: AppColors.textSecondary)),
+                  ? ScrollableCenter(
+                      child: Text(context.tr('films.nothingToWatch'),
+                          style: const TextStyle(color: AppColors.textSecondary)),
                     )
                   : _grouped
-                      ? _buildGroupedGrid(visible)
+                      ? _buildGroupedGrid(context, visible)
                       : GridView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           // Extra top padding clears the floating filter badge
@@ -1482,10 +1510,10 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               episodesWatched: statsSnapshot.episodesWatched,
             ),
             const Divider(height: 33, indent: 16, endIndent: 16),
-            _CarouselSection(title: 'Séries', items: series, readOnly: true),
-            _CarouselSection(title: 'Séries préférées', items: seriesFav, showHeart: true, readOnly: true),
-            _CarouselSection(title: 'Films', items: films, readOnly: true),
-            _CarouselSection(title: 'Films préférés', items: filmsFav, showHeart: true, readOnly: true),
+            _CarouselSection(title: context.tr('profile.series'), items: series, readOnly: true),
+            _CarouselSection(title: context.tr('profile.seriesFavorite'), items: seriesFav, showHeart: true, readOnly: true),
+            _CarouselSection(title: context.tr('profile.films'), items: films, readOnly: true),
+            _CarouselSection(title: context.tr('profile.filmsFavorite'), items: filmsFav, showHeart: true, readOnly: true),
             const SizedBox(height: 24),
           ],
         ),

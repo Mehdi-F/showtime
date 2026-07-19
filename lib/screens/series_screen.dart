@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../l10n/localization_context.dart';
+import '../providers/settings_provider.dart';
 import '../logic/up_next.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
@@ -23,7 +25,7 @@ import 'show_detail_screen.dart';
 enum _ViewMode { list, grid }
 
 const _staleAfter = Duration(days: 14);
-const _frMonthsShort = [
+final _frMonthsShort = [
   'JANV.',
   'FÉVR.',
   'MARS',
@@ -37,7 +39,24 @@ const _frMonthsShort = [
   'NOV.',
   'DÉC.'
 ];
-const _frWeekdays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
+
+final _enMonthsShort = [
+  'JAN.',
+  'FEB.',
+  'MAR.',
+  'APR.',
+  'MAY',
+  'JUN.',
+  'JUL.',
+  'AUG.',
+  'SEP.',
+  'OCT.',
+  'NOV.',
+  'DEC.'
+];
+
+final _frWeekdays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
+final _enWeekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
 /// Runs `action` over `items` with at most `concurrency` in flight at once.
 Future<void> _forEachBounded<T>(List<T> items, int concurrency, Future<void> Function(T item) action) async {
@@ -61,13 +80,19 @@ int _daysUntil(DateTime date) {
   return target.difference(today).inDays;
 }
 
-String _dayGroupLabel(DateTime date) {
+String _dayGroupLabel(BuildContext context, DateTime date) {
+  context.watch<SettingsProvider>();
+  final isFrench = context.read<SettingsProvider>().language == 'fr';
   final diff = _daysUntil(date);
-  if (diff == 0) return "AUJOURD'HUI";
-  if (diff == -1) return 'HIER';
-  if (diff == 1) return 'DEMAIN';
-  if (diff > 1 && diff <= 6) return _frWeekdays[date.weekday - 1];
-  return '${date.day} ${_frMonthsShort[date.month - 1]}';
+  if (diff == 0) return context.tr('day.today');
+  if (diff == -1) return context.tr('day.yesterday');
+  if (diff == 1) return context.tr('day.tomorrow');
+  if (diff > 1 && diff <= 6) {
+    final weekdays = isFrench ? _frWeekdays : _enWeekdays;
+    return weekdays[date.weekday - 1];
+  }
+  final months = isFrench ? _frMonthsShort : _enMonthsShort;
+  return '${date.day} ${months[date.month - 1]}';
 }
 
 class _ShowEpisodesData {
@@ -220,6 +245,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     final tvItems = context.watch<LibraryProvider>().items.where((i) => i.type == 'tv').toList();
     final tmdb = context.read<TmdbService>();
 
@@ -228,7 +254,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
         toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: 'À VOIR'), Tab(text: 'À VENIR')],
+          tabs: [Tab(text: context.tr('series.toWatch')), Tab(text: context.tr('series.upcoming'))],
         ),
       ),
       body: TabBarView(
@@ -423,10 +449,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   Widget _buildBody(BuildContext context) {
+    context.watch<SettingsProvider>();
     if (widget.tvItems.isEmpty) {
-      return const ScrollableCenter(
-        child: Text('Track a show from Explorer to see it here.',
-            style: TextStyle(color: AppColors.textSecondary)),
+      return ScrollableCenter(
+        child: Text(context.tr('series.trackShow'),
+            style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (!_showContent) {
@@ -459,8 +486,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     });
 
     if (history.isEmpty && active.isEmpty && stale.isEmpty) {
-      return const ScrollableCenter(
-          child: Text('All caught up.', style: TextStyle(color: AppColors.textSecondary)));
+      return ScrollableCenter(
+          child: Text(context.tr('series.allCaughtUp'), style: const TextStyle(color: AppColors.textSecondary)));
     }
 
     final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
@@ -479,8 +506,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               if (stale.isNotEmpty) ..._staleSection(context, stale),
             ]
           : [
-              if (active.isNotEmpty) _buildCardSection(context, 'À VOIR', active),
-              if (stale.isNotEmpty) _buildCardSection(context, 'PAS REGARDÉ DEPUIS UN MOMENT', stale),
+              if (active.isNotEmpty) _buildCardSection(context, context.tr('series.toWatch'), active),
+              if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
             ],
     );
   }
@@ -530,7 +557,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries) {
     return [
-      _sectionHeader('HISTORIQUE DE VISIONNAGE'),
+      _sectionHeader(context.tr('series.watchHistory')),
       ...entries.map((h) {
         final ep = h.episode;
         final d = h.show;
@@ -555,7 +582,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows) {
     return [
-      _sectionHeader('À VOIR'),
+      _sectionHeader(context.tr('series.toWatch')),
       for (var i = 0; i < rows.length; i++)
         _buildNextCard(context, rows[i], showMostRecentBadge: i == 0 && rows[i].nextEpisode!.airDate != null),
     ];
@@ -563,7 +590,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows) {
     return [
-      _sectionHeader('PAS REGARDÉ DEPUIS UN MOMENT'),
+      _sectionHeader(context.tr('series.notWatching')),
       for (final d in rows) _buildNextCard(context, d, showMostRecentBadge: false),
     ];
   }
@@ -578,7 +605,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       episodeTitle: ep.name,
       extraCount: d.extraUnwatched > 0 ? d.extraUnwatched : null,
       watched: false,
-      badgeLabels: showMostRecentBadge ? const ['PLUS RÉCENT'] : const [],
+      badgeLabels: showMostRecentBadge ? [context.tr('badge.mostRecent')] : const [],
       onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, true),
       onTapShow: () =>
           Navigator.of(context).push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
@@ -699,10 +726,11 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   }
 
   Widget _buildBody(BuildContext context) {
+    context.watch<SettingsProvider>();
     if (widget.tvItems.isEmpty) {
-      return const ScrollableCenter(
-        child: Text('Track a show from Explorer to see upcoming episodes.',
-            style: TextStyle(color: AppColors.textSecondary)),
+      return ScrollableCenter(
+        child: Text(context.tr('series.trackShow'),
+            style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (!_showContent) {
@@ -722,15 +750,15 @@ class _UpcomingTabState extends State<_UpcomingTab> {
         return aDate.compareTo(bDate);
       });
     if (rows.isEmpty) {
-      return const ScrollableCenter(
-          child: Text('No upcoming episodes scheduled.', style: TextStyle(color: AppColors.textSecondary)));
+      return ScrollableCenter(
+          child: Text(context.tr('series.upcomingEmpty'), style: const TextStyle(color: AppColors.textSecondary)));
     }
 
         final now = DateTime.now();
         final groups = <String, List<_CalendarRow>>{};
         for (final row in rows) {
           final date = row.episode.airDate;
-          final label = date != null ? _dayGroupLabel(date) : 'DATE INCONNUE';
+          final label = date != null ? _dayGroupLabel(context, date) : context.tr('day.unknown');
           groups.putIfAbsent(label, () => []).add(row);
         }
 
@@ -745,10 +773,10 @@ class _UpcomingTabState extends State<_UpcomingTab> {
           if (widget.viewMode == _ViewMode.list) {
             for (final row in groupRows) {
               final date = row.episode.airDate;
-              final badges = <String>['NOUVEAU'];
-              if (row.episode.episodeNumber == 1) badges.add('PREMIERE');
+              final badges = <String>[context.tr('badge.new')];
+              if (row.episode.episodeNumber == 1) badges.add(context.tr('badge.premiere'));
               final aired = date != null && date.isBefore(now);
-              if (aired) badges.add('DIFFUSÉ');
+              if (aired) badges.add(context.tr('badge.aired'));
               final watched = row.item.watchedEpisodes[row.episode.key] ?? false;
               children.add(_EpisodeCard(
                 posterPath: row.posterPath,
@@ -833,17 +861,18 @@ class _EpisodeCard extends StatelessWidget {
     required this.onTapShow,
   });
 
-  Widget _buildBadge(String label) {
+  Widget _buildBadge(BuildContext context, String label) {
+    context.watch<SettingsProvider>();
     Color? fill;
     var textColor = Colors.white;
-    switch (label) {
-      case 'NOUVEAU':
-        fill = AppColors.accent;
-        textColor = Colors.black;
-        break;
-      case 'DIFFUSÉ':
-        fill = Colors.green;
-        break;
+    final newLabel = context.tr('badge.new');
+    final airedLabel = context.tr('badge.aired');
+
+    if (label == newLabel) {
+      fill = AppColors.accent;
+      textColor = Colors.black;
+    } else if (label == airedLabel) {
+      fill = Colors.green;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -944,7 +973,7 @@ class _EpisodeCard extends StatelessWidget {
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: badgeLabels.map(_buildBadge).toList(),
+                      children: badgeLabels.map((label) => _buildBadge(context, label)).toList(),
                     ),
                   ),
               ],

@@ -34,6 +34,15 @@ class AppStrings {
       'filter.completed': 'Vu',
       'filter.notStarted': 'Pas commencé',
 
+      // Group labels
+      'group.inProgress': 'EN COURS',
+      'group.notStarted': 'PAS COMMENCÉ',
+      'group.upToDate': 'À JOUR',
+      'group.completed': 'TERMINÉ',
+      'group.cancelled': 'ARRÊTÉE',
+      'group.watched': 'VU',
+      'group.notWatched': 'PAS VU',
+
       // Series
       'series.toWatch': 'À VOIR',
       'series.upcoming': 'À VENIR',
@@ -93,6 +102,20 @@ class AppStrings {
       'explorer.trending': 'Tendances',
       'explorer.popular': 'Populaire',
       'explorer.topRated': 'Meilleur classement',
+      'explorer.search': 'Rechercher un film, une série...',
+      'explorer.noResults': 'Aucun résultat.',
+      'explorer.browseAllSeries': 'PARCOURIR TOUTES LES SÉRIES',
+      'explorer.browseAllMovies': 'PARCOURIR TOUS LES FILMS',
+      'explorer.allSeries': 'Toutes les séries',
+      'explorer.allMovies': 'Tous les films',
+      'explorer.bestSeriesForYou': 'Meilleures séries pour vous',
+      'explorer.seriesTrending': 'Séries tendance',
+      'explorer.popularInYourCountry': 'Populaire dans votre pays',
+      'explorer.moviesTrending': 'Films tendance',
+      'explorer.popularMovies': 'Films populaires',
+      'explorer.series': 'Séries',
+      'explorer.movie': 'Film',
+      'explorer.searchFailed': 'Search failed. Check your connection and try again.',
 
       // List operations
       'list.rename': 'Renommer la liste',
@@ -117,6 +140,15 @@ class AppStrings {
 
       // Days
       'day.yesterday': 'HIER',
+      'day.today': 'AUJOURD\'HUI',
+      'day.tomorrow': 'DEMAIN',
+      'day.unknown': 'DATE INCONNUE',
+
+      // Badges
+      'badge.new': 'NOUVEAU',
+      'badge.premiere': 'PREMIERE',
+      'badge.aired': 'DIFFUSÉ',
+      'badge.mostRecent': 'PLUS RÉCENT',
 
       // Detail screens
       'detail.about': 'À propos',
@@ -167,6 +199,15 @@ class AppStrings {
       'filter.watching': 'Watching',
       'filter.completed': 'Watched',
       'filter.notStarted': 'Not started',
+
+      // Group labels
+      'group.inProgress': 'WATCHING',
+      'group.notStarted': 'NOT STARTED',
+      'group.upToDate': 'UP TO DATE',
+      'group.completed': 'COMPLETED',
+      'group.cancelled': 'CANCELLED',
+      'group.watched': 'WATCHED',
+      'group.notWatched': 'NOT WATCHED',
 
       // Series
       'series.toWatch': 'TO WATCH',
@@ -227,6 +268,20 @@ class AppStrings {
       'explorer.trending': 'Trending',
       'explorer.popular': 'Popular',
       'explorer.topRated': 'Top Rated',
+      'explorer.search': 'Search for a movie or series...',
+      'explorer.noResults': 'No results.',
+      'explorer.browseAllSeries': 'BROWSE ALL SERIES',
+      'explorer.browseAllMovies': 'BROWSE ALL MOVIES',
+      'explorer.allSeries': 'All series',
+      'explorer.allMovies': 'All movies',
+      'explorer.bestSeriesForYou': 'Best series for you',
+      'explorer.seriesTrending': 'Series trending',
+      'explorer.popularInYourCountry': 'Popular in your country',
+      'explorer.moviesTrending': 'Movies trending',
+      'explorer.popularMovies': 'Popular movies',
+      'explorer.series': 'Series',
+      'explorer.movie': 'Movie',
+      'explorer.searchFailed': 'Search failed. Check your connection and try again.',
 
       // List operations
       'list.rename': 'Rename list',
@@ -251,6 +306,15 @@ class AppStrings {
 
       // Days
       'day.yesterday': 'YESTERDAY',
+      'day.today': 'TODAY',
+      'day.tomorrow': 'TOMORROW',
+      'day.unknown': 'UNKNOWN DATE',
+
+      // Badges
+      'badge.new': 'NEW',
+      'badge.premiere': 'PREMIERE',
+      'badge.aired': 'AIRED',
+      'badge.mostRecent': 'MOST RECENT',
 
       // Detail screens
       'detail.about': 'About',

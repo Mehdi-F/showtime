@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/library_item.dart';
+import '../l10n/localization_context.dart';
+import '../providers/settings_provider.dart';
 import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
@@ -93,7 +95,7 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() => _results = results);
     } catch (e) {
       if (!mounted || token != _searchToken) return;
-      setState(() => _error = 'Search failed. Check your connection and try again.');
+      setState(() => _error = context.tr('explorer.searchFailed'));
     } finally {
       if (mounted && token == _searchToken) setState(() => _loading = false);
     }
@@ -101,6 +103,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
     final uid = context.watch<AuthProvider>().user!.uid;
 
     return Scaffold(
@@ -117,7 +120,7 @@ class _SearchScreenState extends State<SearchScreen> {
             style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
             textAlignVertical: TextAlignVertical.center,
             decoration: InputDecoration(
-              hintText: 'Rechercher un film, une série...',
+              hintText: context.tr('explorer.search'),
               hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
               border: InputBorder.none,
               isDense: true,
@@ -156,7 +159,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     if (_results.isEmpty) {
       return Center(
-        child: Text('Aucun résultat pour "${_controller.text.trim()}".',
+        child: Text(context.tr('explorer.noResults'),
             textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
@@ -183,10 +186,12 @@ class _SearchScreenState extends State<SearchScreen> {
           ));
         }
 
+        final subtitle = result.mediaType == 'tv' ? context.tr('explorer.series') : context.tr('explorer.movie');
+
         return MediaListTile(
           posterPath: result.posterPath,
           title: result.year != null ? '${result.title} (${result.year})' : result.title,
-          subtitle: result.mediaType == 'tv' ? 'Series' : 'Film',
+          subtitle: subtitle,
           heroTag: posterHeroTag(result.mediaType, result.id),
           onTap: openDetail,
           trailing: IconButton(
@@ -216,23 +221,23 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           const SizedBox(height: 8),
-          _CategoryRow(title: 'Meilleures séries pour vous', future: _topRatedTv),
-          _CategoryRow(title: 'Séries tendance', future: _trendingTv),
-          _CategoryRow(title: 'Populaire dans votre pays', future: _popularTv),
+          _CategoryRow(title: context.tr('explorer.bestSeriesForYou'), future: _topRatedTv),
+          _CategoryRow(title: context.tr('explorer.seriesTrending'), future: _trendingTv),
+          _CategoryRow(title: context.tr('explorer.popularInYourCountry'), future: _popularTv),
           _BrowseAllButton(
             icon: Icons.tv,
-            label: 'PARCOURIR TOUTES LES SÉRIES',
+            label: context.tr('explorer.browseAllSeries'),
             mediaType: 'tv',
-            screenTitle: 'Toutes les séries',
+            screenTitle: context.tr('explorer.allSeries'),
           ),
           const SizedBox(height: 16),
-          _CategoryRow(title: 'Films tendance', future: _trendingMovies),
-          _CategoryRow(title: 'Films populaires', future: _popularMovies),
+          _CategoryRow(title: context.tr('explorer.moviesTrending'), future: _trendingMovies),
+          _CategoryRow(title: context.tr('explorer.popularMovies'), future: _popularMovies),
           _BrowseAllButton(
             icon: Icons.movie,
-            label: 'PARCOURIR TOUS LES FILMS',
+            label: context.tr('explorer.browseAllMovies'),
             mediaType: 'movie',
-            screenTitle: 'Tous les films',
+            screenTitle: context.tr('explorer.allMovies'),
           ),
         ],
       ),
