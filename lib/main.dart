@@ -44,9 +44,9 @@ class ShowtimeApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
           ThemeMode themeMode = ThemeMode.dark;
-          if (settings.themeMode == ThemeMode.light) {
+          if (settings.themeMode == AppThemeMode.light) {
             themeMode = ThemeMode.light;
-          } else if (settings.themeMode == ThemeMode.auto) {
+          } else if (settings.themeMode == AppThemeMode.auto) {
             themeMode = ThemeMode.system;
           }
 

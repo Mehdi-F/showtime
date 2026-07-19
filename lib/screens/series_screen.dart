@@ -436,7 +436,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         _sortedItems().take(_visibleCount).map((i) => _resolved[i.tmdbId]).whereType<_ShowEpisodesData>().toList();
     final now = DateTime.now();
 
-    final history = _loadHistory ? _buildHistory(data) : [];
+    final history = _loadHistory ? _buildHistory(data) : <_HistoryEntry>[];
 
     final withNext = data.where((d) => d.nextEpisode != null).toList();
     final active = <_ShowEpisodesData>[];

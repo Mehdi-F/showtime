@@ -68,11 +68,11 @@ class SettingsScreen extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildThemeChip(context, ThemeMode.light, 'Clair', settings.themeMode == ThemeMode.light),
+                  _buildThemeChip(context, AppThemeMode.light, 'Clair', settings.themeMode == AppThemeMode.light),
                   const SizedBox(width: 8),
-                  _buildThemeChip(context, ThemeMode.dark, 'Sombre', settings.themeMode == ThemeMode.dark),
+                  _buildThemeChip(context, AppThemeMode.dark, 'Sombre', settings.themeMode == AppThemeMode.dark),
                   const SizedBox(width: 8),
-                  _buildThemeChip(context, ThemeMode.auto, 'Auto', settings.themeMode == ThemeMode.auto),
+                  _buildThemeChip(context, AppThemeMode.auto, 'Auto', settings.themeMode == AppThemeMode.auto),
                 ],
               ),
             ),
@@ -83,7 +83,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeChip(BuildContext context, ThemeMode mode, String label, bool selected) {
+  Widget _buildThemeChip(BuildContext context, AppThemeMode mode, String label, bool selected) {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
@@ -206,7 +206,7 @@ class SettingsScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
           TextButton(
             onPressed: () {
-              context.read<AuthProvider>().logout();
+              context.read<AuthProvider>().signOut();
               Navigator.pop(context);
             },
             child: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
