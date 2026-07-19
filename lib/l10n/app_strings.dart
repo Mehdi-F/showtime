@@ -16,6 +16,12 @@ class AppStrings {
       'common.apply': 'Appliquer',
       'common.filters': 'FILTRES',
       'common.sortBy': 'Trier par',
+      'common.edit': 'Modifier',
+      'common.change': 'Changer',
+      'common.done': 'Terminé',
+      'common.retry': 'Réessayer',
+      'common.loadMore': 'Charger plus',
+      'common.chooseFile': 'Choisir le fichier zip',
 
       // Sort options
       'sort.lastActivity': 'Dernier visionnage',
@@ -33,8 +39,9 @@ class AppStrings {
       'series.upcoming': 'À VENIR',
       'series.watchHistory': 'HISTORIQUE DE VISIONNAGE',
       'series.notWatching': 'PAS REGARDÉ DEPUIS UN MOMENT',
-      'series.allCaughtUp': 'All caught up.',
-      'series.trackShow': 'Track a show from Explorer to see it here.',
+      'series.allCaughtUp': 'Vous êtes à jour.',
+      'series.trackShow': 'Ajoutez une série depuis Explorer pour la voir ici.',
+      'series.upcomingEmpty': 'Aucun épisode prévu pour le moment.',
 
       // Films
       'films.toWatch': 'À VOIR',
@@ -44,9 +51,20 @@ class AppStrings {
       'profile.stats': 'STATISTIQUES',
       'profile.lists': 'MES LISTES',
       'profile.createList': 'CRÉER UNE LISTE',
+      'profile.friends': 'Amis',
       'profile.import': 'Importer depuis TV Time',
       'profile.signOut': 'Se déconnecter',
       'profile.user': 'Utilisateur',
+      'profile.seriesWatched': 'séries vues',
+      'profile.filmsWatched': 'films vus',
+      'profile.episodesWatched': 'épisodes vus',
+      'profile.timeSpentSeries': 'Temps passé devant des séries',
+      'profile.timeSpentFilms': 'Temps passé devant des films',
+      'profile.editProfile': 'MODIFIER',
+      'profile.series': 'Séries',
+      'profile.seriesFavorite': 'Séries préférées',
+      'profile.films': 'Films',
+      'profile.filmsFavorite': 'Films préférés',
 
       // Settings
       'settings.title': 'Paramètres',
@@ -76,9 +94,45 @@ class AppStrings {
       'explorer.popular': 'Populaire',
       'explorer.topRated': 'Meilleur classement',
 
+      // List operations
+      'list.rename': 'Renommer la liste',
+      'list.createNew': 'Nouvelle liste',
+      'list.delete': 'Supprimer la liste ?',
+      'list.deleteConfirm': 'sera définitivement supprimée.',
+      'list.empty': 'Cette liste est vide.',
+      'list.items': 'élément(s)',
+
+      // Import/Export
+      'import.title': 'Importer depuis TV Time',
+      'import.selectFile': 'Sélectionner fichier',
+      'import.importing': 'Importation en cours',
+      'import.imported': 'série(s) importée(s).',
+      'import.failed': 'échec(s) (réessaie plus tard).',
+
+      // Time units
+      'time.days': 'JOURS',
+      'time.hours': 'HEURES',
+      'time.months': 'MOIS',
+      'time.day': 'JOUR',
+
+      // Days
+      'day.yesterday': 'HIER',
+
+      // Detail screens
+      'detail.about': 'À propos',
+      'detail.episodes': 'Épisodes',
+      'detail.cast': 'Casting',
+      'detail.similar': 'Similaire',
+      'detail.couldNotLoad': 'Impossible de charger.',
+
+      // Dialogs
+      'dialog.editProfile': 'Modifier le profil',
+      'dialog.editProfileName': 'Modifier le nom du profil',
+
       // Empty states
-      'empty.noResults': 'Aucun résultat trouvé',
+      'empty.noResults': 'Aucun résultat.',
       'empty.tryAgain': 'Réessayer',
+      'empty.loadFailed': 'Impossible de charger.',
     },
     'en': {
       // Navigation
@@ -96,6 +150,12 @@ class AppStrings {
       'common.apply': 'Apply',
       'common.filters': 'FILTERS',
       'common.sortBy': 'Sort by',
+      'common.edit': 'Edit',
+      'common.change': 'Change',
+      'common.done': 'Done',
+      'common.retry': 'Retry',
+      'common.loadMore': 'Load more',
+      'common.chooseFile': 'Choose zip file',
 
       // Sort options
       'sort.lastActivity': 'Last watched',
@@ -115,6 +175,7 @@ class AppStrings {
       'series.notWatching': 'HAVEN\'T WATCHED IN A WHILE',
       'series.allCaughtUp': 'All caught up.',
       'series.trackShow': 'Track a show from Explorer to see it here.',
+      'series.upcomingEmpty': 'No upcoming episodes scheduled.',
 
       // Films
       'films.toWatch': 'TO WATCH',
@@ -124,9 +185,20 @@ class AppStrings {
       'profile.stats': 'STATISTICS',
       'profile.lists': 'MY LISTS',
       'profile.createList': 'CREATE A LIST',
+      'profile.friends': 'Friends',
       'profile.import': 'Import from TV Time',
       'profile.signOut': 'Sign out',
       'profile.user': 'User',
+      'profile.seriesWatched': 'series watched',
+      'profile.filmsWatched': 'films watched',
+      'profile.episodesWatched': 'episodes watched',
+      'profile.timeSpentSeries': 'Time spent on series',
+      'profile.timeSpentFilms': 'Time spent on films',
+      'profile.editProfile': 'EDIT',
+      'profile.series': 'Series',
+      'profile.seriesFavorite': 'Favorite series',
+      'profile.films': 'Films',
+      'profile.filmsFavorite': 'Favorite films',
 
       // Settings
       'settings.title': 'Settings',
@@ -156,9 +228,45 @@ class AppStrings {
       'explorer.popular': 'Popular',
       'explorer.topRated': 'Top Rated',
 
+      // List operations
+      'list.rename': 'Rename list',
+      'list.createNew': 'New list',
+      'list.delete': 'Delete list?',
+      'list.deleteConfirm': 'will be permanently deleted.',
+      'list.empty': 'This list is empty.',
+      'list.items': 'item(s)',
+
+      // Import/Export
+      'import.title': 'Import from TV Time',
+      'import.selectFile': 'Select file',
+      'import.importing': 'Importing',
+      'import.imported': 'series imported.',
+      'import.failed': 'failure(s) (will retry later).',
+
+      // Time units
+      'time.days': 'DAYS',
+      'time.hours': 'HOURS',
+      'time.months': 'MONTHS',
+      'time.day': 'DAY',
+
+      // Days
+      'day.yesterday': 'YESTERDAY',
+
+      // Detail screens
+      'detail.about': 'About',
+      'detail.episodes': 'Episodes',
+      'detail.cast': 'Cast',
+      'detail.similar': 'Similar',
+      'detail.couldNotLoad': 'Could not load.',
+
+      // Dialogs
+      'dialog.editProfile': 'Edit profile',
+      'dialog.editProfileName': 'Edit profile name',
+
       // Empty states
-      'empty.noResults': 'No results found',
+      'empty.noResults': 'No results.',
       'empty.tryAgain': 'Try again',
+      'empty.loadFailed': 'Could not load.',
     },
   };
 
