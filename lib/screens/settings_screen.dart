@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -11,22 +12,22 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paramètres'),
+        title: Text(context.tr('settings.title')),
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
       ),
       body: ListView(
         children: [
-          _buildSection('Apparence', [
+          _buildSection(context.tr('settings.appearance'), [
             _buildThemeOption(context),
           ]),
-          _buildSection('Général', [
+          _buildSection(context.tr('settings.general'), [
             _buildLanguageOption(context),
             _buildNotificationsOption(context),
           ]),
-          _buildSection('Données', [
+          _buildSection(context.tr('settings.data'), [
             _buildCacheTile(context),
           ]),
-          _buildSection('Compte', [
+          _buildSection(context.tr('settings.account'), [
             _buildLogoutTile(context),
           ]),
         ],
@@ -62,17 +63,17 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, settings, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Thème', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(context.tr('settings.theme'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildThemeChip(context, AppThemeMode.light, 'Clair', settings.themeMode == AppThemeMode.light),
+                  _buildThemeChip(context, AppThemeMode.light, context.tr('settings.themeLight'), settings.themeMode == AppThemeMode.light),
                   const SizedBox(width: 8),
-                  _buildThemeChip(context, AppThemeMode.dark, 'Sombre', settings.themeMode == AppThemeMode.dark),
+                  _buildThemeChip(context, AppThemeMode.dark, context.tr('settings.themeDark'), settings.themeMode == AppThemeMode.dark),
                   const SizedBox(width: 8),
-                  _buildThemeChip(context, AppThemeMode.auto, 'Auto', settings.themeMode == AppThemeMode.auto),
+                  _buildThemeChip(context, AppThemeMode.auto, context.tr('settings.themeAuto'), settings.themeMode == AppThemeMode.auto),
                 ],
               ),
             ),
@@ -105,13 +106,13 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, settings, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Langue', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(context.tr('settings.language'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: settings.language,
-              items: const [
-                DropdownMenuItem(value: 'fr', child: Text('Français')),
-                DropdownMenuItem(value: 'en', child: Text('English')),
+              items: [
+                DropdownMenuItem(value: 'fr', child: Text(settings.language == 'fr' ? 'Français' : 'French')),
+                DropdownMenuItem(value: 'en', child: Text(settings.language == 'en' ? 'English' : 'Anglais')),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -137,8 +138,8 @@ class SettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) => SwitchListTile(
-          title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: const Text('Notifications pour les nouveaux épisodes'),
+          title: Text(context.tr('settings.notifications'), style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text(context.tr('settings.notificationsDesc')),
           value: settings.enableNotifications,
           onChanged: (value) => context.read<SettingsProvider>().setEnableNotifications(value),
           activeColor: AppColors.accent,
@@ -152,8 +153,8 @@ class SettingsScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        title: const Text('Vider le cache', style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: const Text('Supprime les données TMDB en cache'),
+        title: Text(context.tr('settings.clearCache'), style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(context.tr('settings.clearCacheDesc')),
         trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
         contentPadding: EdgeInsets.zero,
         onTap: () => _showClearCacheDialog(context),
@@ -165,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        title: const Text('Déconnexion', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
+        title: Text(context.tr('settings.logout'), style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
         contentPadding: EdgeInsets.zero,
         onTap: () => _showLogoutDialog(context),
       ),
@@ -177,18 +178,18 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Vider le cache ?'),
-        content: const Text('Cela supprimera les données TMDB en cache. Vous pourrez les récharger.'),
+        title: Text(context.tr('settings.clearCacheConfirm')),
+        content: Text(context.tr('settings.clearCacheConfirmDesc')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
           TextButton(
             onPressed: () {
               context.read<SettingsProvider>().clearCache();
               Navigator.pop(context);
               ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('Cache vidé'), duration: Duration(seconds: 2)));
+                  .showSnackBar(SnackBar(content: Text(context.tr('settings.cacheClear')), duration: const Duration(seconds: 2)));
             },
-            child: const Text('Vider'),
+            child: Text(context.tr('common.delete')),
           ),
         ],
       ),
@@ -200,16 +201,16 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Déconnexion ?'),
-        content: const Text('Vous allez être déconnecté de votre compte.'),
+        title: Text(context.tr('settings.logoutConfirm')),
+        content: Text(context.tr('settings.logoutDesc')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
           TextButton(
             onPressed: () {
               context.read<AuthProvider>().signOut();
               Navigator.pop(context);
             },
-            child: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('settings.logout'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
