@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../config/constants.dart';
 import '../models/tmdb_models.dart';
+import '../exceptions/app_exception.dart';
 
 class TmdbService {
   final http.Client _client;
@@ -16,10 +18,10 @@ class TmdbService {
   }
 
   static const _prefsKeyPrefix = 'tmdb_cache:';
-  static const _prefsTtl = Duration(hours: 6);
+  static const _prefsTtl = AppConstants.tmdbCacheTtl;
   // Without this, a request on a slow/flaky connection could hang
   // indefinitely instead of failing fast enough to fall back to cache below.
-  static const _requestTimeout = Duration(seconds: 12);
+  static const _requestTimeout = AppConstants.tmdbRequestTimeout;
 
   // Per-id lookups (show/movie details, credits, similar, watch providers)
   // are effectively static — every screen that shows a given title re-fetches
@@ -75,7 +77,7 @@ class TmdbService {
     try {
       final response = await _client.get(uri).timeout(_requestTimeout);
       if (response.statusCode != 200) {
-        throw Exception('$errorLabel failed: ${response.statusCode}');
+        throw TmdbException('$errorLabel failed', statusCode: response.statusCode);
       }
       unawaited(prefs.setString(prefsKey, response.body));
       unawaited(prefs.setInt('$prefsKey:at', DateTime.now().millisecondsSinceEpoch));
@@ -86,7 +88,8 @@ class TmdbService {
       // still opens, just with slightly older data, instead of erroring or
       // silently vanishing from whatever list was showing it.
       if (cachedBody != null) return cachedBody;
-      rethrow;
+      if (e is TmdbException) rethrow;
+      throw TmdbException('$errorLabel failed: $e');
     }
   }
 
@@ -97,7 +100,7 @@ class TmdbService {
 
     final response = await _client.get(uri).timeout(_requestTimeout);
     if (response.statusCode != 200) {
-      throw Exception('TMDB search failed: ${response.statusCode}');
+      throw TmdbException('Search failed', statusCode: response.statusCode);
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -171,7 +174,7 @@ class TmdbService {
     });
     final response = await _client.get(uri).timeout(_requestTimeout);
     if (response.statusCode != 200) {
-      throw Exception('TMDB discover $mediaType failed: ${response.statusCode}');
+      throw TmdbException('Discover $mediaType failed', statusCode: response.statusCode);
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final results = body['results'] as List<dynamic>? ?? [];
@@ -192,7 +195,7 @@ class TmdbService {
     });
     final response = await _client.get(uri).timeout(_requestTimeout);
     if (response.statusCode != 200) {
-      throw Exception('TMDB $path failed: ${response.statusCode}');
+      throw TmdbException('$path failed', statusCode: response.statusCode);
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final results = body['results'] as List<dynamic>? ?? [];

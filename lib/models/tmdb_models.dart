@@ -1,3 +1,5 @@
+import '../utils/date_utils.dart';
+
 class TmdbSearchResult {
   final int id;
   final String mediaType; // "tv" | "movie"
@@ -59,14 +61,7 @@ class NextEpisode {
   String get key => 's${seasonNumber}e$episodeNumber';
 
   factory NextEpisode.fromJson(Map<String, dynamic> json) {
-    DateTime? airDate;
-    if (json['air_date'] != null) {
-      try {
-        airDate = DateTime.parse(json['air_date'] as String);
-      } catch (_) {
-        airDate = null;
-      }
-    }
+    final airDate = tryParseDateTime(json['air_date']);
     return NextEpisode(
       seasonNumber: json['season_number'] as int,
       episodeNumber: json['episode_number'] as int,
@@ -176,14 +171,7 @@ class SimilarMedia {
   });
 
   factory SimilarMedia.fromJson(Map<String, dynamic> json, String type) {
-    DateTime? releaseDate;
-    if (json['release_date'] != null && (json['release_date'] as String).isNotEmpty) {
-      try {
-        releaseDate = DateTime.parse(json['release_date'] as String);
-      } catch (_) {
-        releaseDate = null;
-      }
-    }
+    final releaseDate = tryParseDateTime(json['release_date']);
     return SimilarMedia(
       id: json['id'] as int,
       type: type,
@@ -214,15 +202,7 @@ class EpisodeRef {
   String get key => 's${seasonNumber}e$episodeNumber';
 
   factory EpisodeRef.fromJson(int seasonNumber, Map<String, dynamic> json) {
-    DateTime? airDate;
-    if (json['air_date'] != null) {
-      try {
-        airDate = DateTime.parse(json['air_date'] as String);
-      } catch (_) {
-        // Ignore malformed dates from TMDB
-        airDate = null;
-      }
-    }
+    final airDate = tryParseDateTime(json['air_date']);
     return EpisodeRef(
       seasonNumber: seasonNumber,
       episodeNumber: json['episode_number'] as int,
@@ -273,14 +253,7 @@ class MovieDetails {
   });
 
   factory MovieDetails.fromJson(Map<String, dynamic> json) {
-    DateTime? releaseDate;
-    if (json['release_date'] != null && (json['release_date'] as String).isNotEmpty) {
-      try {
-        releaseDate = DateTime.parse(json['release_date'] as String);
-      } catch (_) {
-        releaseDate = null;
-      }
-    }
+    final releaseDate = tryParseDateTime(json['release_date']);
     return MovieDetails(
       id: json['id'] as int,
       title: json['title'] as String,
