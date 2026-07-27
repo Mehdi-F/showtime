@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../config/tmdb_config.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
@@ -8,6 +7,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/image_utils.dart';
+import '../utils/url_builder.dart';
 import 'app_page_route.dart';
 import '../screens/show_detail_screen.dart';
 import '../screens/movie_detail_screen.dart';
@@ -74,7 +74,7 @@ class DiscoverPosterTile extends StatelessWidget {
 
     final posterImage = media.posterPath != null
         ? cachedPosterImage(
-            imageUrl: '${TmdbConfig.imageBaseUrlMedium}${media.posterPath}',
+            imageUrl: UrlBuilder.posterMedium(media.posterPath),
             width: width,
             height: height,
             borderRadius: BorderRadius.circular(6),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../config/tmdb_config.dart';
 import '../theme/app_theme.dart';
 import '../utils/image_utils.dart';
+import '../utils/url_builder.dart';
 
 class MediaListTile extends StatelessWidget {
   final String? posterPath;
@@ -73,7 +73,7 @@ class MediaListTile extends StatelessWidget {
   Widget _poster() {
     final image = posterPath != null
         ? cachedPosterImage(
-            imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
+            imageUrl: UrlBuilder.posterTiny(posterPath),
             width: 56,
             height: 78,
             borderRadius: BorderRadius.circular(4),

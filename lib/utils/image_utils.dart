@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeletons.dart';
+import 'url_builder.dart';
 
 /// Returns a CachedNetworkImage with standard placeholder and error handling.
 /// Uses a SkeletonBox while loading and a generic icon on failure.

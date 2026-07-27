@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
 import '../theme/app_theme.dart';
 import '../utils/image_utils.dart';
+import '../utils/url_builder.dart';
 
 class WatchProvidersRow extends StatelessWidget {
   final Future<List<WatchProvider>> future;
@@ -45,7 +45,7 @@ class WatchProvidersRow extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: cachedImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrlTiny}${provider.logoPath}',
+                              imageUrl: UrlBuilder.logoTiny(provider.logoPath),
                               width: 20,
                               height: 20,
                               fit: BoxFit.cover,
@@ -185,7 +185,7 @@ class CastRow extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                             child: member.profilePath != null
                                 ? cachedPersonImage(
-                                    imageUrl: '${TmdbConfig.imageBaseUrlTiny}${member.profilePath}',
+                                    imageUrl: UrlBuilder.profileTiny(member.profilePath),
                                     height: 100,
                                     width: 100,
                                     borderRadius: BorderRadius.circular(6),
@@ -263,7 +263,7 @@ class SimilarRow extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           child: media.posterPath != null
                               ? cachedPosterImage(
-                                  imageUrl: '${TmdbConfig.imageBaseUrlSmall}${media.posterPath}',
+                                  imageUrl: UrlBuilder.posterSmall(media.posterPath),
                                   height: 130,
                                   width: 90,
                                   borderRadius: BorderRadius.circular(6),
