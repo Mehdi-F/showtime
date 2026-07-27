@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../exceptions/app_exceptions.dart';
 import '../models/tmdb_models.dart';
 
 class TmdbService {
@@ -75,18 +76,26 @@ class TmdbService {
     try {
       final response = await _client.get(uri).timeout(_requestTimeout);
       if (response.statusCode != 200) {
-        throw Exception('$errorLabel failed: ${response.statusCode}');
+        throw TmdbException('$errorLabel failed', statusCode: response.statusCode);
       }
       unawaited(prefs.setString(prefsKey, response.body));
       unawaited(prefs.setInt('$prefsKey:at', DateTime.now().millisecondsSinceEpoch));
       return response.body;
-    } catch (e) {
-      // On a slow or flaky connection, a stale cached copy (even past its
-      // normal TTL) is far more useful than an outright failure — the title
-      // still opens, just with slightly older data, instead of erroring or
-      // silently vanishing from whatever list was showing it.
+    } on TimeoutException catch (e) {
+      // Connection timed out — try to use stale cache
       if (cachedBody != null) return cachedBody;
       rethrow;
+    } on TmdbException {
+      // TMDB API error — try to use stale cache, otherwise propagate
+      if (cachedBody != null) return cachedBody;
+      rethrow;
+    } catch (e) {
+      // Other errors (connection failures, etc.) — try to use stale cache
+      if (cachedBody != null) return cachedBody;
+      if (e is TimeoutException) {
+        throw TimeoutException('$errorLabel: request timed out', timeout: _requestTimeout);
+      }
+      throw NetworkException('$errorLabel: ${e.toString()}', originalException: e as Exception);
     }
   }
 
@@ -95,18 +104,29 @@ class TmdbService {
       queryParameters: {'api_key': TmdbConfig.apiKey, 'query': query},
     );
 
-    final response = await _client.get(uri).timeout(_requestTimeout);
-    if (response.statusCode != 200) {
-      throw Exception('TMDB search failed: ${response.statusCode}');
-    }
+    try {
+      final response = await _client.get(uri).timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        throw TmdbException('Search failed', statusCode: response.statusCode);
+      }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final results = body['results'] as List<dynamic>;
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final results = body['results'] as List<dynamic>?;
+      if (results == null) {
+        throw DataException('Search response missing results field');
+      }
 
-    return results
-        .where((r) => r['media_type'] == 'tv' || r['media_type'] == 'movie')
-        .map((r) => TmdbSearchResult.fromJson(r as Map<String, dynamic>))
+      return results
+          .where((r) => r['media_type'] == 'tv' || r['media_type'] == 'movie')
+          .map((r) => TmdbSearchResult.fromJson(r as Map<String, dynamic>))
         .toList();
+    } on TimeoutException {
+      throw TimeoutException('Search request timed out', timeout: _requestTimeout);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException('Search failed: ${e.toString()}', originalException: e as Exception);
+    }
   }
 
   Future<TvDetails> getTvDetails(int id) async {
@@ -169,13 +189,19 @@ class TmdbService {
       'include_video': 'false',
       'vote_count.gte': '10',
     });
-    final response = await _client.get(uri).timeout(_requestTimeout);
-    if (response.statusCode != 200) {
-      throw Exception('TMDB discover $mediaType failed: ${response.statusCode}');
+    try {
+      final response = await _client.get(uri).timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        throw TmdbException('Discover $mediaType failed', statusCode: response.statusCode);
+      }
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final results = body['results'] as List<dynamic>? ?? [];
+      return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException('Discover $mediaType failed: ${e.toString()}', originalException: e as Exception);
     }
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final results = body['results'] as List<dynamic>? ?? [];
-    return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
   }
 
   Future<List<SimilarMedia>> getTrending(String mediaType) => _getListEndpoint('trending/$mediaType/week', mediaType);
@@ -190,13 +216,19 @@ class TmdbService {
       'api_key': TmdbConfig.apiKey,
       'page': '$page',
     });
-    final response = await _client.get(uri).timeout(_requestTimeout);
-    if (response.statusCode != 200) {
-      throw Exception('TMDB $path failed: ${response.statusCode}');
+    try {
+      final response = await _client.get(uri).timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        throw TmdbException('List endpoint $path failed', statusCode: response.statusCode);
+      }
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final results = body['results'] as List<dynamic>? ?? [];
+      return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException('List endpoint $path failed: ${e.toString()}', originalException: e as Exception);
     }
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final results = body['results'] as List<dynamic>? ?? [];
-    return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
   }
 
   Future<List<WatchProvider>> getTvWatchProviders(int id, {String? region}) =>
