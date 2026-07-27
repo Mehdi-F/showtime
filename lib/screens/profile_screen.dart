@@ -826,6 +826,7 @@ class _CarouselSection extends StatelessWidget {
   final bool readOnly;
 
   const _CarouselSection({
+    super.key,
     required this.title,
     required this.items,
     this.showHeart = false,
