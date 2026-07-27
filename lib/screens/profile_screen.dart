@@ -85,7 +85,15 @@ class _ResolvedItem {
   bool get isWatched =>
       item.type == 'movie' ? item.watched : (totalEpisodeCount > 0 && watchedEpisodesCount >= totalEpisodeCount);
 
-  DateTime get recency => item.lastActivityAt ?? item.watchedAt ?? item.addedAt;
+  DateTime get recency {
+    if (item.type == 'tv') {
+      return item.lastActivityAt ?? item.addedAt;
+    } else {
+      // For movies, prioritize watchedAt (marks when actually watched)
+      // over addedAt, so recently re-watched movies bubble to top
+      return item.watchedAt ?? item.addedAt;
+    }
+  }
 }
 
 // A frozen snapshot of the profile's aggregate numbers (not the per-title
