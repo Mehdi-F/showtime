@@ -27,51 +27,16 @@ import 'show_detail_screen.dart';
 
 enum _ViewMode { list, grid }
 
-final _frMonthsShort = [
-  'JANV.',
-  'FÉVR.',
-  'MARS',
-  'AVR.',
-  'MAI',
-  'JUIN',
-  'JUIL.',
-  'AOÛT',
-  'SEPT.',
-  'OCT.',
-  'NOV.',
-  'DÉC.'
-];
-
-final _enMonthsShort = [
-  'JAN.',
-  'FEB.',
-  'MAR.',
-  'APR.',
-  'MAY',
-  'JUN.',
-  'JUL.',
-  'AUG.',
-  'SEP.',
-  'OCT.',
-  'NOV.',
-  'DEC.'
-];
-
-final _frWeekdays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
-final _enWeekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-
 String _dayGroupLabel(BuildContext context, DateTime date) {
-  context.watch<SettingsProvider>();
-  final isFrench = context.read<SettingsProvider>().language == 'fr';
   final diff = daysUntil(date);
   if (diff == 0) return context.tr('day.today');
   if (diff == -1) return context.tr('day.yesterday');
   if (diff == 1) return context.tr('day.tomorrow');
   if (diff > 1 && diff <= 6) {
-    final weekdays = isFrench ? _frWeekdays : _enWeekdays;
+    final weekdays = context.getWeekdays();
     return weekdays[date.weekday - 1];
   }
-  final months = isFrench ? _frMonthsShort : _enMonthsShort;
+  final months = context.getMonths();
   return '${date.day} ${months[date.month - 1]}';
 }
 

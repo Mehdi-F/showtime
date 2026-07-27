@@ -144,6 +144,29 @@ class AppStrings {
       'day.tomorrow': 'DEMAIN',
       'day.unknown': 'DATE INCONNUE',
 
+      // Weekdays
+      'weekday.monday': 'LUNDI',
+      'weekday.tuesday': 'MARDI',
+      'weekday.wednesday': 'MERCREDI',
+      'weekday.thursday': 'JEUDI',
+      'weekday.friday': 'VENDREDI',
+      'weekday.saturday': 'SAMEDI',
+      'weekday.sunday': 'DIMANCHE',
+
+      // Months (abbreviated)
+      'month.january': 'JANV.',
+      'month.february': 'FÉVR.',
+      'month.march': 'MARS',
+      'month.april': 'AVR.',
+      'month.may': 'MAI',
+      'month.june': 'JUIN',
+      'month.july': 'JUIL.',
+      'month.august': 'AOÛT',
+      'month.september': 'SEPT.',
+      'month.october': 'OCT.',
+      'month.november': 'NOV.',
+      'month.december': 'DÉC.',
+
       // Badges
       'badge.new': 'NOUVEAU',
       'badge.premiere': 'PREMIERE',
@@ -309,6 +332,29 @@ class AppStrings {
       'day.today': 'TODAY',
       'day.tomorrow': 'TOMORROW',
       'day.unknown': 'UNKNOWN DATE',
+
+      // Weekdays
+      'weekday.monday': 'MONDAY',
+      'weekday.tuesday': 'TUESDAY',
+      'weekday.wednesday': 'WEDNESDAY',
+      'weekday.thursday': 'THURSDAY',
+      'weekday.friday': 'FRIDAY',
+      'weekday.saturday': 'SATURDAY',
+      'weekday.sunday': 'SUNDAY',
+
+      // Months (abbreviated)
+      'month.january': 'JAN.',
+      'month.february': 'FEB.',
+      'month.march': 'MAR.',
+      'month.april': 'APR.',
+      'month.may': 'MAY',
+      'month.june': 'JUN.',
+      'month.july': 'JUL.',
+      'month.august': 'AUG.',
+      'month.september': 'SEP.',
+      'month.october': 'OCT.',
+      'month.november': 'NOV.',
+      'month.december': 'DEC.',
 
       // Badges
       'badge.new': 'NEW',

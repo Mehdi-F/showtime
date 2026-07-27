@@ -20,4 +20,37 @@ extension LocalizationContext on BuildContext {
     final settings = watch<SettingsProvider>();
     return AppStrings.get(key, language: settings.language);
   }
+
+  /// Get array of weekday names (Monday-Sunday) in current language
+  List<String> getWeekdays() {
+    final keys = [
+      'weekday.monday',
+      'weekday.tuesday',
+      'weekday.wednesday',
+      'weekday.thursday',
+      'weekday.friday',
+      'weekday.saturday',
+      'weekday.sunday',
+    ];
+    return keys.map(tr).toList();
+  }
+
+  /// Get array of abbreviated month names (Jan-Dec) in current language
+  List<String> getMonths() {
+    final keys = [
+      'month.january',
+      'month.february',
+      'month.march',
+      'month.april',
+      'month.may',
+      'month.june',
+      'month.july',
+      'month.august',
+      'month.september',
+      'month.october',
+      'month.november',
+      'month.december',
+    ];
+    return keys.map(tr).toList();
+  }
 }
