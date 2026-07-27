@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/tmdb_config.dart';
 import '../l10n/localization_context.dart';
 import '../providers/settings_provider.dart';
 import '../models/library_item.dart';
@@ -17,6 +15,8 @@ import '../services/library_service.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
+import '../utils/url_builder.dart';
 import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
@@ -531,9 +531,9 @@ class _ProfileHeader extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   if (backdropPath != null)
-                    CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrlLarge}$backdropPath',
-                      fit: BoxFit.cover,
+                    cachedBackdropImage(
+                      imageUrl: UrlBuilder.backdropLarge(backdropPath),
+                      borderRadius: BorderRadius.zero,
                     )
                   else
                     Container(color: AppColors.surfaceVariant),
@@ -903,11 +903,11 @@ class _CarouselSection extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: resolved.posterPath != null
-                          ? CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrlSmall}${resolved.posterPath}',
-                              fit: BoxFit.cover,
+                          ? cachedPosterImage(
+                              imageUrl: UrlBuilder.posterSmall(resolved.posterPath),
                               height: 130,
                               width: 90,
+                              borderRadius: BorderRadius.circular(6),
                             )
                           : Container(
                               color: AppColors.surfaceVariant,
@@ -1565,9 +1565,9 @@ class _FriendProfileHeader extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   if (backdropPath != null)
-                    CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrlLarge}$backdropPath',
-                      fit: BoxFit.cover,
+                    cachedBackdropImage(
+                      imageUrl: UrlBuilder.backdropLarge(backdropPath),
+                      borderRadius: BorderRadius.zero,
                     )
                   else
                     Container(color: AppColors.surfaceVariant),
