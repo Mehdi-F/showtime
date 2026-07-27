@@ -795,7 +795,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
                     // can be in both simultaneously — only one tab may claim
                     // the shared tag without risking a duplicate-Hero error.
                     posterPath: row.posterPath,
-                    daysUntil: date != null ? _daysUntil(date) : null,
+                    daysUntil: date != null ? daysUntil(date) : null,
                     onTap: () => Navigator.of(context)
                         .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
                   ),
