@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import '../config/tmdb_config.dart';
+import '../config/constants.dart';
+import '../utils/concurrency.dart';
 import '../logic/up_next.dart';
 import '../models/library_item.dart';
 import '../models/tmdb_models.dart';
@@ -26,18 +28,6 @@ import 'movie_detail_screen.dart';
 enum _GapPromptChoice { yes, no, never }
 
 enum _RewatchChoice { notWatched, rewatch, watchedOnce }
-
-Future<void> _forEachBounded<T>(List<T> items, int concurrency, Future<void> Function(T item) action) async {
-  var index = 0;
-  Future<void> worker() async {
-    while (index < items.length) {
-      final i = index++;
-      await action(items[i]);
-    }
-  }
-
-  await Future.wait(List.generate(concurrency, (_) => worker()));
-}
 
 class ShowDetailScreen extends StatefulWidget {
   final LibraryItem? libraryItem;
@@ -71,7 +61,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Map<String, int> _rewatchCounts = {};
   bool _favorite = false;
   late TabController _tabController;
-  late final ConfettiController _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+  late final ConfettiController _confettiController = ConfettiController(duration: AppConstants.confettiDuration);
 
   // Fetched once and reused across rebuilds — building these inline inside
   // _buildAboutTab would re-hit TMDB on every setState in this screen (e.g.
@@ -187,7 +177,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 
     final seasonNumbers = details.seasons.map((s) => s.seasonNumber).toList();
     final loaded = <int, SeasonDetails>{};
-    await _forEachBounded(seasonNumbers, 4, (n) async {
+    await forEachBounded(seasonNumbers, 4, (n) async {
       try {
         loaded[n] = await tmdb.getSeasonDetails(widget.tmdbId, n);
       } catch (_) {

@@ -3,7 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../config/constants.dart';
 import '../l10n/localization_context.dart';
+import '../utils/concurrency.dart';
+import '../utils/date_utils.dart';
 import '../providers/settings_provider.dart';
 import '../logic/up_next.dart';
 import '../models/library_item.dart';
@@ -24,7 +27,6 @@ import 'show_detail_screen.dart';
 
 enum _ViewMode { list, grid }
 
-const _staleAfter = Duration(days: 14);
 final _frMonthsShort = [
   'JANV.',
   'FÉVR.',
@@ -58,32 +60,10 @@ final _enMonthsShort = [
 final _frWeekdays = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI', 'DIMANCHE'];
 final _enWeekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
-/// Runs `action` over `items` with at most `concurrency` in flight at once.
-Future<void> _forEachBounded<T>(List<T> items, int concurrency, Future<void> Function(T item) action) async {
-  var index = 0;
-  Future<void> worker() async {
-    while (true) {
-      final current = index;
-      if (current >= items.length) return;
-      index++;
-      await action(items[current]);
-    }
-  }
-
-  await Future.wait(List.generate(concurrency, (_) => worker()));
-}
-
-int _daysUntil(DateTime date) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final target = DateTime(date.year, date.month, date.day);
-  return target.difference(today).inDays;
-}
-
 String _dayGroupLabel(BuildContext context, DateTime date) {
   context.watch<SettingsProvider>();
   final isFrench = context.read<SettingsProvider>().language == 'fr';
-  final diff = _daysUntil(date);
+  final diff = daysUntil(date);
   if (diff == 0) return context.tr('day.today');
   if (diff == -1) return context.tr('day.yesterday');
   if (diff == 1) return context.tr('day.tomorrow');
@@ -212,7 +192,7 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
   Future<_ShowEpisodesData> _resolveShowEpisodes(TmdbService tmdb, LibraryItem item) async {
     final details = await tmdb.getTvDetails(item.tmdbId);
     final episodesBySeason = List<List<EpisodeRef>?>.filled(details.seasons.length, null);
-    await _forEachBounded(List.generate(details.seasons.length, (i) => i), 4, (i) async {
+    await forEachBounded(List.generate(details.seasons.length, (i) => i), 4, (i) async {
       final seasonDetails = await tmdb.getSeasonDetails(item.tmdbId, details.seasons[i].seasonNumber);
       episodesBySeason[i] = seasonDetails.episodes;
     });
@@ -364,7 +344,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     _settled.removeWhere((k) => !allIds.contains(k));
 
     final visible = _sortedItems().take(_visibleCount).toList();
-    final future = _forEachBounded(visible, 5, (item) async {
+    final future = forEachBounded(visible, 5, (item) async {
       try {
         final data = await widget.resolveRow(widget.tmdb, item);
         if (mounted) {
@@ -470,7 +450,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     final stale = <_ShowEpisodesData>[];
     for (final d in withNext) {
       final lastActivity = d.item.lastActivityAt;
-      if (lastActivity == null || now.difference(lastActivity) > _staleAfter) {
+      if (lastActivity == null || now.difference(lastActivity) > AppConstants.staleSeriesDuration) {
         stale.add(d);
       } else {
         active.add(d);
@@ -678,7 +658,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     _resolved.removeWhere((k, _) => !allIds.contains(k));
 
     final visible = _sortedItems().take(_visibleCount).toList();
-    final future = _forEachBounded(visible, 8, (item) async {
+    final future = forEachBounded(visible, 8, (item) async {
       try {
         final row = await widget.resolveRow(widget.tmdb, item);
         if (row != null && mounted) setState(() => _resolved[item.tmdbId] = row);

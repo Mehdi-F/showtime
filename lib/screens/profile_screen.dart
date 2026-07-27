@@ -6,7 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
+import '../config/constants.dart';
 import '../l10n/localization_context.dart';
+import '../utils/date_utils.dart';
 import '../providers/settings_provider.dart';
 import '../models/library_item.dart';
 import '../models/watch_list.dart';
@@ -169,16 +171,6 @@ _ProfileStatsSnapshot _computeStatsSnapshot(List<_ResolvedItem> resolved) {
   );
 }
 
-class _WatchTime {
-  final int months;
-  final int days;
-  final int hours;
-
-  _WatchTime(int totalMinutes)
-      : hours = (totalMinutes ~/ 60) % 24,
-        days = (totalMinutes ~/ (60 * 24)) % 30,
-        months = totalMinutes ~/ (60 * 24 * 30);
-}
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -291,7 +283,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
 
     final all = Future.wait(futures);
     if (isInitial) {
-      all.timeout(const Duration(milliseconds: 600), onTimeout: () => <void>[]).whenComplete(() {
+      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () => <void>[]).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
@@ -697,7 +689,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     context.watch<SettingsProvider>();
-    final time = _WatchTime(minutes);
+    final time = WatchTime(minutes);
     return Container(
       width: 260,
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -1435,7 +1427,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
     final all = Future.wait(futures);
     if (isInitial) {
-      all.timeout(const Duration(milliseconds: 600), onTimeout: () => <void>[]).whenComplete(() {
+      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () => <void>[]).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
