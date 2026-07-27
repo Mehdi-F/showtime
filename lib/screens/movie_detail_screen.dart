@@ -65,8 +65,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _favorite = widget.libraryItem?.favorite ?? false;
     _rewatchCount = widget.libraryItem?.movieRewatchCount ?? 0;
     final tmdb = context.read<TmdbService>();
+    final settings = context.read<SettingsProvider>();
     _detailsFuture = tmdb.getMovieDetails(widget.tmdbId);
-    _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId);
+    _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId, region: settings.watchRegion);
     _creditsFuture = tmdb.getMovieCredits(widget.tmdbId);
     _similarFuture = tmdb.getSimilarMovies(widget.tmdbId);
     _imagesFuture = tmdb.getMovieImages(widget.tmdbId);
@@ -81,11 +82,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   Future<void> _retryLoad() async {
     final tmdb = context.read<TmdbService>();
+    final settings = context.read<SettingsProvider>();
     tmdb.clearCache();
     final future = tmdb.getMovieDetails(widget.tmdbId);
     setState(() {
       _detailsFuture = future;
-      _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId);
+      _watchProvidersFuture = tmdb.getMovieWatchProviders(widget.tmdbId, region: settings.watchRegion);
       _creditsFuture = tmdb.getMovieCredits(widget.tmdbId);
       _similarFuture = tmdb.getSimilarMovies(widget.tmdbId);
       _imagesFuture = tmdb.getMovieImages(widget.tmdbId);

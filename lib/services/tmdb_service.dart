@@ -199,17 +199,20 @@ class TmdbService {
     return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
   }
 
-  Future<List<WatchProvider>> getTvWatchProviders(int id) => _getWatchProviders('tv', id);
+  Future<List<WatchProvider>> getTvWatchProviders(int id, {String? region}) =>
+      _getWatchProviders('tv', id, region: region);
 
-  Future<List<WatchProvider>> getMovieWatchProviders(int id) => _getWatchProviders('movie', id);
+  Future<List<WatchProvider>> getMovieWatchProviders(int id, {String? region}) =>
+      _getWatchProviders('movie', id, region: region);
 
-  Future<List<WatchProvider>> _getWatchProviders(String mediaType, int id) async {
+  Future<List<WatchProvider>> _getWatchProviders(String mediaType, int id, {String? region}) async {
     final uri = Uri.parse('${TmdbConfig.baseUrl}/$mediaType/$id/watch/providers')
         .replace(queryParameters: {'api_key': TmdbConfig.apiKey});
     final body = await _cachedBody('watch:$mediaType:$id', uri, 'TMDB $mediaType watch providers');
     final decoded = jsonDecode(body) as Map<String, dynamic>;
     final results = decoded['results'] as Map<String, dynamic>? ?? {};
-    final country = (results['FR'] ?? results['US']) as Map<String, dynamic>?;
+    final regionCode = region ?? TmdbConfig.defaultRegion;
+    final country = (results[regionCode] ?? results[TmdbConfig.fallbackRegion]) as Map<String, dynamic>?;
     if (country == null) return <WatchProvider>[];
     final flatrate = country['flatrate'] as List<dynamic>? ?? [];
     return flatrate.map((p) => WatchProvider.fromJson(p as Map<String, dynamic>)).toList();

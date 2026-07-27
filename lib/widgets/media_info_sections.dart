@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
 
 class WatchProvidersRow extends StatelessWidget {
   final Future<List<WatchProvider>> future;
@@ -44,11 +44,12 @@ class WatchProvidersRow extends StatelessWidget {
                         if (provider.logoPath != null)
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
-                            child: CachedNetworkImage(
+                            child: cachedImage(
                               imageUrl: '${TmdbConfig.imageBaseUrlTiny}${provider.logoPath}',
                               width: 20,
                               height: 20,
                               fit: BoxFit.cover,
+                              borderRadius: BorderRadius.circular(4),
                             ),
                           ),
                         const SizedBox(width: 8),
@@ -183,11 +184,11 @@ class CastRow extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(6),
                             child: member.profilePath != null
-                                ? CachedNetworkImage(
+                                ? cachedPersonImage(
                                     imageUrl: '${TmdbConfig.imageBaseUrlTiny}${member.profilePath}',
-                                    fit: BoxFit.cover,
                                     height: 100,
                                     width: 100,
+                                    borderRadius: BorderRadius.circular(6),
                                   )
                                 : Container(
                                     color: AppColors.surfaceVariant,
@@ -261,11 +262,11 @@ class SimilarRow extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: media.posterPath != null
-                              ? CachedNetworkImage(
+                              ? cachedPosterImage(
                                   imageUrl: '${TmdbConfig.imageBaseUrlSmall}${media.posterPath}',
-                                  fit: BoxFit.cover,
                                   height: 130,
                                   width: 90,
+                                  borderRadius: BorderRadius.circular(6),
                                 )
                               : Container(
                                   color: AppColors.surfaceVariant,

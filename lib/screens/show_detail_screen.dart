@@ -90,7 +90,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     _favorite = widget.libraryItem?.favorite ?? false;
     _tabController = TabController(length: 2, vsync: this);
     final tmdb = context.read<TmdbService>();
-    _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
+    final settings = context.read<SettingsProvider>();
+    _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId, region: settings.watchRegion);
     _creditsFuture = tmdb.getTvCredits(widget.tmdbId);
     _similarFuture = tmdb.getSimilarTv(widget.tmdbId);
     _imagesFuture = tmdb.getTvImages(widget.tmdbId);
@@ -205,9 +206,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
 
   Future<void> _refresh() async {
     final tmdb = context.read<TmdbService>();
+    final settings = context.read<SettingsProvider>();
     tmdb.clearCache();
     setState(() {
-      _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
+      _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId, region: settings.watchRegion);
       _creditsFuture = tmdb.getTvCredits(widget.tmdbId);
       _similarFuture = tmdb.getSimilarTv(widget.tmdbId);
       _imagesFuture = tmdb.getTvImages(widget.tmdbId);

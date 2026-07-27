@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_utils.dart';
 
 class MediaListTile extends StatelessWidget {
   final String? posterPath;
@@ -72,9 +72,11 @@ class MediaListTile extends StatelessWidget {
 
   Widget _poster() {
     final image = posterPath != null
-        ? CachedNetworkImage(
+        ? cachedPosterImage(
             imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
-            fit: BoxFit.cover,
+            width: 56,
+            height: 78,
+            borderRadius: BorderRadius.circular(4),
           )
         : Container(
             color: AppColors.surfaceVariant,

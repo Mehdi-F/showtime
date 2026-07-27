@@ -12,6 +12,10 @@ class TmdbConfig {
   static const imageBaseUrlLarge = 'https://image.tmdb.org/t/p/w780'; // banners, backdrops
   static const imageBaseUrlOriginal = 'https://image.tmdb.org/t/p/original'; // full-screen viewer
 
+  // Default region for watch providers — overridable per-user via settings
+  static const defaultRegion = 'FR';
+  static const fallbackRegion = 'US';
+
   static const attribution =
       'This product uses the TMDB API but is not endorsed or certified by TMDB.';
 }
