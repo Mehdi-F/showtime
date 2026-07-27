@@ -364,13 +364,13 @@ class _ProfileBodyState extends State<_ProfileBody> {
 
     final resolved = widget.items.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
 
-        final series = resolved.where((r) => r.item.type == 'tv').toList()
+        final series = resolved.where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0).toList()
           ..sort((a, b) => b.recency.compareTo(a.recency));
-        final seriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
+        final seriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite && r.watchedEpisodesCount > 0).toList()
           ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
-        final films = resolved.where((r) => r.item.type == 'movie').toList()
+        final films = resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
           ..sort((a, b) => b.recency.compareTo(a.recency));
-        final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
+        final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite && r.item.watched).toList()
           ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
 
         // See _ProfileStatsSnapshot: these numbers only move once every title
@@ -1483,11 +1483,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
     final resolved = _libraryItems.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
 
-    final series = resolved.where((r) => r.item.type == 'tv').toList()
+    final series = resolved.where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0).toList()
       ..sort((a, b) => b.recency.compareTo(a.recency));
     final seriesFav = series.where((r) => r.item.favorite).toList()
       ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
-    final films = resolved.where((r) => r.item.type == 'movie').toList()
+    final films = resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
       ..sort((a, b) => b.recency.compareTo(a.recency));
     final filmsFav = films.where((r) => r.item.favorite).toList()
       ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
