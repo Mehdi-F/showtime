@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/constants.dart';
+import '../exceptions/app_exception.dart';
 
 enum AppThemeMode { light, dark, auto }
 
@@ -36,6 +38,9 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setLanguage(String lang) async {
+    if (!AppConstants.supportedLanguages.contains(lang)) {
+      throw ArgumentError('Unsupported language: $lang. Supported: ${AppConstants.supportedLanguages.join(", ")}');
+    }
     _language = lang;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageKey, lang);

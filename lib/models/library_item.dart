@@ -1,3 +1,5 @@
+import '../utils/date_utils.dart';
+
 class LibraryItem {
   final String docId;
   final int tmdbId;
@@ -53,26 +55,33 @@ class LibraryItem {
 
   static String buildDocId({required int tmdbId, required String type}) => '${type}_$tmdbId';
 
-  factory LibraryItem.fromMap(String docId, Map<String, dynamic> map) => LibraryItem(
+  factory LibraryItem.fromMap(String docId, Map<String, dynamic> map) {
+    try {
+      return LibraryItem(
         docId: docId,
-        tmdbId: map['tmdbId'] as int,
-        type: map['type'] as String,
-        status: map['status'] as String,
-        addedAt: DateTime.parse(map['addedAt'] as String),
+        tmdbId: map['tmdbId'] as int? ?? 0,
+        type: map['type'] as String? ?? 'tv',
+        status: map['status'] as String? ?? 'watching',
+        addedAt: tryParseDateTime(map['addedAt']) ?? DateTime.now(),
         watchedEpisodes: Map<String, bool>.from(map['watchedEpisodes'] as Map? ?? {}),
         watched: map['watched'] as bool? ?? false,
-        watchedAt: map['watchedAt'] != null ? DateTime.parse(map['watchedAt'] as String) : null,
+        watchedAt: tryParseDateTime(map['watchedAt']),
         favorite: map['favorite'] as bool? ?? false,
-        favoritedAt: map['favoritedAt'] != null ? DateTime.parse(map['favoritedAt'] as String) : null,
-        lastActivityAt:
-            map['lastActivityAt'] != null ? DateTime.parse(map['lastActivityAt'] as String) : null,
+        favoritedAt: tryParseDateTime(map['favoritedAt']),
+        lastActivityAt: tryParseDateTime(map['lastActivityAt']),
         skipGapPrompt: map['skipGapPrompt'] as bool? ?? false,
         episodeRewatchCounts: (map['episodeRewatchCounts'] as Map? ?? {})
             .map((k, v) => MapEntry(k as String, (v as num).toInt())),
-        episodeWatchedAt: (map['episodeWatchedAt'] as Map? ?? {})
-            .map((k, v) => MapEntry(k as String, DateTime.parse(v as String))),
+        episodeWatchedAt: (map['episodeWatchedAt'] as Map? ?? {}).map((k, v) {
+          final parsed = tryParseDateTime(v);
+          return MapEntry(k as String, parsed ?? DateTime.now());
+        }),
         movieRewatchCount: (map['movieRewatchCount'] as num?)?.toInt() ?? 0,
       );
+    } catch (e) {
+      throw FormatException('Invalid library item format for docId=$docId: $e');
+    }
+  }
 
   Map<String, dynamic> toMap() => {
         'tmdbId': tmdbId,
