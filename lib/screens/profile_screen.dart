@@ -1475,10 +1475,14 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
     final resolved = _libraryItems.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
 
-    final series = resolved.where((r) => r.item.type == 'tv').toList();
-    final seriesFav = series.where((r) => r.item.favorite).toList();
-    final films = resolved.where((r) => r.item.type == 'movie').toList();
-    final filmsFav = films.where((r) => r.item.favorite).toList();
+    final series = resolved.where((r) => r.item.type == 'tv').toList()
+      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final seriesFav = series.where((r) => r.item.favorite).toList()
+      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final films = resolved.where((r) => r.item.type == 'movie').toList()
+      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final filmsFav = films.where((r) => r.item.favorite).toList()
+      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
 
     final statsSnapshot =
         _allSettled ? _computeStatsSnapshot(resolved) : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
