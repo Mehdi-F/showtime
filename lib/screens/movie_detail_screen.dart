@@ -123,9 +123,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(_RewatchChoice.notWatched),
-            child: const Row(children: [
-              Icon(Icons.visibility_off_outlined, color: AppColors.textSecondary),
-              SizedBox(width: 12),
+            child: Row(children: [
+              const Icon(Icons.visibility_off_outlined, color: AppColors.textSecondary),
+              const SizedBox(width: 12),
               Text(context.tr('media.notWatched')),
             ]),
           ),
@@ -140,9 +140,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           if (showWatchedOnce)
             SimpleDialogOption(
               onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
-              child: const Row(children: [
-                Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
-                SizedBox(width: 12),
+              child: Row(children: [
+                const Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+                const SizedBox(width: 12),
                 Text(context.tr('media.watchedOnce')),
               ]),
             ),
