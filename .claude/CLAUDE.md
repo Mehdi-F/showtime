@@ -32,15 +32,19 @@ lib/
 
 ## Skills & Workflows
 
+**DEFAULT MODE: Caveman** — All responses use ultra-concise style (60–70% token reduction) by default.
+
 ### Caveman 🗣️
-Ultra-concise responses, 60–70% fewer tokens.
+Ultra-concise responses, 60–70% fewer tokens. **Active by default for this project.**
 ```bash
-/caveman      # Activate for this turn
+/caveman      # Explicitly activate (or already active)
 /caveman-review    # Review code terse-style
 ```
 
+If you want verbose mode for a single turn, just ask naturally.
+
 ### Superpowers 🦸
-Structured development: brainstorm → plan → code → test → review.
+Structured development: brainstorm → plan → code → test → review. **Use for complex features or refactors.**
 ```bash
 /superpowers:plan     # Planning phase only
 /superpowers:tdd      # TDD cycle (RED-GREEN-REFACTOR)
@@ -48,7 +52,10 @@ Structured development: brainstorm → plan → code → test → review.
 /superpowers         # Full workflow
 ```
 
-**Combo tip:** `/superpowers:plan` + `/caveman` = efficient long sessions.
+**Workflow tips:**
+- Complex feature? Start with `/superpowers:plan`
+- Multi-file refactor? Use `/superpowers` for full cycle
+- Pair with caveman: `/superpowers:plan` → get plan in concise style
 
 ## Translation System
 

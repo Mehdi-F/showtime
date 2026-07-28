@@ -1,0 +1,7 @@
+{
+  "model": "haiku",
+  "language": "french",
+  "permissions": {
+    "defaultMode": "acceptEdits"
+  }
+}
