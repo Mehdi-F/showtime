@@ -81,6 +81,7 @@ class AppStrings {
       'friends.addButton': 'Lier',
       'friends.removeButton': 'Retirer',
       'friends.placeholder': 'Ajoutez un ami par email...',
+      'friends.viewProfile': 'CONSULTER',
 
       // Media detail
       'media.markAs': 'Marquer comme...',
@@ -298,6 +299,7 @@ class AppStrings {
       'friends.addButton': 'Link',
       'friends.removeButton': 'Remove',
       'friends.placeholder': 'Add a friend by email...',
+      'friends.viewProfile': 'VIEW',
 
       // Media detail
       'media.markAs': 'Mark as...',

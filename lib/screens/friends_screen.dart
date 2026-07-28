@@ -164,7 +164,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                     photoUrl: photoUrl,
                                   ),
                                 )),
-                                child: const Text('CONSULTER', style: TextStyle(fontSize: 11)),
+                                child: Text(context.tr('friends.viewProfile'), style: const TextStyle(fontSize: 11)),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close, size: 18),
