@@ -365,6 +365,16 @@ class _ProfileBodyState extends State<_ProfileBody> {
         final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite && r.item.watched).toList()
           ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
 
+        // Unfiltered lists for full list view (include non-watched items)
+        final allSeries = resolved.where((r) => r.item.type == 'tv').toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
+        final allSeriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
+          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+        final allFilms = resolved.where((r) => r.item.type == 'movie').toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
+        final allFilmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
+          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+
         // See _ProfileStatsSnapshot: these numbers only move once every title
         // in the batch has settled, never mid-stream, and fall back to the
         // last known-good values (this session's, or disk-cached from a
@@ -464,10 +474,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 ),
                 const SizedBox(height: 12),
                 const Divider(height: 33, indent: 16, endIndent: 16),
-                _CarouselSection(title: context.tr('profile.series'), items: series),
-                _CarouselSection(title: context.tr('profile.seriesFavorite'), items: seriesFav, showHeart: true),
-                _CarouselSection(title: context.tr('profile.films'), items: films),
-                _CarouselSection(title: context.tr('profile.filmsFavorite'), items: filmsFav, showHeart: true),
+                _CarouselSection(title: context.tr('profile.series'), items: series, allItems: allSeries),
+                _CarouselSection(title: context.tr('profile.seriesFavorite'), items: seriesFav, allItems: allSeriesFav, showHeart: true),
+                _CarouselSection(title: context.tr('profile.films'), items: films, allItems: allFilms),
+                _CarouselSection(title: context.tr('profile.filmsFavorite'), items: filmsFav, allItems: allFilmsFav, showHeart: true),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -822,6 +832,7 @@ class _ListCard extends StatelessWidget {
 class _CarouselSection extends StatelessWidget {
   final String title;
   final List<_ResolvedItem> items;
+  final List<_ResolvedItem>? allItems;
   final bool showHeart;
   final bool readOnly;
 
@@ -829,6 +840,7 @@ class _CarouselSection extends StatelessWidget {
     super.key,
     required this.title,
     required this.items,
+    this.allItems,
     this.showHeart = false,
     this.readOnly = false,
   });
@@ -845,7 +857,7 @@ class _CarouselSection extends StatelessWidget {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => Navigator.of(context).push(appRoute(
-            builder: (_) => _FullListScreen(title: title, items: items, readOnly: readOnly),
+            builder: (_) => _FullListScreen(title: title, items: allItems ?? items, readOnly: readOnly),
           )),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
