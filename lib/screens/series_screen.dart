@@ -645,6 +645,58 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     await _resolveVisible(isInitial: false);
   }
 
+  Widget _buildGroupHeader(BuildContext context, String label, DateTime? date, int count, DateTime now) {
+    String timeLabel = '';
+    Color? accentColor;
+
+    if (date != null) {
+      final diff = daysUntil(date);
+      if (diff <= 1) {
+        timeLabel = diff == 0 ? context.tr('day.today') : context.tr('day.tomorrow');
+        accentColor = Colors.orange;
+      } else if (diff > 1 && diff <= 7) {
+        timeLabel = context.tr('timespan.thisWeek');
+        accentColor = AppColors.accent;
+      } else if (diff > 7 && diff <= 30) {
+        final weeks = (diff / 7).ceil();
+        timeLabel = weeks == 1 ? context.tr('timespan.nextWeek') : context.tr('timespan.nextWeeks');
+        accentColor = Colors.blue[300];
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                if (timeLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(timeLabel,
+                        style: TextStyle(fontSize: 12, color: accentColor ?? AppColors.textSecondary)),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Text('$count ${context.tr("count.episode")}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
     final uid = context.read<AuthProvider>().user!.uid;
     return context.read<LibraryService>().markEpisodeWatched(
@@ -701,20 +753,18 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
         final now = DateTime.now();
         final groups = <String, List<_CalendarRow>>{};
+        final groupDates = <String, DateTime?>{};
         for (final row in rows) {
           final date = row.episode.airDate;
           final label = date != null ? _dayGroupLabel(context, date) : context.tr('day.unknown');
           groups.putIfAbsent(label, () => []).add(row);
+          if (!groupDates.containsKey(label)) groupDates[label] = date;
         }
 
         final children = <Widget>[];
         groups.forEach((label, groupRows) {
-          children.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(label,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-          ));
+          final date = groupDates[label];
+          children.add(_buildGroupHeader(context, label, date, groupRows.length, now));
           if (widget.viewMode == _ViewMode.list) {
             for (final row in groupRows) {
               final date = row.episode.airDate;

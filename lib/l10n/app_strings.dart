@@ -173,6 +173,14 @@ class AppStrings {
       'day.tomorrow': 'DEMAIN',
       'day.unknown': 'DATE INCONNUE',
 
+      // Time spans
+      'timespan.thisWeek': 'Cette semaine',
+      'timespan.nextWeek': 'La semaine prochaine',
+      'timespan.nextWeeks': 'Les semaines prochaines',
+
+      // Counts
+      'count.episode': 'épisode',
+
       // Weekdays
       'weekday.monday': 'LUNDI',
       'weekday.tuesday': 'MARDI',
@@ -390,6 +398,14 @@ class AppStrings {
       'day.today': 'TODAY',
       'day.tomorrow': 'TOMORROW',
       'day.unknown': 'UNKNOWN DATE',
+
+      // Time spans
+      'timespan.thisWeek': 'This week',
+      'timespan.nextWeek': 'Next week',
+      'timespan.nextWeeks': 'Next weeks',
+
+      // Counts
+      'count.episode': 'episode',
 
       // Weekdays
       'weekday.monday': 'MONDAY',
