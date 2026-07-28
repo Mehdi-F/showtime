@@ -75,6 +75,27 @@ class AppStrings {
       'profile.films': 'Films',
       'profile.filmsFavorite': 'Films préférés',
 
+      // Friends
+      'friends.title': 'Amis',
+      'friends.addFriend': 'Email de l\'ami à ajouter',
+      'friends.addButton': 'Lier',
+      'friends.removeButton': 'Retirer',
+      'friends.placeholder': 'Ajoutez un ami par email...',
+
+      // Media detail
+      'media.markAs': 'Marquer comme...',
+      'media.notWatched': 'Pas vu',
+      'media.watchedOnce': 'Vu une fois',
+      'media.watchedNotWatched': 'Vu/Pas encore vu',
+      'media.watching': 'VISIONNAGE',
+      'media.addToLibrary': 'AJOUTER LE FILM',
+      'media.addToList': 'Ajouter à une liste',
+      'media.removeFromLibrary': 'Retirer de la bibliothèque',
+      'media.couldNotLoad': 'Impossible de charger ce film.',
+
+      // Login
+      'login.signInWithGoogle': 'Sign in with Google',
+
       // Settings
       'settings.title': 'Paramètres',
       'settings.appearance': 'Apparence',
@@ -86,6 +107,8 @@ class AppStrings {
       'settings.themeDark': 'Sombre',
       'settings.themeAuto': 'Auto',
       'settings.language': 'Langue',
+      'settings.languageFrench': 'Français',
+      'settings.languageEnglish': 'Anglais',
       'settings.notifications': 'Notifications',
       'settings.notificationsDesc': 'Notifications pour les nouveaux épisodes',
       'settings.clearCache': 'Vider le cache',
@@ -128,7 +151,12 @@ class AppStrings {
       // Import/Export
       'import.title': 'Importer depuis TV Time',
       'import.selectFile': 'Sélectionner fichier',
+      'import.pickFile': 'Choisir le fichier zip',
+      'import.change': 'Changer',
       'import.importing': 'Importation en cours',
+      'import.importSeries': 'Importer',
+      'import.done': 'Terminé',
+      'import.seriesName': 'Nom de la série',
       'import.imported': 'série(s) importée(s).',
       'import.failed': 'échec(s) (réessaie plus tard).',
 
@@ -241,6 +269,27 @@ class AppStrings {
       'profile.films': 'Films',
       'profile.filmsFavorite': 'Favorite films',
 
+      // Friends
+      'friends.title': 'Friends',
+      'friends.addFriend': 'Friend email to add',
+      'friends.addButton': 'Link',
+      'friends.removeButton': 'Remove',
+      'friends.placeholder': 'Add a friend by email...',
+
+      // Media detail
+      'media.markAs': 'Mark as...',
+      'media.notWatched': 'Not watched',
+      'media.watchedOnce': 'Watched once',
+      'media.watchedNotWatched': 'Watched/Not watched',
+      'media.watching': 'WATCHING',
+      'media.addToLibrary': 'ADD TO LIBRARY',
+      'media.addToList': 'Add to list',
+      'media.removeFromLibrary': 'Remove from library',
+      'media.couldNotLoad': 'Could not load this movie.',
+
+      // Login
+      'login.signInWithGoogle': 'Sign in with Google',
+
       // Settings
       'settings.title': 'Settings',
       'settings.appearance': 'Appearance',
@@ -252,6 +301,8 @@ class AppStrings {
       'settings.themeDark': 'Dark',
       'settings.themeAuto': 'Auto',
       'settings.language': 'Language',
+      'settings.languageFrench': 'French',
+      'settings.languageEnglish': 'English',
       'settings.notifications': 'Notifications',
       'settings.notificationsDesc': 'Notifications for new episodes',
       'settings.clearCache': 'Clear cache',
@@ -294,7 +345,12 @@ class AppStrings {
       // Import/Export
       'import.title': 'Import from TV Time',
       'import.selectFile': 'Select file',
+      'import.pickFile': 'Choose zip file',
+      'import.change': 'Change',
       'import.importing': 'Importing',
+      'import.importSeries': 'Import',
+      'import.done': 'Done',
+      'import.seriesName': 'Series name',
       'import.imported': 'series imported.',
       'import.failed': 'failure(s) (will retry later).',
 

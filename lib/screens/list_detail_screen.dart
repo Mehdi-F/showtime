@@ -10,6 +10,7 @@ import '../providers/lists_provider.dart';
 import '../services/lists_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/poster_hero_tag.dart';
 import '../widgets/scrollable_center.dart';
@@ -38,13 +39,13 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Renommer la liste'),
+        title: Text(context.tr('list.rename')),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Enregistrer'),
+            child: Text(context.tr('common.save')),
           ),
         ],
       ),
@@ -60,13 +61,13 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Supprimer la liste ?'),
-        content: Text('"${list.name}" sera définitivement supprimée.'),
+        title: Text(context.tr('list.delete')),
+        content: Text('"${list.name}" ${context.tr('list.deleteConfirm')}'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('common.cancel'))),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer'),
+            child: Text(context.tr('common.delete')),
           ),
         ],
       ),
@@ -102,12 +103,12 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Renommer',
+            tooltip: context.tr('list.rename'),
             onPressed: () => _rename(context, list),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Supprimer',
+            tooltip: context.tr('common.delete'),
             onPressed: () => _delete(context, list),
           ),
         ],
@@ -115,8 +116,8 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: list.items.isEmpty
-          ? const ScrollableCenter(
-              child: Text('Cette liste est vide.', style: TextStyle(color: AppColors.textSecondary)),
+          ? ScrollableCenter(
+              child: Text(context.tr('list.empty'), style: const TextStyle(color: AppColors.textSecondary)),
             )
           : GridView.builder(
               physics: const AlwaysScrollableScrollPhysics(),

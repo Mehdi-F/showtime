@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/tmdb_models.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 import '../widgets/discover_poster_tile.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/poster_hero_tag.dart';
@@ -108,13 +109,13 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
                         ? Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Impossible de charger.',
-                                  style: TextStyle(color: AppColors.textSecondary)),
+                              Text(context.tr('empty.loadFailed'),
+                                  style: const TextStyle(color: AppColors.textSecondary)),
                               const SizedBox(height: 12),
-                              FilledButton(onPressed: _loadMore, child: const Text('Réessayer')),
+                              FilledButton(onPressed: _loadMore, child: Text(context.tr('common.retry'))),
                             ],
                           )
-                        : const Text('Aucun résultat.'),
+                        : Text(context.tr('empty.noResults')),
                   ))
             : GridView.builder(
                 controller: _scrollController,

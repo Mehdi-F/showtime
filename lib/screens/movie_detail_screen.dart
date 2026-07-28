@@ -9,6 +9,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
 import '../widgets/app_page_route.dart';
@@ -120,14 +121,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       context: context,
       builder: (context) => SimpleDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Marquer comme...'),
+        title: Text(context.tr('media.markAs')),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(_RewatchChoice.notWatched),
             child: const Row(children: [
               Icon(Icons.visibility_off_outlined, color: AppColors.textSecondary),
               SizedBox(width: 12),
-              Text('Pas vu'),
+              Text(context.tr('media.notWatched')),
             ]),
           ),
           SimpleDialogOption(
@@ -144,7 +145,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               child: const Row(children: [
                 Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
                 SizedBox(width: 12),
-                Text('Vu une fois'),
+                Text(context.tr('media.watchedOnce')),
               ]),
             ),
         ],
@@ -371,10 +372,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text('VISIONNAGE',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(context.tr('media.watching'),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -413,8 +414,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Impossible de charger ce film.',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                  Text(context.tr('media.couldNotLoad'),
+                      style: const TextStyle(color: AppColors.textSecondary)),
                   const SizedBox(height: 12),
                   FilledButton(onPressed: _retryLoad, child: const Text('Réessayer')),
                 ],
@@ -452,7 +453,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             ),
           ),
           bottomNavigationBar:
-              _libraryItem == null ? AddBar(label: 'AJOUTER LE FILM', onTap: _ensureFollowed) : null,
+              _libraryItem == null ? AddBar(label: context.tr('media.addToLibrary'), onTap: _ensureFollowed) : null,
         );
       },
     );
@@ -544,11 +545,11 @@ class _MovieBanner extends StatelessWidget {
                           itemBuilder: (context) => [
                             PopupMenuItem(
                               onTap: onAddToList,
-                              child: const Text('Ajouter à une liste'),
+                              child: Text(context.tr('media.addToList')),
                             ),
                             PopupMenuItem(
                               onTap: onUnfollow,
-                              child: const Text('Remove from Library'),
+                              child: Text(context.tr('media.removeFromLibrary')),
                             ),
                           ],
                         ),

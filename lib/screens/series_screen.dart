@@ -1009,12 +1009,12 @@ class _SeriesProgressCard extends StatelessWidget {
     this.daysUntil,
   });
 
-  Widget? _buildDayBadge() {
+  Widget? _buildDayBadge(BuildContext context) {
     final days = daysUntil;
     if (days == null || days == 0) return null;
     if (days < 0) {
-      return const Text('HIER',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13));
+      return Text(context.tr('day.yesterday'),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1023,7 +1023,7 @@ class _SeriesProgressCard extends StatelessWidget {
         Text('$days',
             style: const TextStyle(
                 color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20, height: 1)),
-        Text(days == 1 ? 'JOUR' : 'JOURS',
+        Text(days == 1 ? context.tr('time.day') : context.tr('time.days'),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 9)),
       ],
     );
@@ -1031,7 +1031,7 @@ class _SeriesProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dayBadge = _buildDayBadge();
+    final dayBadge = _buildDayBadge(context);
     return GestureDetector(
       onTap: onTap,
       child: Stack(
