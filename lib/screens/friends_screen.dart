@@ -69,35 +69,58 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final linkService = context.read<LinkService>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('friends.title'))),
+      appBar: AppBar(
+        title: Text(context.tr('friends.title')),
+        elevation: 0,
+        backgroundColor: AppColors.surface,
+      ),
       body: Column(
         children: [
-          Padding(
+          Container(
+            color: AppColors.surface,
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(hintText: context.tr('friends.addFriend')),
-                  ),
+                Text(
+                  'Ajoutez des amis',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _adding ? null : () => _addFriend(uid),
-                  child: _adding
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                        )
-                      : Text(context.tr('friends.addButton')),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          hintText: context.tr('friends.addFriend'),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _adding ? null : () => _addFriend(uid),
+                      child: _adding
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(context.tr('friends.addButton')),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
           Expanded(
             child: StreamBuilder<List<String>>(
               stream: linkService.watchFriendUids(uid),
@@ -109,74 +132,131 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     child: ScrollableCenter(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
-                        child: Text(context.tr('friends.placeholder'),
-                            textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline, size: 48, color: AppColors.textSecondary),
+                            const SizedBox(height: 16),
+                            Text(context.tr('friends.placeholder'),
+                                textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                          ],
+                        ),
                       ),
                     ),
                   );
                 }
                 return RefreshIndicator(
                   onRefresh: _refresh,
-                  child: ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: friendUids.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
-                  itemBuilder: (context, index) {
-                    final friendUid = friendUids[index];
-                    return FutureBuilder<Map<String, dynamic>?>(
-                      future: linkService.getProfile(friendUid),
-                      builder: (context, profileSnapshot) {
-                        // While getProfile() is still in flight, show a
-                        // skeleton rather than falling back to the raw uid
-                        // — that fallback is only correct once the future
-                        // has actually resolved (even to a missing profile).
-                        if (profileSnapshot.connectionState == ConnectionState.waiting) {
-                          return const ListTile(
-                            leading: SkeletonBox(
-                              width: 48,
-                              height: 48,
-                              borderRadius: BorderRadius.all(Radius.circular(24)),
-                            ),
-                            title: SkeletonBox(width: 140, height: 14),
-                          );
-                        }
-                        final profile = profileSnapshot.data;
-                        final name =
-                            profile?['displayName'] as String? ?? profile?['email'] as String? ?? friendUid;
-                        final photoUrl = profile?['photoUrl'] as String?;
-                        return ListTile(
-                          leading: CircleAvatar(
-                            radius: 24,
-                            backgroundColor: AppColors.surfaceVariant,
-                            backgroundImage: photoUrl != null ? CachedNetworkImageProvider(photoUrl) : null,
-                            child:
-                                photoUrl == null ? const Icon(Icons.person, color: AppColors.textSecondary) : null,
-                          ),
-                          title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              OutlinedButton(
-                                onPressed: () => Navigator.of(context).push(appRoute(
-                                  builder: (_) => FriendProfileScreen(
-                                    friendUid: friendUid,
-                                    displayName: name,
-                                    photoUrl: photoUrl,
-                                  ),
-                                )),
-                                child: Text(context.tr('friends.viewProfile'), style: const TextStyle(fontSize: 11)),
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: friendUids.length,
+                    itemBuilder: (context, index) {
+                      final friendUid = friendUids[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: FutureBuilder<Map<String, dynamic>?>(
+                          future: linkService.getProfile(friendUid),
+                          builder: (context, profileSnapshot) {
+                            if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.all(12),
+                                child: const Row(
+                                  children: [
+                                    SkeletonBox(
+                                      width: 56,
+                                      height: 56,
+                                      borderRadius: BorderRadius.all(Radius.circular(28)),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(child: SkeletonBox(width: 140, height: 14)),
+                                  ],
+                                ),
+                              );
+                            }
+                            final profile = profileSnapshot.data;
+                            final name = profile?['displayName'] as String? ?? profile?['email'] as String? ?? friendUid;
+                            final photoUrl = profile?['photoUrl'] as String?;
+                            final seriesCount = profile?['seriesWatchedCount'] as int? ?? 0;
+                            final filmsCount = profile?['filmsWatchedCount'] as int? ?? 0;
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.surfaceVariant, width: 1),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 18),
-                                tooltip: context.tr('friends.removeButton'),
-                                onPressed: () => _removeFriend(uid, friendUid),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 28,
+                                          backgroundColor: AppColors.surfaceVariant,
+                                          backgroundImage: photoUrl != null ? CachedNetworkImageProvider(photoUrl) : null,
+                                          child: photoUrl == null ? const Icon(Icons.person, color: AppColors.textSecondary, size: 28) : null,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(name,
+                                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Text('$seriesCount séries',
+                                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                                  const SizedBox(width: 12),
+                                                  Text('$filmsCount films',
+                                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.close, size: 20),
+                                          tooltip: context.tr('friends.removeButton'),
+                                          onPressed: () => _removeFriend(uid, friendUid),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton.tonal(
+                                        onPressed: () => Navigator.of(context).push(appRoute(
+                                          builder: (_) => FriendProfileScreen(
+                                            friendUid: friendUid,
+                                            displayName: name,
+                                            photoUrl: photoUrl,
+                                          ),
+                                        )),
+                                        child: Text(context.tr('friends.viewProfile'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
                 );
               },
