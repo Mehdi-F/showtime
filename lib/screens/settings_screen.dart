@@ -111,8 +111,8 @@ class SettingsScreen extends StatelessWidget {
             DropdownButtonFormField<String>(
               value: settings.language,
               items: [
-                DropdownMenuItem(value: 'fr', child: Text(settings.language == 'fr' ? 'Français' : 'French')),
-                DropdownMenuItem(value: 'en', child: Text(settings.language == 'en' ? 'English' : 'Anglais')),
+                DropdownMenuItem(value: 'fr', child: Text(context.tr('settings.languageFrench'))),
+                DropdownMenuItem(value: 'en', child: Text(context.tr('settings.languageEnglish'))),
               ],
               onChanged: (value) {
                 if (value != null) {

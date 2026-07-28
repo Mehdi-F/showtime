@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -31,7 +32,7 @@ class LoginScreen extends StatelessWidget {
             FilledButton.icon(
               onPressed: () => context.read<AuthProvider>().signInWithGoogle(),
               icon: const Icon(Icons.login),
-              label: const Text('Sign in with Google'),
+              label: Text(context.tr('login.signInWithGoogle')),
             ),
           ],
         ),

@@ -10,6 +10,7 @@ import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/tvtime_import_service.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 import '../widgets/skeletons.dart';
 
 enum _Stage { pickFile, matching, review, importing, done }
@@ -175,7 +176,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Importer depuis TV Time')),
+      appBar: AppBar(title: Text(context.tr('import.title'))),
       body: switch (_stage) {
         _Stage.pickFile => _buildPickFile(),
         _Stage.matching => _buildProgress('Recherche des séries sur TMDB…'),
@@ -207,7 +208,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
             FilledButton.icon(
               onPressed: _pickFile,
               icon: const Icon(Icons.folder_open),
-              label: const Text('Choisir le fichier zip'),
+              label: Text(context.tr('import.pickFile')),
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
@@ -308,7 +309,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
                     ),
                     TextButton(
                       onPressed: () => _changeMatch(row),
-                      child: const Text('Changer'),
+                      child: Text(context.tr('import.change')),
                     ),
                   ],
                 ),
@@ -348,7 +349,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Terminé'),
+              child: Text(context.tr('import.done')),
             ),
           ],
         ),
@@ -410,7 +411,7 @@ class _ChangeMatchDialogState extends State<_ChangeMatchDialog> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(hintText: 'Nom de la série'),
+                      decoration: InputDecoration(hintText: context.tr('import.seriesName')),
                       onSubmitted: (_) => _search(),
                     ),
                   ),

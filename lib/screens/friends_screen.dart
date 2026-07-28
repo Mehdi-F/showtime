@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/link_service.dart';
 import '../theme/app_theme.dart';
+import '../l10n/localization_context.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
@@ -68,7 +69,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final linkService = context.read<LinkService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Amis')),
+      appBar: AppBar(title: Text(context.tr('friends.title'))),
       body: Column(
         children: [
           Padding(
@@ -79,7 +80,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   child: TextField(
                     controller: _controller,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(hintText: "Email de l'ami à ajouter"),
+                    decoration: InputDecoration(hintText: context.tr('friends.addFriend')),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -91,7 +92,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                         )
-                      : const Text('Lier'),
+                      : Text(context.tr('friends.addButton')),
                 ),
               ],
             ),
@@ -105,11 +106,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 if (friendUids.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: _refresh,
-                    child: const ScrollableCenter(
+                    child: ScrollableCenter(
                       child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text('Ajoutez un ami par email pour consulter sa bibliothèque.',
-                            textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                        padding: const EdgeInsets.all(24),
+                        child: Text(context.tr('friends.placeholder'),
+                            textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
                       ),
                     ),
                   );
@@ -167,7 +168,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close, size: 18),
-                                tooltip: 'Retirer',
+                                tooltip: context.tr('friends.removeButton'),
                                 onPressed: () => _removeFriend(uid, friendUid),
                               ),
                             ],
