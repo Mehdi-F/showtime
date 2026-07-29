@@ -611,12 +611,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                     overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Text('${d.totalEpisodeCount} ${context.tr("count.episode")}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.play_arrow, size: 24, color: AppColors.accent),
+            icon: Icon(Icons.play_arrow, size: 24, color: AppColors.accent),
             onPressed: () => Navigator.of(context)
                 .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
             padding: EdgeInsets.zero,
