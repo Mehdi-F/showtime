@@ -592,7 +592,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: CachedNetworkImage(
-              imageUrl: d.posterPath != null ? '${TmdbConfig.imageBaseUrl}${d.posterPath}' : '',
+              imageUrl: d.posterPath != null ? '${TmdbConfig.imageBaseUrlSmall}${d.posterPath}' : '',
               width: 48,
               height: 72,
               fit: BoxFit.cover,
