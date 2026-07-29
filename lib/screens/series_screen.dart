@@ -760,7 +760,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Text('$count ${context.tr("count.episode")}',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           ),
         ],
       ),
