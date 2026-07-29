@@ -473,13 +473,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           ? [
               if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
               if (active.isNotEmpty) ..._activeSection(context, active),
-              if (stale.isNotEmpty) ..._staleSection(context, stale),
               if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
+              if (stale.isNotEmpty) ..._staleSection(context, stale),
             ]
           : [
               if (active.isNotEmpty) _buildCardSection(context, context.tr('series.toWatch'), active),
-              if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
               if (notStarted.isNotEmpty) _buildCardSection(context, context.tr('series.notStarted'), notStarted),
+              if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
             ],
     );
   }
