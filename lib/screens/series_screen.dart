@@ -296,7 +296,19 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       setState(() => _loadHistory = true);
     }
 
-    // Load more shows when scrolling near bottom
+    // Prefetch next batch at 80% scroll (eager load before user reaches bottom)
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    if (_scrollController.position.pixels > maxExtent * 0.8) {
+      if (_visibleCount >= widget.tvItems.length) return;
+      final newCount = _visibleCount + _pageSize;
+      if (newCount > _visibleCount) {
+        setState(() => _visibleCount = newCount);
+        _resolveVisible(isInitial: false);
+      }
+      return;
+    }
+
+    // Load more shows when scrolling near bottom (legacy fallback)
     if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
     if (_visibleCount >= widget.tvItems.length) return;
     setState(() => _visibleCount += _pageSize);
@@ -326,7 +338,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     });
 
     if (isInitial) {
-      future.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+      // Increased timeout to 1000ms to load more items in first page before showing content
+      future.timeout(const Duration(milliseconds: 1000), onTimeout: () {}).whenComplete(() {
         if (mounted) {
           // Trigger auto-scroll as soon as the current page of shows is fully loaded,
           // then show the content. This ensures the scroll happens before rendering.
@@ -664,7 +677,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    _scrollController.addListener(_onUpcomingScroll);
     _resolveVisible(isInitial: true);
   }
 
@@ -676,7 +689,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
+    _scrollController.removeListener(_onUpcomingScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -703,11 +716,32 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     });
 
     if (isInitial) {
-      future.timeout(const Duration(milliseconds: 600), onTimeout: () {}).whenComplete(() {
+      // Increased timeout to 1000ms to load more items in first page before showing content
+      future.timeout(const Duration(milliseconds: 1000), onTimeout: () {}).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
     return future;
+  }
+
+  void _onUpcomingScroll() {
+    // Prefetch next batch at 80% scroll (eager load before user reaches bottom)
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    if (_scrollController.position.pixels > maxExtent * 0.8) {
+      if (_visibleCount >= widget.tvItems.length) return;
+      final newCount = _visibleCount + _pageSize;
+      if (newCount > _visibleCount) {
+        setState(() => _visibleCount = newCount);
+        _resolveVisible(isInitial: false);
+      }
+      return;
+    }
+
+    // Load more shows when scrolling near bottom (legacy fallback)
+    if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
+    if (_visibleCount >= widget.tvItems.length) return;
+    setState(() => _visibleCount += _pageSize);
+    _resolveVisible(isInitial: false);
   }
 
   Future<void> _refresh() async {
