@@ -410,7 +410,17 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
     final history = _loadHistory ? _buildHistory(data) : <_HistoryEntry>[];
 
-    final withNext = data.where((d) => d.nextEpisode != null).toList();
+    final notStarted = <_ShowEpisodesData>[];
+    final withNext = <_ShowEpisodesData>[];
+
+    for (final d in data) {
+      if (d.watchedEpisodesCount == 0) {
+        notStarted.add(d);
+      } else if (d.nextEpisode != null) {
+        withNext.add(d);
+      }
+    }
+
     final active = <_ShowEpisodesData>[];
     final stale = <_ShowEpisodesData>[];
     for (final d in withNext) {
@@ -430,7 +440,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       return bDate.compareTo(aDate);
     });
 
-    if (history.isEmpty && active.isEmpty && stale.isEmpty) {
+    notStarted.sort((a, b) => (b.item.addedAt).compareTo(a.item.addedAt));
+
+    if (history.isEmpty && active.isEmpty && stale.isEmpty && notStarted.isEmpty) {
       return ScrollableCenter(
           child: Text(context.tr('series.allCaughtUp'), style: const TextStyle(color: AppColors.textSecondary)));
     }
@@ -449,10 +461,12 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
               if (active.isNotEmpty) ..._activeSection(context, active),
               if (stale.isNotEmpty) ..._staleSection(context, stale),
+              if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
             ]
           : [
               if (active.isNotEmpty) _buildCardSection(context, context.tr('series.toWatch'), active),
               if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
+              if (notStarted.isNotEmpty) _buildCardSection(context, context.tr('series.notStarted'), notStarted),
             ],
     );
   }
@@ -540,6 +554,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     ];
   }
 
+  List<Widget> _notStartedSection(BuildContext context, List<_ShowEpisodesData> rows) {
+    return [
+      _sectionHeader(context.tr('series.notStarted')),
+      for (final d in rows) _buildNotStartedCard(context, d),
+    ];
+  }
+
   Widget _buildNextCard(BuildContext context, _ShowEpisodesData d, {required bool showMostRecentBadge}) {
     final ep = d.nextEpisode!;
     return _EpisodeCard(
@@ -554,6 +575,55 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, true),
       onTapShow: () =>
           Navigator.of(context).push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+    );
+  }
+
+  Widget _buildNotStartedCard(BuildContext context, _ShowEpisodesData d) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.surfaceVariant, width: 1),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: CachedNetworkImage(
+              imageUrl: d.posterPath != null ? '${TmdbConfig.imageBaseUrl}${d.posterPath}' : '',
+              width: 48,
+              height: 72,
+              fit: BoxFit.cover,
+              errorWidget: (context, url, error) =>
+                  Container(width: 48, height: 72, color: AppColors.surfaceVariant),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(d.showTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text('${d.totalEpisodeCount} ${context.tr("count.episode")}',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.play_arrow, size: 24, color: AppColors.accent),
+            onPressed: () => Navigator.of(context)
+                .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
     );
   }
 }

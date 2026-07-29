@@ -44,10 +44,11 @@ class AppStrings {
       'group.notWatched': 'PAS VU',
 
       // Series
-      'series.toWatch': 'À VOIR',
+      'series.toWatch': 'EN COURS',
       'series.upcoming': 'À VENIR',
       'series.watchHistory': 'HISTORIQUE DE VISIONNAGE',
       'series.notWatching': 'PAS REGARDÉ DEPUIS UN MOMENT',
+      'series.notStarted': 'PAS COMMENCÉ',
       'series.allCaughtUp': 'Vous êtes à jour.',
       'series.trackShow': 'Ajoutez une série depuis Explorer pour la voir ici.',
       'series.upcomingEmpty': 'Aucun épisode prévu pour le moment.',
@@ -270,10 +271,11 @@ class AppStrings {
       'group.notWatched': 'NOT WATCHED',
 
       // Series
-      'series.toWatch': 'TO WATCH',
+      'series.toWatch': 'WATCHING',
       'series.upcoming': 'UPCOMING',
       'series.watchHistory': 'WATCH HISTORY',
       'series.notWatching': 'HAVEN\'T WATCHED IN A WHILE',
+      'series.notStarted': 'NOT STARTED',
       'series.allCaughtUp': 'All caught up.',
       'series.trackShow': 'Track a show from Explorer to see it here.',
       'series.upcomingEmpty': 'No upcoming episodes scheduled.',
