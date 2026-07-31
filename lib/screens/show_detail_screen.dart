@@ -754,14 +754,36 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     );
   }
 
+  List<EpisodeRef> _getAllEpisodes() {
+    final episodes = <EpisodeRef>[];
+    for (final season in _seasonsByNumber.values) {
+      episodes.addAll(season.episodes);
+    }
+    episodes.sort((a, b) {
+      final aSeason = a.seasonNumber.compareTo(b.seasonNumber);
+      if (aSeason != 0) return aSeason;
+      return a.episodeNumber.compareTo(b.episodeNumber);
+    });
+    return episodes;
+  }
+
+  int _findEpisodeIndex(EpisodeRef episode) {
+    final all = _getAllEpisodes();
+    return all.indexWhere((e) => e.key == episode.key);
+  }
+
   Widget _buildNextEpisodeCard(EpisodeRef ep) {
     final watched = _watchedEpisodes[ep.key] ?? false;
+    final allEpisodes = _getAllEpisodes();
+    final initialIndex = _findEpisodeIndex(ep);
+
     return GestureDetector(
       onTap: () => showEpisodeDetailSheet(
         context,
-        episode: ep,
-        watched: watched,
-        onToggleWatched: () => _toggleEpisode(ep),
+        episodes: allEpisodes,
+        initialIndex: initialIndex,
+        watchedMap: _watchedEpisodes,
+        onToggleWatched: (episode, newWatched) => _toggleEpisode(episode),
       ),
       child: Container(
         decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
@@ -847,12 +869,17 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       title: Text('${ep.episodeNumber}. ${ep.name}', style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: subtitleParts.isEmpty ? null : Text(subtitleParts.join(' · ')),
       trailing: RoundCheck(checked: watched, onTap: () => _toggleEpisode(ep)),
-      onTap: () => showEpisodeDetailSheet(
-        context,
-        episode: ep,
-        watched: watched,
-        onToggleWatched: () => _toggleEpisode(ep),
-      ),
+      onTap: () {
+        final allEpisodes = _getAllEpisodes();
+        final initialIndex = _findEpisodeIndex(ep);
+        showEpisodeDetailSheet(
+          context,
+          episodes: allEpisodes,
+          initialIndex: initialIndex,
+          watchedMap: _watchedEpisodes,
+          onToggleWatched: (episode, newWatched) => _toggleEpisode(episode),
+        );
+      },
     );
   }
 
