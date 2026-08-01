@@ -102,23 +102,34 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                 },
               ),
             ),
-            // Page indicator dots
+            // Page indicator dots (show only 5 around current)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.episodes.length,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: index == _currentIndex ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: index == _currentIndex ? AppColors.accent : AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: () {
+                    final start = (_currentIndex - 2).clamp(0, widget.episodes.length - 1);
+                    final end = (_currentIndex + 2).clamp(0, widget.episodes.length - 1);
+                    return List.generate(
+                      end - start + 1,
+                      (i) {
+                        final index = start + i;
+                        final isActive = index == _currentIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          width: isActive ? 28 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isActive ? Colors.white : Colors.grey[700],
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        );
+                      },
+                    );
+                  }(),
                 ),
               ),
             ),
@@ -204,7 +215,21 @@ class _EpisodeInfo extends StatefulWidget {
 }
 
 class _EpisodeInfoState extends State<_EpisodeInfo> {
-  late bool _watched = widget.watched;
+  late bool _watched;
+
+  @override
+  void initState() {
+    super.initState();
+    _watched = widget.watched;
+  }
+
+  @override
+  void didUpdateWidget(covariant _EpisodeInfo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.watched != widget.watched) {
+      _watched = widget.watched;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
