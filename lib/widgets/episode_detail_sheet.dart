@@ -64,6 +64,7 @@ class _EpisodeDetailSheet extends StatefulWidget {
 
 class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
   late PageController _pageController;
+  late ScrollController _dotsController;
   late int _currentIndex = widget.initialIndex;
   late Map<String, bool> _watchedMap = Map.from(widget.watchedMap);
 
@@ -71,12 +72,24 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
+    _dotsController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollDotsToCenter());
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _dotsController.dispose();
     super.dispose();
+  }
+
+  void _scrollDotsToCenter() {
+    final offset = (_currentIndex * 24.0) - (MediaQuery.of(context).size.width / 2 - 12);
+    _dotsController.animateTo(
+      offset.clamp(0, _dotsController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -94,7 +107,10 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
               height: MediaQuery.of(context).size.height * 0.3,
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: (index) => setState(() => _currentIndex = index),
+                onPageChanged: (index) {
+                  setState(() => _currentIndex = index);
+                  _scrollDotsToCenter();
+                },
                 itemCount: widget.episodes.length,
                 itemBuilder: (context, index) {
                   final ep = widget.episodes[index];
@@ -102,34 +118,40 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                 },
               ),
             ),
-            // Page indicator dots (show only 5 around current)
+            // Page indicator dots with scroll effect
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: () {
-                    final start = (_currentIndex - 2).clamp(0, widget.episodes.length - 1);
-                    final end = (_currentIndex + 2).clamp(0, widget.episodes.length - 1);
-                    return List.generate(
-                      end - start + 1,
-                      (i) {
-                        final index = start + i;
-                        final isActive = index == _currentIndex;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          width: isActive ? 28 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: isActive ? Colors.white : Colors.grey[700],
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        );
-                      },
-                    );
-                  }(),
+              child: ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Colors.black.withAlpha(0), Colors.black, Colors.black, Colors.black.withAlpha(0)],
+                  stops: const [0, 0.1, 0.9, 1],
+                ).createShader(bounds),
+                child: SingleChildScrollView(
+                  controller: _dotsController,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: () {
+                      return List.generate(
+                        widget.episodes.length,
+                        (index) {
+                          final isActive = index == _currentIndex;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            width: isActive ? 28 : 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: isActive ? Colors.white : Colors.grey[700],
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          );
+                        },
+                      );
+                    }(),
+                  ),
                 ),
               ),
             ),
