@@ -118,7 +118,7 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                 },
               ),
             ),
-            // Page indicator dots with scroll effect
+            // Page indicator dots (5 visible, centered on active)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: ShaderMask(
@@ -126,7 +126,7 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [Colors.black.withAlpha(0), Colors.black, Colors.black, Colors.black.withAlpha(0)],
-                  stops: const [0, 0.1, 0.9, 1],
+                  stops: const [0, 0.15, 0.85, 1],
                 ).createShader(bounds),
                 child: SingleChildScrollView(
                   controller: _dotsController,
@@ -134,9 +134,12 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: () {
+                      final start = (_currentIndex - 2).clamp(0, widget.episodes.length - 1);
+                      final end = (_currentIndex + 2).clamp(0, widget.episodes.length - 1);
                       return List.generate(
-                        widget.episodes.length,
-                        (index) {
+                        end - start + 1,
+                        (i) {
+                          final index = start + i;
                           final isActive = index == _currentIndex;
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
