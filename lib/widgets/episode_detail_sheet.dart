@@ -84,12 +84,16 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
   }
 
   void _scrollDotsToCenter() {
-    final offset = (_currentIndex * 24.0) - (MediaQuery.of(context).size.width / 2 - 12);
-    _dotsController.animateTo(
-      offset.clamp(0, _dotsController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_dotsController.hasClients) return;
+      const dotSize = 18.0; // ~6 or 24 width + 12 margins
+      final offset = (_currentIndex * dotSize) - (MediaQuery.of(context).size.width / 2 - 12);
+      _dotsController.animateTo(
+        offset.clamp(0.0, _dotsController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   @override
@@ -118,42 +122,39 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                 },
               ),
             ),
-            // Page indicator dots (5 visible, centered on active)
+            // Page indicator dots with scroll effect
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: ShaderMask(
                 shaderCallback: (bounds) => LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [Colors.black.withAlpha(0), Colors.black, Colors.black, Colors.black.withAlpha(0)],
-                  stops: const [0, 0.15, 0.85, 1],
+                  colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+                  stops: const [0, 0.1, 0.9, 1],
                 ).createShader(bounds),
                 child: SingleChildScrollView(
                   controller: _dotsController,
                   scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: () {
-                      final start = (_currentIndex - 2).clamp(0, widget.episodes.length - 1);
-                      final end = (_currentIndex + 2).clamp(0, widget.episodes.length - 1);
-                      return List.generate(
-                        end - start + 1,
-                        (i) {
-                          final index = start + i;
-                          final isActive = index == _currentIndex;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            width: isActive ? 28 : 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: isActive ? Colors.white : Colors.grey[700],
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          );
-                        },
-                      );
-                    }(),
+                    children: List.generate(
+                      widget.episodes.length,
+                      (index) {
+                        final isActive = index == _currentIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeInOut,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          width: isActive ? 24 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isActive ? AppColors.accent : Colors.white,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
