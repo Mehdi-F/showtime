@@ -507,32 +507,34 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionHeader(label),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.67,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
+        SizedBox(
+          height: (rows.length / 3).ceil() * 180 + 4,
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.67,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+            ),
+            itemCount: rows.length,
+            itemBuilder: (context, index) {
+              final d = rows[index];
+              final info = _progressInfo(d);
+              return FadeInEntry(
+                index: index,
+                child: _SeriesProgressCard(
+                  heroTag: posterHeroTag('tv', d.item.tmdbId),
+                  posterPath: d.posterPath,
+                  progress: info?.ratio,
+                  barColor: info?.color,
+                  onTap: () => Navigator.of(context)
+                      .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+                ),
+              );
+            },
           ),
-          itemCount: rows.length,
-          itemBuilder: (context, index) {
-            final d = rows[index];
-            final info = _progressInfo(d);
-            return FadeInEntry(
-              index: index,
-              child: _SeriesProgressCard(
-                heroTag: posterHeroTag('tv', d.item.tmdbId),
-                posterPath: d.posterPath,
-                progress: info?.ratio,
-                barColor: info?.color,
-                onTap: () => Navigator.of(context)
-                    .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
-              ),
-            );
-          },
         ),
       ],
     );
@@ -1024,6 +1026,12 @@ class _EpisodeCard extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
                       fit: BoxFit.cover,
+                      fadeInDuration: const Duration(milliseconds: 150),
+                      placeholder: (_, __) => Container(color: AppColors.surfaceVariant),
+                      errorWidget: (_, __, ___) => Container(
+                        color: AppColors.surfaceVariant,
+                        child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                      ),
                     )
                   : Container(
                       color: AppColors.surfaceVariant,
@@ -1187,8 +1195,14 @@ class _SeriesProgressCard extends StatelessWidget {
   Widget _posterImage(String? heroTag) {
     final image = posterPath != null
         ? CachedNetworkImage(
-            imageUrl: '${TmdbConfig.imageBaseUrlMedium}$posterPath',
+            imageUrl: '${TmdbConfig.imageBaseUrlSmall}$posterPath',
             fit: BoxFit.cover,
+            fadeInDuration: const Duration(milliseconds: 200),
+            placeholder: (_, __) => Container(color: AppColors.surfaceVariant),
+            errorWidget: (_, __, ___) => Container(
+              color: AppColors.surfaceVariant,
+              child: const Icon(Icons.tv, color: AppColors.textSecondary),
+            ),
           )
         : Container(
             color: AppColors.surfaceVariant,
