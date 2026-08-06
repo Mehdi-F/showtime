@@ -22,6 +22,7 @@ import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
+import '../widgets/animations.dart';
 import '../widgets/view_mode_toggle.dart';
 import 'show_detail_screen.dart';
 
@@ -465,22 +466,39 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       _autoScrollPastHistoryOnce();
     }
 
+    return AnimatedViewSwitcher(
+      child: widget.viewMode == _ViewMode.list
+          ? _buildListView(context, showHistory, history, active, notStarted, stale)
+          : _buildGridView(context, active, notStarted, stale),
+    );
+  }
+
+  Widget _buildListView(BuildContext context, bool showHistory, List<_ShowEpisodesData> history, List<_ShowEpisodesData> active, List<_ShowEpisodesData> notStarted, List<_ShowEpisodesData> stale) {
     return ListView(
+      key: const ValueKey('list_view'),
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(top: 8, bottom: 16),
-      children: widget.viewMode == _ViewMode.list
-          ? [
-              if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
-              if (active.isNotEmpty) ..._activeSection(context, active),
-              if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
-              if (stale.isNotEmpty) ..._staleSection(context, stale),
-            ]
-          : [
-              if (active.isNotEmpty) _buildCardSection(context, context.tr('series.toWatch'), active),
-              if (notStarted.isNotEmpty) _buildCardSection(context, context.tr('series.notStarted'), notStarted),
-              if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
-            ],
+      children: [
+        if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
+        if (active.isNotEmpty) ..._activeSection(context, active),
+        if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
+        if (stale.isNotEmpty) ..._staleSection(context, stale),
+      ],
+    );
+  }
+
+  Widget _buildGridView(BuildContext context, List<_ShowEpisodesData> active, List<_ShowEpisodesData> notStarted, List<_ShowEpisodesData> stale) {
+    return ListView(
+      key: const ValueKey('grid_view'),
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      children: [
+        if (active.isNotEmpty) _buildCardSection(context, context.tr('series.toWatch'), active),
+        if (notStarted.isNotEmpty) _buildCardSection(context, context.tr('series.notStarted'), notStarted),
+        if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
+      ],
     );
   }
 

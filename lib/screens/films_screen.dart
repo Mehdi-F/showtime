@@ -12,6 +12,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/animations.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/poster_hero_tag.dart';
@@ -246,7 +247,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               child: Text(context.tr('series.allCaughtUp'), style: const TextStyle(color: AppColors.textSecondary)));
         }
         final visible = rows.take(_visibleCount).toList();
-        return widget.viewMode == _ViewMode.grid ? _buildGrid(visible) : _buildList(visible);
+        return AnimatedViewSwitcher(
+          child: widget.viewMode == _ViewMode.grid
+            ? _buildGrid(visible)
+            : _buildList(visible),
+        );
       },
     );
   }
