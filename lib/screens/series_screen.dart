@@ -473,7 +473,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     );
   }
 
-  Widget _buildListView(BuildContext context, bool showHistory, List<_ShowEpisodesData> history, List<_ShowEpisodesData> active, List<_ShowEpisodesData> notStarted, List<_ShowEpisodesData> stale) {
+  Widget _buildListView(BuildContext context, bool showHistory, List<_HistoryEntry> history, List<_ShowEpisodesData> active, List<_ShowEpisodesData> notStarted, List<_ShowEpisodesData> stale) {
     return ListView(
       key: const ValueKey('list_view'),
       controller: _scrollController,
