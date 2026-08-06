@@ -907,7 +907,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Icon(expanded ? Icons.expand_less : Icons.expand_more, color: AppColors.textSecondary),
+                RotateWidget(
+                  isRotated: expanded,
+                  child: Icon(Icons.expand_more, color: AppColors.textSecondary),
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(summary.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
@@ -936,11 +939,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             ),
           ),
         ),
-        if (expanded && seasonDetails != null)
-          ...seasonDetails.episodes.map(_buildEpisodeRow)
-        else if (expanded)
-          const EpisodeRowsSkeleton(),
-        const SizedBox(height: 8),
+        ExpandCollapseWidget(
+          isExpanded: expanded,
+          child: Column(
+            children: [
+              if (seasonDetails != null)
+                ...seasonDetails.episodes.map(_buildEpisodeRow)
+              else
+                const EpisodeRowsSkeleton(),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -966,7 +976,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Icon(expanded ? Icons.expand_less : Icons.expand_more, color: AppColors.textSecondary),
+                RotateWidget(
+                  isRotated: expanded,
+                  child: Icon(Icons.expand_more, color: AppColors.textSecondary),
+                ),
                 const SizedBox(width: 4),
                 const Expanded(
                   child: Text('Spéciaux', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
@@ -984,7 +997,12 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             ),
           ),
         ),
-        if (expanded && seasonDetails != null) ...seasonDetails.episodes.map(_buildEpisodeRow),
+        ExpandCollapseWidget(
+          isExpanded: expanded,
+          child: seasonDetails != null
+              ? Column(children: seasonDetails.episodes.map(_buildEpisodeRow).toList())
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
