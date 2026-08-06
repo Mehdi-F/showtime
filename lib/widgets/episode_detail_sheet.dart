@@ -141,20 +141,10 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                       widget.episodes.length,
-                      (index) {
-                        final isActive = index == _currentIndex;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                          margin: const EdgeInsets.symmetric(horizontal: 5),
-                          width: isActive ? 24 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: isActive ? AppColors.accent : Colors.white,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        );
-                      },
+                      (index) => _DotIndicator(
+                        key: ValueKey(index),
+                        isActive: index == _currentIndex,
+                      ),
                     ),
                   ),
                 ),
@@ -337,6 +327,27 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
           style: const TextStyle(height: 1.4),
         ),
       ],
+    );
+  }
+}
+
+class _DotIndicator extends StatelessWidget {
+  final bool isActive;
+
+  const _DotIndicator({required super.key, required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      margin: const EdgeInsets.symmetric(horizontal: 5),
+      width: isActive ? 24 : 6,
+      height: 6,
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.accent : Colors.white,
+        borderRadius: BorderRadius.circular(3),
+      ),
     );
   }
 }
