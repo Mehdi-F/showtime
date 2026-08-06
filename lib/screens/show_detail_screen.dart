@@ -1124,7 +1124,15 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           ),
         ],
       ),
-      bottomNavigationBar: _libraryItem == null ? AddBar(label: 'AJOUTER LA SÉRIE', onTap: _ensureFollowed) : null,
+      bottomNavigationBar: AnimatedSlide(
+        offset: _libraryItem == null ? Offset.zero : const Offset(0, 1),
+        duration: const Duration(milliseconds: 300),
+        child: AnimatedOpacity(
+          opacity: _libraryItem == null ? 1 : 0,
+          duration: const Duration(milliseconds: 300),
+          child: AddBar(label: 'AJOUTER LA SÉRIE', onTap: _ensureFollowed),
+        ),
+      ),
     );
   }
 }
