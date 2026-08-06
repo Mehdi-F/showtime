@@ -304,67 +304,76 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       itemCount: visible.length,
       itemBuilder: (context, index) {
         final row = visible[index];
+        final isAnimatingOut = _pendingWatchedIds.contains(row.item.tmdbId);
         final parts = <String>[
           if (row.details.runtime > 0) '${row.details.runtime ~/ 60} h ${row.details.runtime % 60} m',
           if (row.details.genres.isNotEmpty) row.details.genres.join(', '),
         ];
-        return InkWell(
-          onTap: () {
-            Navigator.of(context).push(appRoute(
-              builder: (_) => MovieDetailScreen(libraryItem: row.item),
-            ));
-          },
-          child: Container(
-            color: AppColors.surface,
-            margin: const EdgeInsets.only(bottom: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: SizedBox(
-                    width: 56,
-                    height: 78,
-                    child: Hero(
-                      tag: posterHeroTag('movie', row.item.tmdbId),
-                      child: row.details.posterPath != null
-                          ? CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrlTiny}${row.details.posterPath}',
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: AppColors.surfaceVariant,
-                              child: const Icon(Icons.movie, color: AppColors.textSecondary),
-                            ),
+        return AnimatedOpacity(
+          opacity: isAnimatingOut ? 0 : 1,
+          duration: const Duration(milliseconds: 300),
+          child: AnimatedSlide(
+            offset: isAnimatingOut ? const Offset(1, 0) : Offset.zero,
+            duration: const Duration(milliseconds: 300),
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(appRoute(
+                  builder: (_) => MovieDetailScreen(libraryItem: row.item),
+                ));
+              },
+              child: Container(
+                color: AppColors.surface,
+                margin: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox(
+                        width: 56,
+                        height: 78,
+                        child: Hero(
+                          tag: posterHeroTag('movie', row.item.tmdbId),
+                          child: row.details.posterPath != null
+                              ? CachedNetworkImage(
+                                  imageUrl: '${TmdbConfig.imageBaseUrlTiny}${row.details.posterPath}',
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  color: AppColors.surfaceVariant,
+                                  child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                                ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(row.details.title,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                          if (parts.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(parts.join(' • '),
+                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    RoundCheck(
+                      checked: false,
+                      onTap: () => _toggleWatched(row.item, true),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(row.details.title,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      if (parts.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(parts.join(' • '),
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                RoundCheck(
-                  checked: false,
-                  onTap: () => _toggleWatched(row.item, true),
-                ),
-              ],
+              ),
             ),
           ),
         );
