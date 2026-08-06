@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
 import '../theme/app_theme.dart';
+import './animations.dart';
 
 const _frMonths = [
   'janvier',
@@ -289,11 +290,22 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
                 setState(() => _watched = !_watched);
                 widget.onToggleWatched();
               },
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: _watched ? Colors.green : AppColors.surfaceVariant,
-                child:
-                    Icon(Icons.check, color: _watched ? Colors.white : AppColors.textSecondary),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: _watched ? Colors.green : AppColors.surfaceVariant,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                    child: Icon(
+                      Icons.check,
+                      key: ValueKey(_watched),
+                      color: _watched ? Colors.white : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

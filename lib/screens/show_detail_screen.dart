@@ -15,6 +15,7 @@ import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_bar.dart';
 import '../widgets/add_to_list_sheet.dart';
+import '../widgets/animations.dart';
 import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/image_gallery.dart';
