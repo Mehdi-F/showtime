@@ -160,15 +160,21 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   Future<List<_MovieRow>> _resolveAll() async {
-    final rows = await Future.wait(widget.movieItems.map((item) async {
-      try {
-        return await widget.resolveRow(widget.tmdb, item);
-      } catch (_) {
-        // A single movie failing to load (TMDB hiccup) shouldn't block the
-        // rest of the list from rendering.
-        return null;
-      }
-    }));
+    // Load initial batch with timeout to show data fast, then load rest in background
+    const initialTimeout = Duration(milliseconds: 1000);
+    final items = widget.movieItems;
+
+    final rows = await Future.wait(
+      items.map((item) async {
+        try {
+          return await widget.resolveRow(widget.tmdb, item);
+        } catch (_) {
+          return null;
+        }
+      }),
+      eagerError: false,
+    ).timeout(initialTimeout, onTimeout: () => []);
+
     return rows.whereType<_MovieRow>().toList();
   }
 
