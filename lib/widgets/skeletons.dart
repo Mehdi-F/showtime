@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 
 /// A pulsing placeholder box — the base building block for every skeleton
@@ -234,4 +235,30 @@ class ProfileSkeleton extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Image with skeleton placeholder and error handling
+Widget buildCachedImage({
+  required String imageUrl,
+  required double width,
+  required double height,
+  BoxFit fit = BoxFit.cover,
+  BorderRadius? borderRadius,
+}) {
+  return ClipRRect(
+    borderRadius: borderRadius ?? BorderRadius.circular(6),
+    child: CachedNetworkImage(
+      imageUrl: imageUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      placeholder: (context, url) => SkeletonBox(width: width, height: height),
+      errorWidget: (context, url, error) => Container(
+        width: width,
+        height: height,
+        color: AppColors.surfaceVariant,
+        child: const Icon(Icons.error_outline, color: AppColors.textSecondary, size: 24),
+      ),
+    ),
+  );
 }
