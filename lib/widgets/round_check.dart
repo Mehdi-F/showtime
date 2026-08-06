@@ -11,14 +11,13 @@ class RoundCheck extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         width: 32,
         height: 32,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          // Fill/border snap instantly — fading this at the same time as
-          // the checkmark scales in made the whole thing read as two
-          // overlapping fades instead of one crisp pop.
           color: checked ? Colors.greenAccent.shade400 : Colors.transparent,
           border: Border.all(
             color: checked ? Colors.greenAccent.shade400 : AppColors.textSecondary,
