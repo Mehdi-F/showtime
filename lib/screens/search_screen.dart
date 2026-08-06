@@ -163,28 +163,27 @@ class _SearchScreenState extends State<SearchScreen> {
             textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
-    final libraryItems = context.watch<LibraryProvider>().items;
-    return ListView.builder(
-      itemCount: _results.length,
-      itemBuilder: (context, index) {
-        final result = _results[index];
-        LibraryItem? existing;
-        for (final i in libraryItems) {
-          if (i.tmdbId == result.id && i.type == result.mediaType) existing = i;
-        }
-        final added = existing != null;
-
-        void openDetail() {
-          final item = existing;
-          Navigator.of(context).push(appRoute(
-            builder: (_) {
-              if (result.mediaType == 'tv') {
-                return item != null ? ShowDetailScreen(libraryItem: item) : ShowDetailScreen.preview(tmdbId: result.id);
-              }
-              return item != null ? MovieDetailScreen(libraryItem: item) : MovieDetailScreen.preview(tmdbId: result.id);
-            },
-          ));
-        }
+    return Selector<LibraryProvider, Set<String>>(
+      selector: (_, lib) => lib.items.map((i) => '${i.type}_${i.tmdbId}').toSet(),
+      builder: (context, libraryKeys, _) {
+        return ListView.builder(
+          itemCount: _results.length,
+          itemBuilder: (context, index) {
+            final result = _results[index];
+            final added = libraryKeys.contains('${result.mediaType}_${result.id}');
+            void openDetail() async {
+              final lib = context.read<LibraryService>();
+              final items = context.read<LibraryProvider>().items;
+              final item = items.where((i) => i.tmdbId == result.id && i.type == result.mediaType).firstOrNull;
+              Navigator.of(context).push(appRoute(
+                builder: (_) {
+                  if (result.mediaType == 'tv') {
+                    return item != null ? ShowDetailScreen(libraryItem: item) : ShowDetailScreen.preview(tmdbId: result.id);
+                  }
+                  return item != null ? MovieDetailScreen(libraryItem: item) : MovieDetailScreen.preview(tmdbId: result.id);
+                },
+              ));
+            }
 
         final subtitle = result.mediaType == 'tv' ? context.tr('explorer.series') : context.tr('explorer.movie');
 
@@ -208,6 +207,8 @@ class _SearchScreenState extends State<SearchScreen> {
               }
             },
           ),
+            );
+          },
         );
       },
     );

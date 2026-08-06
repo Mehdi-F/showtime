@@ -97,6 +97,38 @@ class _ResolvedItem {
     }
   }
 }
+// Cached sorted lists to avoid re-sorting on every build
+class _SortedLists {
+  final List<_ResolvedItem> series;
+  final List<_ResolvedItem> seriesFav;
+  final List<_ResolvedItem> films;
+  final List<_ResolvedItem> filmsFav;
+  final List<_ResolvedItem> allSeries;
+  final List<_ResolvedItem> allSeriesFav;
+  final List<_ResolvedItem> allFilms;
+  final List<_ResolvedItem> allFilmsFav;
+
+  const _SortedLists({
+    required this.series,
+    required this.seriesFav,
+    required this.films,
+    required this.filmsFav,
+    required this.allSeries,
+    required this.allSeriesFav,
+    required this.allFilms,
+    required this.allFilmsFav,
+  });
+
+  const _SortedLists.empty()
+      : series = const [],
+        seriesFav = const [],
+        films = const [],
+        filmsFav = const [],
+        allSeries = const [],
+        allSeriesFav = const [],
+        allFilms = const [],
+        allFilmsFav = const [];
+}
 
 // A frozen snapshot of the profile's aggregate numbers (not the per-title
 // carousels, which are fine to grow progressively). Streaming these in as
@@ -205,6 +237,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
   final Set<String> _settled = {};
   bool _showContent = false;
   _ProfileStatsSnapshot? _lastSnapshot;
+
+  // Cache for sorted lists
+  List<_ResolvedItem>? _cachedResolved;
+  late _SortedLists _sortedLists = const _SortedLists.empty();
 
   String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
 
@@ -345,6 +381,36 @@ class _ProfileBodyState extends State<_ProfileBody> {
     }
   }
 
+  _SortedLists _buildSortedLists(List<_ResolvedItem> resolved) {
+    final series = resolved.where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0).toList()
+      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final seriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite && r.watchedEpisodesCount > 0).toList()
+      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final films = resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
+      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite && r.item.watched).toList()
+      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final allSeries = resolved.where((r) => r.item.type == 'tv').toList()
+      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final allSeriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
+      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final allFilms = resolved.where((r) => r.item.type == 'movie').toList()
+      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final allFilmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
+      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+
+    return _SortedLists(
+      series: series,
+      seriesFav: seriesFav,
+      films: films,
+      filmsFav: filmsFav,
+      allSeries: allSeries,
+      allSeriesFav: allSeriesFav,
+      allFilms: allFilms,
+      allFilmsFav: allFilmsFav,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.user;
@@ -356,24 +422,20 @@ class _ProfileBodyState extends State<_ProfileBody> {
 
     final resolved = widget.items.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
 
-        final series = resolved.where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0).toList()
-          ..sort((a, b) => b.recency.compareTo(a.recency));
-        final seriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite && r.watchedEpisodesCount > 0).toList()
-          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
-        final films = resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
-          ..sort((a, b) => b.recency.compareTo(a.recency));
-        final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite && r.item.watched).toList()
-          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    // Cache sorted lists to avoid re-sorting on every build
+    if (!identical(_cachedResolved, resolved)) {
+      _cachedResolved = resolved;
+      _sortedLists = _buildSortedLists(resolved);
+    }
 
-        // Unfiltered lists for full list view (include non-watched items)
-        final allSeries = resolved.where((r) => r.item.type == 'tv').toList()
-          ..sort((a, b) => b.recency.compareTo(a.recency));
-        final allSeriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
-          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
-        final allFilms = resolved.where((r) => r.item.type == 'movie').toList()
-          ..sort((a, b) => b.recency.compareTo(a.recency));
-        final allFilmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
-          ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final series = _sortedLists.series;
+    final seriesFav = _sortedLists.seriesFav;
+    final films = _sortedLists.films;
+    final filmsFav = _sortedLists.filmsFav;
+    final allSeries = _sortedLists.allSeries;
+    final allSeriesFav = _sortedLists.allSeriesFav;
+    final allFilms = _sortedLists.allFilms;
+    final allFilmsFav = _sortedLists.allFilmsFav;
 
         // See _ProfileStatsSnapshot: these numbers only move once every title
         // in the batch has settled, never mid-stream, and fall back to the
