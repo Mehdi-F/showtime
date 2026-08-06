@@ -203,6 +203,12 @@ class _EpisodeImageCard extends StatelessWidget {
                 ? CachedNetworkImage(
                     imageUrl: '${TmdbConfig.imageBaseUrlSmall}${episode.stillPath}',
                     fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 200),
+                    placeholder: (_, __) => Container(color: AppColors.surfaceVariant),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppColors.surfaceVariant,
+                      child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 40),
+                    ),
                   )
                 : Container(
                     color: AppColors.surfaceVariant,
