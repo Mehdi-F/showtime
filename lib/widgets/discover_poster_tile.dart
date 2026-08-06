@@ -106,15 +106,25 @@ class DiscoverPosterTile extends StatelessWidget {
                 right: 6,
                 child: GestureDetector(
                   onTap: followed ? unfollow : follow,
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       color: followed ? AppColors.accent : Colors.black54,
                       border: Border.all(color: AppColors.accent),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(followed ? Icons.check : Icons.add,
-                        color: followed ? Colors.black : AppColors.accent, size: 16),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                      child: Icon(
+                        followed ? Icons.check : Icons.add,
+                        key: ValueKey(followed),
+                        color: followed ? Colors.black : AppColors.accent,
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ),
               ),
