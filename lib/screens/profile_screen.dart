@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
 import '../config/constants.dart';
 import '../l10n/localization_context.dart';
+import '../utils/concurrency.dart';
 import '../utils/date_utils.dart';
 import '../providers/settings_provider.dart';
 import '../models/library_item.dart';
@@ -300,26 +301,29 @@ class _ProfileBodyState extends State<_ProfileBody> {
     _resolved.removeWhere((k, _) => !keys.contains(k));
     _settled.removeWhere((k) => !keys.contains(k));
 
-    final List<Future<void>> futures = items.map((item) {
+    // Bounded concurrency: firing one TMDB request per library title at once
+    // (the old behavior) hit TMDB's rate limit on any sizeable library, so
+    // most titles silently failed (caught below) and only came back once the
+    // user pulled to refresh and got lucky with a smaller retry batch.
+    final all = forEachBounded(items, 8, (item) async {
       final key = _key(item);
-      return _resolveItem(widget.tmdb, item).then<void>((r) {
+      try {
+        final r = await _resolveItem(widget.tmdb, item);
         if (mounted) {
           setState(() {
             _resolved[key] = r;
             _settled.add(key);
           });
         }
-      }).catchError((_) {
+      } catch (_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
         // rest of the profile from rendering — but it still counts as
         // "settled" so the stats snapshot isn't stuck waiting forever.
         if (mounted) setState(() => _settled.add(key));
-      });
-    }).toList();
-
-    final all = Future.wait(futures);
+      }
+    });
     if (isInitial) {
-      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () => <void>[]).whenComplete(() {
+      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () {}).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
@@ -1483,26 +1487,25 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     _resolved.removeWhere((k, _) => !keys.contains(k));
     _settled.removeWhere((k) => !keys.contains(k));
 
-    final List<Future<void>> futures = items.map((item) {
+    final all = forEachBounded(items, 8, (item) async {
       final key = _key(item);
-      return _resolveItem(tmdb, item).then<void>((r) {
+      try {
+        final r = await _resolveItem(tmdb, item);
         if (mounted) {
           setState(() {
             _resolved[key] = r;
             _settled.add(key);
           });
         }
-      }).catchError((_) {
+      } catch (_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
         // rest of the profile from rendering — but it still counts as
         // "settled" so the stats snapshot isn't stuck waiting forever.
         if (mounted) setState(() => _settled.add(key));
-      });
-    }).toList();
-
-    final all = Future.wait(futures);
+      }
+    });
     if (isInitial) {
-      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () => <void>[]).whenComplete(() {
+      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () {}).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }

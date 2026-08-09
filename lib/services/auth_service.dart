@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   final FirebaseAuth _firebaseAuth;
@@ -10,7 +11,10 @@ class AuthService {
   User? get currentUser => _firebaseAuth.currentUser;
 
   Future<UserCredential?> signInWithGoogle() {
-    return _firebaseAuth.signInWithPopup(GoogleAuthProvider());
+    final provider = GoogleAuthProvider();
+    return kIsWeb
+        ? _firebaseAuth.signInWithPopup(provider)
+        : _firebaseAuth.signInWithProvider(provider);
   }
 
   Future<void> signOut() => _firebaseAuth.signOut();

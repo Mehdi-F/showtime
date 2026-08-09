@@ -1,17 +1,1 @@
-{
-  "flutter": {
-    "platforms": {
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "showtime-mehdi",
-          "configurations": {
-            "web": "1:704108506497:web:ba42015ee856a5b7644c80"
-          }
-        }
-      }
-    }
-  },
-  "firestore": {
-    "rules": "firestore.rules"
-  }
-}
+{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"showtime-mehdi","configurations":{"android":"1:704108506497:android:ec8a253a78f5bb35644c80"}}},"android":{"default":{"projectId":"showtime-mehdi","appId":"1:704108506497:android:ec8a253a78f5bb35644c80","fileOutput":"android/app/google-services.json"}}}},"firestore":{"rules":"firestore.rules"}}
