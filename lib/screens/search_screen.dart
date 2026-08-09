@@ -222,23 +222,38 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           const SizedBox(height: 8),
-          _CategoryRow(title: context.tr('explorer.bestSeriesForYou'), future: _topRatedTv),
-          _CategoryRow(title: context.tr('explorer.seriesTrending'), future: _trendingTv),
-          _CategoryRow(title: context.tr('explorer.popularInYourCountry'), future: _popularTv),
-          _BrowseAllButton(
-            icon: Icons.tv,
-            label: context.tr('explorer.browseAllSeries'),
+          const _BrowsePillRow(),
+          const SizedBox(height: 20),
+          _CategoryRow(
+            title: context.tr('explorer.bestSeriesForYou'),
+            future: _topRatedTv,
             mediaType: 'tv',
-            screenTitle: context.tr('explorer.allSeries'),
+            fetchPage: (tmdb, page) => tmdb.getTopRatedTv(page: page),
           ),
-          const SizedBox(height: 16),
-          _CategoryRow(title: context.tr('explorer.moviesTrending'), future: _trendingMovies),
-          _CategoryRow(title: context.tr('explorer.popularMovies'), future: _popularMovies),
-          _BrowseAllButton(
-            icon: Icons.movie,
-            label: context.tr('explorer.browseAllMovies'),
+          _CategoryRow(
+            title: context.tr('explorer.seriesTrending'),
+            future: _trendingTv,
+            mediaType: 'tv',
+            fetchPage: (tmdb, page) => tmdb.getTrending('tv', page: page),
+          ),
+          _CategoryRow(
+            title: context.tr('explorer.popularInYourCountry'),
+            future: _popularTv,
+            mediaType: 'tv',
+            fetchPage: (tmdb, page) => tmdb.getPopular('tv', page: page),
+          ),
+          const SizedBox(height: 8),
+          _CategoryRow(
+            title: context.tr('explorer.moviesTrending'),
+            future: _trendingMovies,
             mediaType: 'movie',
-            screenTitle: context.tr('explorer.allMovies'),
+            fetchPage: (tmdb, page) => tmdb.getTrending('movie', page: page),
+          ),
+          _CategoryRow(
+            title: context.tr('explorer.popularMovies'),
+            future: _popularMovies,
+            mediaType: 'movie',
+            fetchPage: (tmdb, page) => tmdb.getPopular('movie', page: page),
           ),
         ],
       ),
@@ -249,8 +264,15 @@ class _SearchScreenState extends State<SearchScreen> {
 class _CategoryRow extends StatefulWidget {
   final String title;
   final Future<List<SimilarMedia>> future;
+  final String mediaType;
+  final Future<List<SimilarMedia>> Function(TmdbService tmdb, int page) fetchPage;
 
-  const _CategoryRow({required this.title, required this.future});
+  const _CategoryRow({
+    required this.title,
+    required this.future,
+    required this.mediaType,
+    required this.fetchPage,
+  });
 
   @override
   State<_CategoryRow> createState() => _CategoryRowState();
@@ -296,9 +318,29 @@ class _CategoryRowState extends State<_CategoryRow> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                final tmdb = context.read<TmdbService>();
+                Navigator.of(context).push(appRoute(
+                  builder: (_) => DiscoverGridScreen(
+                    mediaType: widget.mediaType,
+                    title: widget.title,
+                    fetchPage: (page) => widget.fetchPage(tmdb, page),
+                    maxPages: 5,
+                  ),
+                ));
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                    const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                  ],
+                ),
+              ),
             ),
             SizedBox(
               height: 150,
@@ -319,13 +361,45 @@ class _CategoryRowState extends State<_CategoryRow> {
   }
 }
 
-class _BrowseAllButton extends StatelessWidget {
+class _BrowsePillRow extends StatelessWidget {
+  const _BrowsePillRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _BrowsePill(
+              icon: Icons.tv,
+              label: context.tr('explorer.browseAllSeries'),
+              mediaType: 'tv',
+              screenTitle: context.tr('explorer.allSeries'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _BrowsePill(
+              icon: Icons.movie,
+              label: context.tr('explorer.browseAllMovies'),
+              mediaType: 'movie',
+              screenTitle: context.tr('explorer.allMovies'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BrowsePill extends StatelessWidget {
   final IconData icon;
   final String label;
   final String mediaType;
   final String screenTitle;
 
-  const _BrowseAllButton({
+  const _BrowsePill({
     required this.icon,
     required this.label,
     required this.mediaType,
@@ -334,31 +408,30 @@ class _BrowseAllButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: AppColors.accent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () => Navigator.of(context).push(appRoute(
-            builder: (_) => DiscoverGridScreen(mediaType: mediaType, title: screenTitle),
-          )),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(icon, color: Colors.black),
-                    const SizedBox(width: 10),
-                    Text(label, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
-                  ],
+    return Material(
+      color: AppColors.accent,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => Navigator.of(context).push(appRoute(
+          builder: (_) => DiscoverGridScreen(mediaType: mediaType, title: screenTitle),
+        )),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.black, size: 18),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 13),
                 ),
-                const Icon(Icons.chevron_right, color: Colors.black),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -17,6 +17,7 @@ import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/episode_detail_sheet.dart';
 import '../widgets/fade_in_entry.dart';
 import '../widgets/poster_hero_tag.dart';
 import '../widgets/round_check.dart';
@@ -62,7 +63,8 @@ class _ShowEpisodesData {
     required this.allEpisodes,
   });
 
-  int get watchedEpisodesCount => item.watchedEpisodes.values.where((w) => w).length;
+  int get watchedEpisodesCount =>
+      item.watchedEpisodes.values.where((w) => w).length;
 }
 
 class _HistoryEntry {
@@ -70,7 +72,11 @@ class _HistoryEntry {
   final EpisodeRef episode;
   final DateTime watchedAt;
 
-  _HistoryEntry({required this.show, required this.episode, required this.watchedAt});
+  _HistoryEntry({
+    required this.show,
+    required this.episode,
+    required this.watchedAt,
+  });
 }
 
 /// Flattens every show's individually-timestamped watched episodes into one
@@ -102,7 +108,8 @@ class _ProgressInfo {
 _ProgressInfo? _progressInfo(_ShowEpisodesData d) {
   if (d.totalEpisodeCount <= 0) return null;
   final ratio = d.watchedEpisodesCount / d.totalEpisodeCount;
-  if (ratio >= 1.0) return _ProgressInfo(1.0, d.isEnded ? Colors.purple : Colors.green);
+  if (ratio >= 1.0)
+    return _ProgressInfo(1.0, d.isEnded ? Colors.purple : Colors.green);
   return _ProgressInfo(ratio, AppColors.accent);
 }
 
@@ -112,7 +119,12 @@ class _CalendarRow {
   final String? posterPath;
   final NextEpisode episode;
 
-  _CalendarRow({required this.item, required this.showTitle, required this.posterPath, required this.episode});
+  _CalendarRow({
+    required this.item,
+    required this.showTitle,
+    required this.posterPath,
+    required this.episode,
+  });
 }
 
 class SeriesScreen extends StatefulWidget {
@@ -122,7 +134,8 @@ class SeriesScreen extends StatefulWidget {
   State<SeriesScreen> createState() => _SeriesScreenState();
 }
 
-class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderStateMixin {
+class _SeriesScreenState extends State<SeriesScreen>
+    with SingleTickerProviderStateMixin {
   static const _prefsKey = 'series_view_mode';
   late final TabController _tabController;
   _ViewMode _viewMode = _ViewMode.list;
@@ -143,7 +156,9 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
   }
 
   Future<void> _toggleViewMode() async {
-    final newMode = _viewMode == _ViewMode.list ? _ViewMode.grid : _ViewMode.list;
+    final newMode = _viewMode == _ViewMode.list
+        ? _ViewMode.grid
+        : _ViewMode.list;
     setState(() => _viewMode = newMode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsKey, newMode.name);
@@ -155,16 +170,34 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  Future<_ShowEpisodesData> _resolveShowEpisodes(TmdbService tmdb, LibraryItem item) async {
+  Future<_ShowEpisodesData> _resolveShowEpisodes(
+    TmdbService tmdb,
+    LibraryItem item,
+  ) async {
     final details = await tmdb.getTvDetails(item.tmdbId);
-    final episodesBySeason = List<List<EpisodeRef>?>.filled(details.seasons.length, null);
-    await forEachBounded(List.generate(details.seasons.length, (i) => i), 4, (i) async {
-      final seasonDetails = await tmdb.getSeasonDetails(item.tmdbId, details.seasons[i].seasonNumber);
+    final episodesBySeason = List<List<EpisodeRef>?>.filled(
+      details.seasons.length,
+      null,
+    );
+    await forEachBounded(List.generate(details.seasons.length, (i) => i), 4, (
+      i,
+    ) async {
+      final seasonDetails = await tmdb.getSeasonDetails(
+        item.tmdbId,
+        details.seasons[i].seasonNumber,
+      );
       episodesBySeason[i] = seasonDetails.episodes;
     });
-    final allEpisodes = <EpisodeRef>[for (final episodes in episodesBySeason) if (episodes != null) ...episodes];
+    final allEpisodes = <EpisodeRef>[
+      for (final episodes in episodesBySeason)
+        if (episodes != null) ...episodes,
+    ];
     final now = DateTime.now();
-    final next = nextUnwatchedEpisode(episodesInOrder: allEpisodes, watchedEpisodes: item.watchedEpisodes, now: now);
+    final next = nextUnwatchedEpisode(
+      episodesInOrder: allEpisodes,
+      watchedEpisodes: item.watchedEpisodes,
+      now: now,
+    );
     final unwatchedCount = allEpisodes.where((e) {
       if (item.watchedEpisodes[e.key] == true) return false;
       if (e.airDate != null && e.airDate!.isAfter(now)) return false;
@@ -182,17 +215,29 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
     );
   }
 
-  Future<_CalendarRow?> _resolveCalendarRow(TmdbService tmdb, LibraryItem item) async {
+  Future<_CalendarRow?> _resolveCalendarRow(
+    TmdbService tmdb,
+    LibraryItem item,
+  ) async {
     final details = await tmdb.getTvDetails(item.tmdbId);
     final next = details.nextEpisodeToAir;
     if (next == null) return null;
-    return _CalendarRow(item: item, showTitle: details.name, posterPath: details.posterPath, episode: next);
+    return _CalendarRow(
+      item: item,
+      showTitle: details.name,
+      posterPath: details.posterPath,
+      episode: next,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     context.watch<SettingsProvider>();
-    final tvItems = context.watch<LibraryProvider>().items.where((i) => i.type == 'tv').toList();
+    final tvItems = context
+        .watch<LibraryProvider>()
+        .items
+        .where((i) => i.type == 'tv')
+        .toList();
     final tmdb = context.read<TmdbService>();
 
     return Scaffold(
@@ -200,7 +245,10 @@ class _SeriesScreenState extends State<SeriesScreen> with SingleTickerProviderSt
         toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
-          tabs: [Tab(text: context.tr('series.toWatch')), Tab(text: context.tr('series.upcoming'))],
+          tabs: [
+            Tab(text: context.tr('series.toWatch')),
+            Tab(text: context.tr('series.upcoming')),
+          ],
         ),
       ),
       body: TabBarView(
@@ -267,7 +315,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   List<LibraryItem> _sortedItems() {
     final sorted = widget.tvItems.toList();
-    sorted.sort((a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(a.lastActivityAt ?? a.addedAt));
+    sorted.sort(
+      (a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(
+        a.lastActivityAt ?? a.addedAt,
+      ),
+    );
     return sorted;
   }
 
@@ -310,7 +362,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     }
 
     // Load more shows when scrolling near bottom (legacy fallback)
-    if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 400)
+      return;
     if (_visibleCount >= widget.tvItems.length) return;
     setState(() => _visibleCount += _pageSize);
     _resolveVisible(isInitial: false);
@@ -340,15 +394,17 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
     if (isInitial) {
       // Increased timeout to 1000ms to load more items in first page before showing content
-      future.timeout(const Duration(milliseconds: 1000), onTimeout: () {}).whenComplete(() {
-        if (mounted) {
-          // Trigger auto-scroll as soon as the current page of shows is fully loaded,
-          // then show the content. This ensures the scroll happens before rendering.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _showContent = true);
+      future
+          .timeout(const Duration(milliseconds: 1000), onTimeout: () {})
+          .whenComplete(() {
+            if (mounted) {
+              // Trigger auto-scroll as soon as the current page of shows is fully loaded,
+              // then show the content. This ensures the scroll happens before rendering.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _showContent = true);
+              });
+            }
           });
-        }
-      });
     }
     return future;
   }
@@ -377,31 +433,47 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       if (!mounted || !_scrollController.hasClients) return;
       final height = _historyKey.currentContext?.size?.height;
       if (height != null && height > 0) {
-        _scrollController.jumpTo(height.clamp(0, _scrollController.position.maxScrollExtent));
+        _scrollController.jumpTo(
+          height.clamp(0, _scrollController.position.maxScrollExtent),
+        );
       }
     });
   }
 
-  Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
+  Future<void> _toggleEpisode(
+    BuildContext context,
+    LibraryItem item,
+    int season,
+    int episode,
+    bool newValue,
+  ) {
     final uid = context.read<AuthProvider>().user!.uid;
     return context.read<LibraryService>().markEpisodeWatched(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          season: season,
-          episode: episode,
-          watched: newValue,
-        );
+      uid: uid,
+      tmdbId: item.tmdbId,
+      season: season,
+      episode: episode,
+      watched: newValue,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
+        Positioned.fill(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: _buildBody(context),
+          ),
+        ),
         Positioned(
           top: 12,
           right: 16,
-          child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+          child: ViewModeToggle(
+            isGrid: widget.viewMode == _ViewMode.grid,
+            onTap: widget.onToggleViewMode,
+          ),
         ),
       ],
     );
@@ -411,15 +483,20 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     context.watch<SettingsProvider>();
     if (widget.tvItems.isEmpty) {
       return ScrollableCenter(
-        child: Text(context.tr('series.trackShow'),
-            style: const TextStyle(color: AppColors.textSecondary)),
+        child: Text(
+          context.tr('series.trackShow'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
       );
     }
     if (!_showContent) {
       return const PosterGridSkeleton(childAspectRatio: 0.67);
     }
-    final data =
-        _sortedItems().take(_visibleCount).map((i) => _resolved[i.tmdbId]).whereType<_ShowEpisodesData>().toList();
+    final data = _sortedItems()
+        .take(_visibleCount)
+        .map((i) => _resolved[i.tmdbId])
+        .whereType<_ShowEpisodesData>()
+        .toList();
     final now = DateTime.now();
 
     final history = _loadHistory ? _buildHistory(data) : <_HistoryEntry>[];
@@ -439,7 +516,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     final stale = <_ShowEpisodesData>[];
     for (final d in withNext) {
       final lastActivity = d.item.lastActivityAt;
-      if (lastActivity == null || now.difference(lastActivity) > AppConstants.staleSeriesDuration) {
+      if (lastActivity == null ||
+          now.difference(lastActivity) > AppConstants.staleSeriesDuration) {
         stale.add(d);
       } else {
         active.add(d);
@@ -456,9 +534,16 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
     notStarted.sort((a, b) => (b.item.addedAt).compareTo(a.item.addedAt));
 
-    if (history.isEmpty && active.isEmpty && stale.isEmpty && notStarted.isEmpty) {
+    if (history.isEmpty &&
+        active.isEmpty &&
+        stale.isEmpty &&
+        notStarted.isEmpty) {
       return ScrollableCenter(
-          child: Text(context.tr('series.allCaughtUp'), style: const TextStyle(color: AppColors.textSecondary)));
+        child: Text(
+          context.tr('series.allCaughtUp'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+      );
     }
 
     final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
@@ -468,19 +553,34 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
     return AnimatedViewSwitcher(
       child: widget.viewMode == _ViewMode.list
-          ? _buildListView(context, showHistory, history, active, notStarted, stale)
+          ? _buildListView(
+              context,
+              showHistory,
+              history,
+              active,
+              notStarted,
+              stale,
+            )
           : _buildGridView(context, active, notStarted, stale),
     );
   }
 
-  Widget _buildListView(BuildContext context, bool showHistory, List<_HistoryEntry> history, List<_ShowEpisodesData> active, List<_ShowEpisodesData> notStarted, List<_ShowEpisodesData> stale) {
+  Widget _buildListView(
+    BuildContext context,
+    bool showHistory,
+    List<_HistoryEntry> history,
+    List<_ShowEpisodesData> active,
+    List<_ShowEpisodesData> notStarted,
+    List<_ShowEpisodesData> stale,
+  ) {
     return ListView(
       key: const ValueKey('list_view'),
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(top: 8, bottom: 16),
       children: [
-        if (showHistory) Column(key: _historyKey, children: _historySection(context, history)),
+        if (showHistory)
+          Column(key: _historyKey, children: _historySection(context, history)),
         if (active.isNotEmpty) ..._activeSection(context, active),
         if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
         if (stale.isNotEmpty) ..._staleSection(context, stale),
@@ -488,21 +588,37 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     );
   }
 
-  Widget _buildGridView(BuildContext context, List<_ShowEpisodesData> active, List<_ShowEpisodesData> notStarted, List<_ShowEpisodesData> stale) {
+  Widget _buildGridView(
+    BuildContext context,
+    List<_ShowEpisodesData> active,
+    List<_ShowEpisodesData> notStarted,
+    List<_ShowEpisodesData> stale,
+  ) {
     return ListView(
       key: const ValueKey('grid_view'),
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(top: 8, bottom: 16),
       children: [
-        if (active.isNotEmpty) _buildCardSection(context, context.tr('series.toWatch'), active),
-        if (notStarted.isNotEmpty) _buildCardSection(context, context.tr('series.notStarted'), notStarted),
-        if (stale.isNotEmpty) _buildCardSection(context, context.tr('series.notWatching'), stale),
+        if (active.isNotEmpty)
+          _buildCardSection(context, context.tr('series.toWatch'), active),
+        if (notStarted.isNotEmpty)
+          _buildCardSection(
+            context,
+            context.tr('series.notStarted'),
+            notStarted,
+          ),
+        if (stale.isNotEmpty)
+          _buildCardSection(context, context.tr('series.notWatching'), stale),
       ],
     );
   }
 
-  Widget _buildCardSection(BuildContext context, String label, List<_ShowEpisodesData> rows) {
+  Widget _buildCardSection(
+    BuildContext context,
+    String label,
+    List<_ShowEpisodesData> rows,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -529,8 +645,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                   posterPath: d.posterPath,
                   progress: info?.ratio,
                   barColor: info?.color,
-                  onTap: () => Navigator.of(context)
-                      .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+                  onTap: () => Navigator.of(context).push(
+                    appRoute(
+                      builder: (_) => ShowDetailScreen(libraryItem: d.item),
+                    ),
+                  ),
                 ),
               );
             },
@@ -541,13 +660,43 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   Widget _sectionHeader(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 
-  List<Widget> _historySection(BuildContext context, List<_HistoryEntry> entries) {
+  void _openEpisodeSheet(
+    BuildContext context,
+    _ShowEpisodesData d,
+    EpisodeRef ep,
+  ) {
+    final initialIndex = d.allEpisodes.indexWhere((e) => e.key == ep.key);
+    showEpisodeDetailSheet(
+      context,
+      episodes: d.allEpisodes,
+      initialIndex: initialIndex < 0 ? 0 : initialIndex,
+      watchedMap: d.item.watchedEpisodes,
+      onToggleWatched: (episode, newValue) => _toggleEpisode(
+        context,
+        d.item,
+        episode.seasonNumber,
+        episode.episodeNumber,
+        newValue,
+      ),
+    );
+  }
+
+  List<Widget> _historySection(
+    BuildContext context,
+    List<_HistoryEntry> entries,
+  ) {
     return [
       _sectionHeader(context.tr('series.watchHistory')),
       ...entries.map((h) {
@@ -563,38 +712,64 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             episodeTitle: ep.name,
             watched: true,
             dimmed: true,
-            onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, false),
-            onTapShow: () => Navigator.of(context)
-                .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+            onToggleWatched: () => _toggleEpisode(
+              context,
+              d.item,
+              ep.seasonNumber,
+              ep.episodeNumber,
+              false,
+            ),
+            onTapShow: () => Navigator.of(context).push(
+              appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item)),
+            ),
+            onTapCard: () => _openEpisodeSheet(context, d, ep),
           ),
         );
       }),
     ];
   }
 
-  List<Widget> _activeSection(BuildContext context, List<_ShowEpisodesData> rows) {
+  List<Widget> _activeSection(
+    BuildContext context,
+    List<_ShowEpisodesData> rows,
+  ) {
     return [
       _sectionHeader(context.tr('series.toWatch')),
       for (var i = 0; i < rows.length; i++)
-        _buildNextCard(context, rows[i], showMostRecentBadge: i == 0 && rows[i].nextEpisode!.airDate != null),
+        _buildNextCard(
+          context,
+          rows[i],
+          showMostRecentBadge: i == 0 && rows[i].nextEpisode!.airDate != null,
+        ),
     ];
   }
 
-  List<Widget> _staleSection(BuildContext context, List<_ShowEpisodesData> rows) {
+  List<Widget> _staleSection(
+    BuildContext context,
+    List<_ShowEpisodesData> rows,
+  ) {
     return [
       _sectionHeader(context.tr('series.notWatching')),
-      for (final d in rows) _buildNextCard(context, d, showMostRecentBadge: false),
+      for (final d in rows)
+        _buildNextCard(context, d, showMostRecentBadge: false),
     ];
   }
 
-  List<Widget> _notStartedSection(BuildContext context, List<_ShowEpisodesData> rows) {
+  List<Widget> _notStartedSection(
+    BuildContext context,
+    List<_ShowEpisodesData> rows,
+  ) {
     return [
       _sectionHeader(context.tr('series.notStarted')),
       for (final d in rows) _buildNotStartedCard(context, d),
     ];
   }
 
-  Widget _buildNextCard(BuildContext context, _ShowEpisodesData d, {required bool showMostRecentBadge}) {
+  Widget _buildNextCard(
+    BuildContext context,
+    _ShowEpisodesData d, {
+    required bool showMostRecentBadge,
+  }) {
     final ep = d.nextEpisode!;
     return _EpisodeCard(
       posterPath: d.posterPath,
@@ -604,10 +779,20 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       episodeTitle: ep.name,
       extraCount: d.extraUnwatched > 0 ? d.extraUnwatched : null,
       watched: false,
-      badgeLabels: showMostRecentBadge ? [context.tr('badge.mostRecent')] : const [],
-      onToggleWatched: () => _toggleEpisode(context, d.item, ep.seasonNumber, ep.episodeNumber, true),
-      onTapShow: () =>
-          Navigator.of(context).push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+      badgeLabels: showMostRecentBadge
+          ? [context.tr('badge.mostRecent')]
+          : const [],
+      onToggleWatched: () => _toggleEpisode(
+        context,
+        d.item,
+        ep.seasonNumber,
+        ep.episodeNumber,
+        true,
+      ),
+      onTapShow: () => Navigator.of(
+        context,
+      ).push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+      onTapCard: () => _openEpisodeSheet(context, d, ep),
     );
   }
 
@@ -625,12 +810,17 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: CachedNetworkImage(
-              imageUrl: d.posterPath != null ? '${TmdbConfig.imageBaseUrlSmall}${d.posterPath}' : '',
+              imageUrl: d.posterPath != null
+                  ? '${TmdbConfig.imageBaseUrlSmall}${d.posterPath}'
+                  : '',
               width: 48,
               height: 72,
               fit: BoxFit.cover,
-              errorWidget: (context, url, error) =>
-                  Container(width: 48, height: 72, color: AppColors.surfaceVariant),
+              errorWidget: (context, url, error) => Container(
+                width: 48,
+                height: 72,
+                color: AppColors.surfaceVariant,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -638,20 +828,31 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(d.showTitle,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  d.showTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 4),
-                Text('${d.totalEpisodeCount} ${context.tr("count.episode")}',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  '${d.totalEpisodeCount} ${context.tr("count.episode")}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
             icon: Icon(Icons.play_arrow, size: 24, color: AppColors.accent),
-            onPressed: () => Navigator.of(context)
-                .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item))),
+            onPressed: () => Navigator.of(context).push(
+              appRoute(builder: (_) => ShowDetailScreen(libraryItem: d.item)),
+            ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
@@ -690,7 +891,11 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
   List<LibraryItem> _sortedItems() {
     final sorted = widget.tvItems.toList();
-    sorted.sort((a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(a.lastActivityAt ?? a.addedAt));
+    sorted.sort(
+      (a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(
+        a.lastActivityAt ?? a.addedAt,
+      ),
+    );
     return sorted;
   }
 
@@ -715,7 +920,9 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 400)
+      return;
     if (_visibleCount >= widget.tvItems.length) return;
     setState(() => _visibleCount += _pageSize);
     _resolveVisible(isInitial: false);
@@ -729,7 +936,8 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     final future = forEachBounded(visible, 8, (item) async {
       try {
         final row = await widget.resolveRow(widget.tmdb, item);
-        if (row != null && mounted) setState(() => _resolved[item.tmdbId] = row);
+        if (row != null && mounted)
+          setState(() => _resolved[item.tmdbId] = row);
       } catch (_) {
         // A single show failing to load shouldn't block the rest of the list.
       }
@@ -737,9 +945,11 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
     if (isInitial) {
       // Increased timeout to 1000ms to load more items in first page before showing content
-      future.timeout(const Duration(milliseconds: 1000), onTimeout: () {}).whenComplete(() {
-        if (mounted) setState(() => _showContent = true);
-      });
+      future
+          .timeout(const Duration(milliseconds: 1000), onTimeout: () {})
+          .whenComplete(() {
+            if (mounted) setState(() => _showContent = true);
+          });
     }
     return future;
   }
@@ -758,7 +968,9 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     }
 
     // Load more shows when scrolling near bottom (legacy fallback)
-    if (_scrollController.position.pixels < _scrollController.position.maxScrollExtent - 400) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 400)
+      return;
     if (_visibleCount >= widget.tvItems.length) return;
     setState(() => _visibleCount += _pageSize);
     _resolveVisible(isInitial: false);
@@ -769,21 +981,31 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     await _resolveVisible(isInitial: false);
   }
 
-  Widget _buildGroupHeader(BuildContext context, String label, DateTime? date, int count, DateTime now) {
+  Widget _buildGroupHeader(
+    BuildContext context,
+    String label,
+    DateTime? date,
+    int count,
+    DateTime now,
+  ) {
     String timeLabel = '';
     Color? accentColor;
 
     if (date != null) {
       final diff = daysUntil(date);
       if (diff <= 1) {
-        timeLabel = diff == 0 ? context.tr('day.today') : context.tr('day.tomorrow');
+        timeLabel = diff == 0
+            ? context.tr('day.today')
+            : context.tr('day.tomorrow');
         accentColor = Colors.orange;
       } else if (diff > 1 && diff <= 7) {
         timeLabel = context.tr('timespan.thisWeek');
         accentColor = AppColors.accent;
       } else if (diff > 7 && diff <= 30) {
         final weeks = (diff / 7).ceil();
-        timeLabel = weeks == 1 ? context.tr('timespan.nextWeek') : context.tr('timespan.nextWeeks');
+        timeLabel = weeks == 1
+            ? context.tr('timespan.nextWeek')
+            : context.tr('timespan.nextWeeks');
         accentColor = Colors.blue[300];
       }
     }
@@ -796,13 +1018,24 @@ class _UpcomingTabState extends State<_UpcomingTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
                 if (timeLabel.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(timeLabel,
-                        style: TextStyle(fontSize: 12, color: accentColor ?? AppColors.textSecondary)),
+                    child: Text(
+                      timeLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: accentColor ?? AppColors.textSecondary,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -813,34 +1046,54 @@ class _UpcomingTabState extends State<_UpcomingTab> {
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Text('$count ${context.tr("count.episode")}',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            child: Text(
+              '$count ${context.tr("count.episode")}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _toggleEpisode(BuildContext context, LibraryItem item, int season, int episode, bool newValue) {
+  Future<void> _toggleEpisode(
+    BuildContext context,
+    LibraryItem item,
+    int season,
+    int episode,
+    bool newValue,
+  ) {
     final uid = context.read<AuthProvider>().user!.uid;
     return context.read<LibraryService>().markEpisodeWatched(
-          uid: uid,
-          tmdbId: item.tmdbId,
-          season: season,
-          episode: episode,
-          watched: newValue,
-        );
+      uid: uid,
+      tmdbId: item.tmdbId,
+      season: season,
+      episode: episode,
+      watched: newValue,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context))),
+        Positioned.fill(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: _buildBody(context),
+          ),
+        ),
         Positioned(
           top: 12,
           right: 16,
-          child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+          child: ViewModeToggle(
+            isGrid: widget.viewMode == _ViewMode.grid,
+            onTap: widget.onToggleViewMode,
+          ),
         ),
       ],
     );
@@ -850,106 +1103,155 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     context.watch<SettingsProvider>();
     if (widget.tvItems.isEmpty) {
       return ScrollableCenter(
-        child: Text(context.tr('series.trackShow'),
-            style: const TextStyle(color: AppColors.textSecondary)),
+        child: Text(
+          context.tr('series.trackShow'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
       );
     }
     if (!_showContent) {
       return const PosterGridSkeleton(childAspectRatio: 0.67);
     }
-    final rows = _sortedItems()
-        .take(_visibleCount)
-        .map((i) => _resolved[i.tmdbId])
-        .whereType<_CalendarRow>()
-        .toList()
-      ..sort((a, b) {
-        final aDate = a.episode.airDate;
-        final bDate = b.episode.airDate;
-        if (aDate == null && bDate == null) return 0;
-        if (aDate == null) return 1;
-        if (bDate == null) return -1;
-        return aDate.compareTo(bDate);
-      });
+    final rows =
+        _sortedItems()
+            .take(_visibleCount)
+            .map((i) => _resolved[i.tmdbId])
+            .whereType<_CalendarRow>()
+            .toList()
+          ..sort((a, b) {
+            final aDate = a.episode.airDate;
+            final bDate = b.episode.airDate;
+            if (aDate == null && bDate == null) return 0;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return aDate.compareTo(bDate);
+          });
     if (rows.isEmpty) {
       return ScrollableCenter(
-          child: Text(context.tr('series.upcomingEmpty'), style: const TextStyle(color: AppColors.textSecondary)));
+        child: Text(
+          context.tr('series.upcomingEmpty'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+      );
     }
 
-        final now = DateTime.now();
-        final groups = <String, List<_CalendarRow>>{};
-        final groupDates = <String, DateTime?>{};
-        for (final row in rows) {
+    final now = DateTime.now();
+    final groups = <String, List<_CalendarRow>>{};
+    final groupDates = <String, DateTime?>{};
+    for (final row in rows) {
+      final date = row.episode.airDate;
+      final label = date != null
+          ? _dayGroupLabel(context, date)
+          : context.tr('day.unknown');
+      groups.putIfAbsent(label, () => []).add(row);
+      if (!groupDates.containsKey(label)) groupDates[label] = date;
+    }
+
+    final children = <Widget>[];
+    groups.forEach((label, groupRows) {
+      final date = groupDates[label];
+      children.add(
+        _buildGroupHeader(context, label, date, groupRows.length, now),
+      );
+      if (widget.viewMode == _ViewMode.list) {
+        for (final row in groupRows) {
           final date = row.episode.airDate;
-          final label = date != null ? _dayGroupLabel(context, date) : context.tr('day.unknown');
-          groups.putIfAbsent(label, () => []).add(row);
-          if (!groupDates.containsKey(label)) groupDates[label] = date;
-        }
-
-        final children = <Widget>[];
-        groups.forEach((label, groupRows) {
-          final date = groupDates[label];
-          children.add(_buildGroupHeader(context, label, date, groupRows.length, now));
-          if (widget.viewMode == _ViewMode.list) {
-            for (final row in groupRows) {
-              final date = row.episode.airDate;
-              final badges = <String>[context.tr('badge.new')];
-              if (row.episode.episodeNumber == 1) badges.add(context.tr('badge.premiere'));
-              final aired = date != null && date.isBefore(now);
-              if (aired) badges.add(context.tr('badge.aired'));
-              final watched = row.item.watchedEpisodes[row.episode.key] ?? false;
-              children.add(_EpisodeCard(
-                posterPath: row.posterPath,
-                showTitle: row.showTitle,
-                seasonNumber: row.episode.seasonNumber,
-                episodeNumber: row.episode.episodeNumber,
-                episodeTitle: row.episode.name,
-                badgeLabels: badges,
-                watched: watched,
-                onToggleWatched: () => _toggleEpisode(
-                    context, row.item, row.episode.seasonNumber, row.episode.episodeNumber, !watched),
-                onTapShow: () => Navigator.of(context)
-                    .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
-              ));
-            }
-          } else {
-            children.add(GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.67,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
+          final badges = <String>[context.tr('badge.new')];
+          if (row.episode.episodeNumber == 1)
+            badges.add(context.tr('badge.premiere'));
+          final aired = date != null && date.isBefore(now);
+          if (aired) badges.add(context.tr('badge.aired'));
+          final watched = row.item.watchedEpisodes[row.episode.key] ?? false;
+          children.add(
+            _EpisodeCard(
+              posterPath: row.posterPath,
+              showTitle: row.showTitle,
+              seasonNumber: row.episode.seasonNumber,
+              episodeNumber: row.episode.episodeNumber,
+              episodeTitle: row.episode.name,
+              badgeLabels: badges,
+              watched: watched,
+              onToggleWatched: () => _toggleEpisode(
+                context,
+                row.item,
+                row.episode.seasonNumber,
+                row.episode.episodeNumber,
+                !watched,
               ),
-              itemCount: groupRows.length,
-              itemBuilder: (context, index) {
-                final row = groupRows[index];
-                final date = row.episode.airDate;
-                return FadeInEntry(
-                  index: index,
-                  child: _SeriesProgressCard(
-                    // No heroTag here: this "à venir" grid and the "à voir"
-                    // grid are both built at once by TabBarView, and a show
-                    // can be in both simultaneously — only one tab may claim
-                    // the shared tag without risking a duplicate-Hero error.
-                    posterPath: row.posterPath,
-                    daysUntil: date != null ? daysUntil(date) : null,
-                    onTap: () => Navigator.of(context)
-                        .push(appRoute(builder: (_) => ShowDetailScreen(libraryItem: row.item))),
+              onTapShow: () => Navigator.of(context).push(
+                appRoute(
+                  builder: (_) => ShowDetailScreen(libraryItem: row.item),
+                ),
+              ),
+              onTapCard: () => showEpisodeDetailSheet(
+                context,
+                episodes: [
+                  EpisodeRef(
+                    seasonNumber: row.episode.seasonNumber,
+                    episodeNumber: row.episode.episodeNumber,
+                    name: row.episode.name,
+                    airDate: row.episode.airDate,
+                    overview: '',
+                    stillPath: row.posterPath,
                   ),
-                );
-              },
-            ));
-          }
-        });
-
-        return ListView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(top: 8, bottom: 16),
-          children: children,
+                ],
+                initialIndex: 0,
+                watchedMap: row.item.watchedEpisodes,
+                onToggleWatched: (episode, newValue) => _toggleEpisode(
+                  context,
+                  row.item,
+                  episode.seasonNumber,
+                  episode.episodeNumber,
+                  newValue,
+                ),
+              ),
+            ),
+          );
+        }
+      } else {
+        children.add(
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.67,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+            ),
+            itemCount: groupRows.length,
+            itemBuilder: (context, index) {
+              final row = groupRows[index];
+              final date = row.episode.airDate;
+              return FadeInEntry(
+                index: index,
+                child: _SeriesProgressCard(
+                  // No heroTag here: this "à venir" grid and the "à voir"
+                  // grid are both built at once by TabBarView, and a show
+                  // can be in both simultaneously — only one tab may claim
+                  // the shared tag without risking a duplicate-Hero error.
+                  posterPath: row.posterPath,
+                  daysUntil: date != null ? daysUntil(date) : null,
+                  onTap: () => Navigator.of(context).push(
+                    appRoute(
+                      builder: (_) => ShowDetailScreen(libraryItem: row.item),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         );
+      }
+    });
+
+    return ListView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      children: children,
+    );
   }
 }
 
@@ -965,6 +1267,7 @@ class _EpisodeCard extends StatelessWidget {
   final bool dimmed;
   final VoidCallback onToggleWatched;
   final VoidCallback onTapShow;
+  final VoidCallback? onTapCard;
 
   const _EpisodeCard({
     required this.posterPath,
@@ -978,6 +1281,7 @@ class _EpisodeCard extends StatelessWidget {
     this.dimmed = false,
     required this.onToggleWatched,
     required this.onTapShow,
+    this.onTapCard,
   });
 
   Widget _buildBadge(BuildContext context, String label) {
@@ -1000,113 +1304,148 @@ class _EpisodeCard extends StatelessWidget {
         border: fill == null ? Border.all(color: Colors.white38) : null,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(label, style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.w700)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final titleColor = dimmed ? AppColors.textSecondary : Colors.white;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              width: 70,
-              height: 100,
-              child: posterPath != null
-                  ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
-                      fit: BoxFit.cover,
-                      fadeInDuration: const Duration(milliseconds: 150),
-                      placeholder: (_, __) => Container(color: AppColors.surfaceVariant),
-                      errorWidget: (_, __, ___) => Container(
-                        color: AppColors.surfaceVariant,
-                        child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                      ),
-                    )
-                  : Container(
-                      color: AppColors.surfaceVariant,
-                      child: const Icon(Icons.tv, color: AppColors.textSecondary),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: onTapShow,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white38),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            showTitle.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTapCard,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                width: 70,
+                height: 100,
+                child: posterPath != null
+                    ? CachedNetworkImage(
+                        imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
+                        fit: BoxFit.cover,
+                        fadeInDuration: const Duration(milliseconds: 150),
+                        placeholder: (_, __) =>
+                            Container(color: AppColors.surfaceVariant),
+                        errorWidget: (_, __, ___) => Container(
+                          color: AppColors.surfaceVariant,
+                          child: const Icon(
+                            Icons.tv,
+                            color: AppColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(width: 2),
-                        const Icon(Icons.chevron_right, size: 14),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Text(
-                      'S${seasonNumber.toString().padLeft(2, '0')} | E${episodeNumber.toString().padLeft(2, '0')}',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: titleColor),
-                    ),
-                    if (extraCount != null && extraCount! > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text('+$extraCount',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary)),
+                      )
+                    : Container(
+                        color: AppColors.surfaceVariant,
+                        child: const Icon(
+                          Icons.tv,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  episodeTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: titleColor),
-                ),
-                if (badgeLabels.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: badgeLabels.map((label) => _buildBadge(context, label)).toList(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: onTapShow,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white38),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              showTitle.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.chevron_right, size: 14),
+                        ],
+                      ),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text(
+                        'S${seasonNumber.toString().padLeft(2, '0')} | E${episodeNumber.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: titleColor,
+                        ),
+                      ),
+                      if (extraCount != null && extraCount! > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            '+$extraCount',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    episodeTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, color: titleColor),
+                  ),
+                  if (badgeLabels.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: badgeLabels
+                            .map((label) => _buildBadge(context, label))
+                            .toList(),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          RoundCheck(checked: watched, onTap: onToggleWatched),
-        ],
+            const SizedBox(width: 8),
+            RoundCheck(checked: watched, onTap: onToggleWatched),
+          ],
+        ),
       ),
     );
   }
@@ -1138,18 +1477,36 @@ class _SeriesProgressCard extends StatelessWidget {
     final days = daysUntil;
     if (days == null || days == 0) return null;
     if (days < 0) {
-      return Text(context.tr('day.yesterday'),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13));
+      return Text(
+        context.tr('day.yesterday'),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 13,
+        ),
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('$days',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20, height: 1)),
-        Text(days == 1 ? context.tr('time.day') : context.tr('time.days'),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 9)),
+        Text(
+          '$days',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+            height: 1,
+          ),
+        ),
+        Text(
+          days == 1 ? context.tr('time.day') : context.tr('time.days'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 9,
+          ),
+        ),
       ],
     );
   }

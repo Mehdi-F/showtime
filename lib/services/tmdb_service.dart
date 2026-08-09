@@ -181,7 +181,8 @@ class TmdbService {
     return results.map((r) => SimilarMedia.fromJson(r as Map<String, dynamic>, mediaType)).toList();
   }
 
-  Future<List<SimilarMedia>> getTrending(String mediaType) => _getListEndpoint('trending/$mediaType/week', mediaType);
+  Future<List<SimilarMedia>> getTrending(String mediaType, {int page = 1}) =>
+      _getListEndpoint('trending/$mediaType/week', mediaType, page: page);
 
   Future<List<SimilarMedia>> getPopular(String mediaType, {int page = 1}) =>
       _getListEndpoint('$mediaType/popular', mediaType, page: page);

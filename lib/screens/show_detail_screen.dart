@@ -418,7 +418,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Marquer les épisodes précédents ?'),
-        content: const Text('Voulez-vous marquer tous les épisodes précédents comme vus ?'),
+        content: const Text('Veux-tu marquer tous les épisodes précédents comme vus ?'),
         actions: [
           SizedBox(
             width: double.maxFinite,
@@ -741,13 +741,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           overview: details.overview,
           runtimeMinutes: details.episodeRunTime,
           addedCaption: libraryItem != null
-              ? 'Ajoutée à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
+              ? 'Ajoutée à ta bibliothèque le ${_formatDate(libraryItem.addedAt)}'
               : 'Pas encore suivie',
         ),
         ImageGalleryRow(future: _imagesFuture),
         CastRow(future: _creditsFuture),
         SimilarRow(
-          title: 'Vous pourriez aussi aimer',
+          title: 'Tu pourrais aussi aimer',
           future: _similarFuture,
           onTap: _openSimilar,
         ),

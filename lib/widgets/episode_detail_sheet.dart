@@ -20,7 +20,8 @@ const _frMonths = [
   'décembre',
 ];
 
-String formatFrDate(DateTime date) => '${date.day} ${_frMonths[date.month - 1]} ${date.year}';
+String formatFrDate(DateTime date) =>
+    '${date.day} ${_frMonths[date.month - 1]} ${date.year}';
 
 Future<void> showEpisodeDetailSheet(
   BuildContext context, {
@@ -88,7 +89,9 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_dotsController.hasClients) return;
       const dotSize = 18.0; // ~6 or 24 width + 12 margins
-      final offset = (_currentIndex * dotSize) - (MediaQuery.of(context).size.width / 2 - 12);
+      final offset =
+          (_currentIndex * dotSize) -
+          (MediaQuery.of(context).size.width / 2 - 12);
       _dotsController.animateTo(
         offset.clamp(0.0, _dotsController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 400),
@@ -130,7 +133,12 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                 shaderCallback: (bounds) => LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+                  colors: [
+                    Colors.transparent,
+                    Colors.white,
+                    Colors.white,
+                    Colors.transparent,
+                  ],
                   stops: const [0, 0.1, 0.9, 1],
                 ).createShader(bounds),
                 child: SingleChildScrollView(
@@ -158,7 +166,9 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
                 children: [
                   _EpisodeInfo(
                     episode: widget.episodes[_currentIndex],
-                    watched: _watchedMap[widget.episodes[_currentIndex].key] ?? false,
+                    watched:
+                        _watchedMap[widget.episodes[_currentIndex].key] ??
+                        false,
                     onToggleWatched: () {
                       final ep = widget.episodes[_currentIndex];
                       final newWatched = !(_watchedMap[ep.key] ?? false);
@@ -191,18 +201,28 @@ class _EpisodeImageCard extends StatelessWidget {
             aspectRatio: 16 / 9,
             child: episode.stillPath != null
                 ? CachedNetworkImage(
-                    imageUrl: '${TmdbConfig.imageBaseUrlSmall}${episode.stillPath}',
+                    imageUrl:
+                        '${TmdbConfig.imageBaseUrlSmall}${episode.stillPath}',
                     fit: BoxFit.cover,
                     fadeInDuration: const Duration(milliseconds: 200),
-                    placeholder: (_, __) => Container(color: AppColors.surfaceVariant),
+                    placeholder: (_, __) =>
+                        Container(color: AppColors.surfaceVariant),
                     errorWidget: (_, __, ___) => Container(
                       color: AppColors.surfaceVariant,
-                      child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 40),
+                      child: const Icon(
+                        Icons.tv,
+                        color: AppColors.textSecondary,
+                        size: 40,
+                      ),
                     ),
                   )
                 : Container(
                     color: AppColors.surfaceVariant,
-                    child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 40),
+                    child: const Icon(
+                      Icons.tv,
+                      color: AppColors.textSecondary,
+                      size: 40,
+                    ),
                   ),
           ),
           Positioned(
@@ -276,7 +296,13 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(ep.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  Text(
+                    ep.name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -291,10 +317,13 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
                 curve: Curves.easeOutCubic,
                 child: CircleAvatar(
                   radius: 20,
-                  backgroundColor: _watched ? Colors.green : AppColors.surfaceVariant,
+                  backgroundColor: _watched
+                      ? Colors.green
+                      : AppColors.surfaceVariant,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
-                    transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                    transitionBuilder: (child, animation) =>
+                        ScaleTransition(scale: animation, child: child),
                     child: Icon(
                       Icons.check,
                       key: ValueKey(_watched),
@@ -310,17 +339,28 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+              const Icon(
+                Icons.calendar_today,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: 8),
-              Text(formatFrDate(ep.airDate!),
-                  style: const TextStyle(color: AppColors.textSecondary)),
+              Text(
+                formatFrDate(ep.airDate!),
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
             ],
           ),
         ],
         const Divider(height: 32),
-        const Text('SYNOPSIS',
-            style: TextStyle(
-                fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary)),
+        const Text(
+          'SYNOPSIS',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            color: AppColors.textSecondary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           ep.overview.isNotEmpty ? ep.overview : 'Aucun synopsis disponible.',
@@ -339,14 +379,25 @@ class _DotIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.symmetric(horizontal: 5),
-      width: isActive ? 24 : 6,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: isActive ? 22 : 6,
       height: 6,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.accent : Colors.white,
+        color: isActive
+            ? AppColors.accent
+            : Colors.white.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(3),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.5),
+                  blurRadius: 6,
+                  spreadRadius: 0.5,
+                ),
+              ]
+            : null,
       ),
     );
   }

@@ -387,13 +387,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           overview: movie.overview,
           runtimeMinutes: movie.runtime,
           addedCaption: libraryItem != null
-              ? 'Ajouté à votre bibliothèque le ${_formatDate(libraryItem.addedAt)}'
+              ? 'Ajouté à ta bibliothèque le ${_formatDate(libraryItem.addedAt)}'
               : 'Pas encore suivi',
         ),
         ImageGalleryRow(future: _imagesFuture),
         CastRow(future: _creditsFuture),
         SimilarRow(
-          title: 'Vous pourriez aussi aimer',
+          title: 'Tu pourrais aussi aimer',
           future: _similarFuture,
           onTap: _openSimilar,
         ),
