@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/constants.dart';
 import '../config/tmdb_config.dart';
 import '../l10n/localization_context.dart';
 import '../providers/settings_provider.dart';
@@ -12,6 +13,7 @@ import '../providers/library_provider.dart';
 import '../services/library_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/concurrency.dart';
 import '../widgets/animations.dart';
 import '../widgets/app_page_route.dart';
 import '../widgets/fade_in_entry.dart';
@@ -38,7 +40,8 @@ class FilmsScreen extends StatefulWidget {
   State<FilmsScreen> createState() => _FilmsScreenState();
 }
 
-class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStateMixin {
+class _FilmsScreenState extends State<FilmsScreen>
+    with SingleTickerProviderStateMixin {
   static const _prefsKey = 'films_view_mode';
   late final TabController _tabController;
   _ViewMode _viewMode = _ViewMode.grid;
@@ -46,10 +49,7 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    // Only one tab today, but sharing the TabBar (rather than a plain Text
-    // header) keeps the top of Films visually identical to Séries, whose
-    // "À VOIR" is a real tab — matching what the design should look like
-    // even with a single entry.
+    // Single tab, but keeps the TabBar header visually consistent with Séries.
     _tabController = TabController(length: 1, vsync: this);
     _loadViewMode();
   }
@@ -63,7 +63,9 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
   }
 
   Future<void> _toggleViewMode() async {
-    final newMode = _viewMode == _ViewMode.grid ? _ViewMode.list : _ViewMode.grid;
+    final newMode = _viewMode == _ViewMode.grid
+        ? _ViewMode.list
+        : _ViewMode.grid;
     setState(() => _viewMode = newMode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsKey, newMode.name);
@@ -83,7 +85,9 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     context.watch<SettingsProvider>();
-    final movieItems = context.watch<LibraryProvider>().items.where((i) => i.type == 'movie').toList();
+    // Unfiltered: keeps list identity stable so _ToWatchTab can skip
+    // re-resolving on unrelated rebuilds (see didUpdateWidget below).
+    final libraryItems = context.watch<LibraryProvider>().items;
     final tmdb = context.read<TmdbService>();
 
     return Scaffold(
@@ -95,7 +99,7 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
         ),
       ),
       body: _ToWatchTab(
-        movieItems: movieItems,
+        libraryItems: libraryItems,
         tmdb: tmdb,
         resolveRow: _resolveRow,
         viewMode: _viewMode,
@@ -106,14 +110,14 @@ class _FilmsScreenState extends State<FilmsScreen> with SingleTickerProviderStat
 }
 
 class _ToWatchTab extends StatefulWidget {
-  final List<LibraryItem> movieItems;
+  final List<LibraryItem> libraryItems;
   final TmdbService tmdb;
   final Future<_MovieRow> Function(TmdbService, LibraryItem) resolveRow;
   final _ViewMode viewMode;
   final VoidCallback onToggleViewMode;
 
   const _ToWatchTab({
-    required this.movieItems,
+    required this.libraryItems,
     required this.tmdb,
     required this.resolveRow,
     required this.viewMode,
@@ -125,32 +129,35 @@ class _ToWatchTab extends StatefulWidget {
 }
 
 class _ToWatchTabState extends State<_ToWatchTab> {
-  static const _pageSize = 21;
+  static const _pageSize = AppConstants.filmsPageSize;
 
   final _scrollController = ScrollController();
   int _visibleCount = _pageSize;
-  late Future<List<_MovieRow>> _rowsFuture;
-  // Marking a movie watched only disappears from this list once the
-  // Firestore write round-trips back through LibraryProvider's stream and
-  // didUpdateWidget below reruns _resolveAll() — a real network delay that
-  // read as the whole screen lagging. Hiding the tapped row immediately and
-  // clearing this once fresh data arrives makes it feel instant.
+  final Map<int, _MovieRow> _resolved = {};
+  final Set<int> _settled = {};
+  bool _showContent = false;
+  // Hides a just-marked-watched row immediately instead of waiting for the
+  // Firestore round-trip, so it doesn't feel laggy.
   final Set<int> _pendingWatchedIds = {};
+
+  List<LibraryItem> get _movieItems =>
+      widget.libraryItems.where((i) => i.type == 'movie').toList();
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _rowsFuture = _resolveAll();
+    _resolveAll(_movieItems, isInitial: true);
   }
 
   @override
   void didUpdateWidget(covariant _ToWatchTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only the library contents changing should trigger a refetch — the scroll-driven
-    // pagination setState below must not recreate this future or the grid will flicker.
-    _rowsFuture = _resolveAll();
-    _pendingWatchedIds.clear();
+    // Only reresolve when the library itself changed, not on every rebuild.
+    if (!identical(oldWidget.libraryItems, widget.libraryItems)) {
+      _resolveAll(_movieItems, isInitial: false);
+      _pendingWatchedIds.clear();
+    }
   }
 
   @override
@@ -160,34 +167,44 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     super.dispose();
   }
 
-  Future<List<_MovieRow>> _resolveAll() async {
-    // Load initial batch with timeout to show data fast, then load rest in background
-    const initialTimeout = Duration(milliseconds: 1000);
-    final items = widget.movieItems;
+  // Each title resolves and renders independently, bounded to 8 concurrent
+  // requests so a large library doesn't hit TMDB's rate limit.
+  Future<void> _resolveAll(List<LibraryItem> items, {required bool isInitial}) {
+    final keys = items.map((i) => i.tmdbId).toSet();
+    _resolved.removeWhere((k, _) => !keys.contains(k));
+    _settled.removeWhere((k) => !keys.contains(k));
 
-    final rows = await Future.wait(
-      items.map((item) async {
-        try {
-          return await widget.resolveRow(widget.tmdb, item);
-        } catch (_) {
-          return null;
+    final all = forEachBounded(items, 8, (item) async {
+      try {
+        final row = await widget.resolveRow(widget.tmdb, item);
+        if (mounted) {
+          setState(() {
+            _resolved[item.tmdbId] = row;
+            _settled.add(item.tmdbId);
+          });
         }
-      }),
-      eagerError: false,
-    ).timeout(initialTimeout, onTimeout: () => []);
-
-    return rows.whereType<_MovieRow>().toList();
+      } catch (_) {
+        if (mounted) setState(() => _settled.add(item.tmdbId));
+      }
+    });
+    if (isInitial) {
+      all
+          .timeout(AppConstants.initialLoadTimeout, onTimeout: () {})
+          .whenComplete(() {
+            if (mounted) setState(() => _showContent = true);
+          });
+    }
+    return all;
   }
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    final future = _resolveAll();
-    setState(() => _rowsFuture = future);
-    await future;
+    await _resolveAll(_movieItems, isInitial: false);
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 400) {
       setState(() => _visibleCount += _pageSize);
     }
   }
@@ -197,12 +214,13 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     final uid = context.read<AuthProvider>().user!.uid;
     try {
       await context.read<LibraryService>().markMovieWatched(
-            uid: uid,
-            tmdbId: item.tmdbId,
-            watched: newValue,
-          );
+        uid: uid,
+        tmdbId: item.tmdbId,
+        watched: newValue,
+      );
     } catch (_) {
-      if (mounted && newValue) setState(() => _pendingWatchedIds.remove(item.tmdbId));
+      if (mounted && newValue)
+        setState(() => _pendingWatchedIds.remove(item.tmdbId));
     }
   }
 
@@ -210,49 +228,65 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(child: RefreshIndicator(onRefresh: _refresh, child: _buildBody())),
+        Positioned.fill(
+          child: RefreshIndicator(onRefresh: _refresh, child: _buildBody()),
+        ),
         Positioned(
           top: 12,
           right: 16,
-          child: ViewModeToggle(isGrid: widget.viewMode == _ViewMode.grid, onTap: widget.onToggleViewMode),
+          child: ViewModeToggle(
+            isGrid: widget.viewMode == _ViewMode.grid,
+            onTap: widget.onToggleViewMode,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildBody() {
-    if (widget.movieItems.isEmpty) {
+    final movieItems = _movieItems;
+    if (movieItems.isEmpty) {
       return ScrollableCenter(
-        child: Text(context.tr('series.trackShow'),
-            style: const TextStyle(color: AppColors.textSecondary)),
+        child: Text(
+          context.tr('series.trackShow'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
       );
     }
-    return FutureBuilder<List<_MovieRow>>(
-      future: _rowsFuture,
-      builder: (context, snapshot) {
-        context.watch<SettingsProvider>();
-        if (!snapshot.hasData) {
-          return const PosterGridSkeleton(childAspectRatio: 0.67);
-        }
-        final rows = snapshot.data!
-            .where((r) => !r.item.watched && !_pendingWatchedIds.contains(r.item.tmdbId))
+    context.watch<SettingsProvider>();
+    if (!_showContent) {
+      return widget.viewMode == _ViewMode.grid
+          ? const PosterGridSkeleton(childAspectRatio: 0.67)
+          : const MediaListSkeleton();
+    }
+    final rows =
+        movieItems
+            .map((i) => _resolved[i.tmdbId])
+            .whereType<_MovieRow>()
+            .where(
+              (r) =>
+                  !r.item.watched &&
+                  !_pendingWatchedIds.contains(r.item.tmdbId),
+            )
             .toList()
           ..sort((a, b) {
             final dateA = a.details.releaseDate ?? DateTime(0);
             final dateB = b.details.releaseDate ?? DateTime(0);
             return dateB.compareTo(dateA);
           });
-        if (rows.isEmpty) {
-          return ScrollableCenter(
-              child: Text(context.tr('series.allCaughtUp'), style: const TextStyle(color: AppColors.textSecondary)));
-        }
-        final visible = rows.take(_visibleCount).toList();
-        return AnimatedViewSwitcher(
-          child: widget.viewMode == _ViewMode.grid
-            ? _buildGrid(visible)
-            : _buildList(visible),
-        );
-      },
+    if (rows.isEmpty) {
+      return ScrollableCenter(
+        child: Text(
+          context.tr('series.allCaughtUp'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+    final visible = rows.take(_visibleCount).toList();
+    return AnimatedViewSwitcher(
+      child: widget.viewMode == _ViewMode.grid
+          ? _buildGrid(visible)
+          : _buildList(visible),
     );
   }
 
@@ -274,21 +308,27 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           index: index,
           child: GestureDetector(
             onTap: () {
-              Navigator.of(context).push(appRoute(
-                builder: (_) => MovieDetailScreen(libraryItem: row.item),
-              ));
+              Navigator.of(context).push(
+                appRoute(
+                  builder: (_) => MovieDetailScreen(libraryItem: row.item),
+                ),
+              );
             },
             child: Hero(
               tag: posterHeroTag('movie', row.item.tmdbId),
               child: row.details.posterPath != null
                   ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrlMedium}${row.details.posterPath}',
+                      imageUrl:
+                          '${TmdbConfig.imageBaseUrlMedium}${row.details.posterPath}',
                       fit: BoxFit.cover,
                     )
                   : Container(
                       color: AppColors.surfaceVariant,
                       alignment: Alignment.center,
-                      child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                      child: const Icon(
+                        Icons.movie,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
             ),
           ),
@@ -306,7 +346,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         final row = visible[index];
         final isAnimatingOut = _pendingWatchedIds.contains(row.item.tmdbId);
         final parts = <String>[
-          if (row.details.runtime > 0) '${row.details.runtime ~/ 60} h ${row.details.runtime % 60} m',
+          if (row.details.runtime > 0)
+            '${row.details.runtime ~/ 60} h ${row.details.runtime % 60} m',
           if (row.details.genres.isNotEmpty) row.details.genres.join(', '),
         ];
         return AnimatedOpacity(
@@ -317,14 +358,19 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             duration: const Duration(milliseconds: 300),
             child: InkWell(
               onTap: () {
-                Navigator.of(context).push(appRoute(
-                  builder: (_) => MovieDetailScreen(libraryItem: row.item),
-                ));
+                Navigator.of(context).push(
+                  appRoute(
+                    builder: (_) => MovieDetailScreen(libraryItem: row.item),
+                  ),
+                );
               },
               child: Container(
                 color: AppColors.surface,
                 margin: const EdgeInsets.only(bottom: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Row(
                   children: [
                     ClipRRect(
@@ -336,12 +382,16 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                           tag: posterHeroTag('movie', row.item.tmdbId),
                           child: row.details.posterPath != null
                               ? CachedNetworkImage(
-                                  imageUrl: '${TmdbConfig.imageBaseUrlTiny}${row.details.posterPath}',
+                                  imageUrl:
+                                      '${TmdbConfig.imageBaseUrlTiny}${row.details.posterPath}',
                                   fit: BoxFit.cover,
                                 )
                               : Container(
                                   color: AppColors.surfaceVariant,
-                                  child: const Icon(Icons.movie, color: AppColors.textSecondary),
+                                  child: const Icon(
+                                    Icons.movie,
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
                         ),
                       ),
@@ -352,16 +402,26 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(row.details.title,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
+                          Text(
+                            row.details.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           if (parts.isNotEmpty) ...[
                             const SizedBox(height: 4),
-                            Text(parts.join(' • '),
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
+                            Text(
+                              parts.join(' • '),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ],
                         ],
                       ),

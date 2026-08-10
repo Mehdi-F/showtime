@@ -79,24 +79,23 @@ class _HistoryEntry {
   });
 }
 
-/// Flattens every show's individually-timestamped watched episodes into one
-/// chronological list (oldest first), most recent 200 kept.
-List<_HistoryEntry> _buildHistory(List<_ShowEpisodesData> data) {
-  final entries = <_HistoryEntry>[];
-  for (final d in data) {
-    for (final ep in d.allEpisodes) {
-      final watchedAt = d.item.episodeWatchedAt[ep.key];
-      if (watchedAt != null) {
-        entries.add(_HistoryEntry(show: d, episode: ep, watchedAt: watchedAt));
-      }
-    }
-  }
-  entries.sort((a, b) => a.watchedAt.compareTo(b.watchedAt));
-  if (entries.length > 200) {
-    return entries.sublist(entries.length - 200);
-  }
-  return entries;
+/// A watched episode's identity + timestamp, built from local LibraryItem
+/// data with no TMDB call needed.
+class _HistorySkeletonEntry {
+  final LibraryItem item;
+  final int seasonNumber;
+  final int episodeNumber;
+  final DateTime watchedAt;
+
+  _HistorySkeletonEntry({
+    required this.item,
+    required this.seasonNumber,
+    required this.episodeNumber,
+    required this.watchedAt,
+  });
 }
+
+final _episodeKeyPattern = RegExp(r'^s(\d+)e(\d+)$');
 
 class _ProgressInfo {
   final double ratio;
@@ -294,24 +293,18 @@ class _ToWatchTab extends StatefulWidget {
 }
 
 class _ToWatchTabState extends State<_ToWatchTab> {
-  // A show can need several TMDB calls (details + one per season), so
-  // fetching every show in the library on open — even progressively — was
-  // still a lot of network work for a big library. Only the first page of
-  // shows (sorted by most recent activity, which needs no network call) is
-  // fetched now; more load in as the user scrolls near the bottom, same as
-  // Films' pagination. Each show still renders as soon as it resolves, and
-  // in-flight requests stay bounded (5 shows at once, each internally capped
-  // at 4 seasons).
   static const _pageSize = 20;
+
+  static const _historyPageSize = 15;
+  int _historyVisibleCount = 0;
+  bool _historyLoadingMore = false;
+  bool _historyExpanded = false;
 
   final Map<int, _ShowEpisodesData> _resolved = {};
   final Set<int> _settled = {};
   bool _showContent = false;
   int _visibleCount = _pageSize;
   final _scrollController = ScrollController();
-  final _historyKey = GlobalKey();
-  bool _autoScrolledPastHistory = false;
-  bool _loadHistory = false;
 
   List<LibraryItem> _sortedItems() {
     final sorted = widget.tvItems.toList();
@@ -344,12 +337,6 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   void _onScroll() {
-    // Load history when user scrolls toward the top
-    if (_scrollController.position.pixels < 200 && !_loadHistory) {
-      setState(() => _loadHistory = true);
-    }
-
-    // Prefetch next batch at 80% scroll (eager load before user reaches bottom)
     final maxExtent = _scrollController.position.maxScrollExtent;
     if (_scrollController.position.pixels > maxExtent * 0.8) {
       if (_visibleCount >= widget.tvItems.length) return;
@@ -361,7 +348,6 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       return;
     }
 
-    // Load more shows when scrolling near bottom (legacy fallback)
     if (_scrollController.position.pixels <
         _scrollController.position.maxScrollExtent - 400)
       return;
@@ -386,24 +372,15 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           });
         }
       } catch (_) {
-        // A single show failing to load (TMDB hiccup, rate limit) shouldn't
-        // block the rest of the list from rendering.
         if (mounted) setState(() => _settled.add(item.tmdbId));
       }
     });
 
     if (isInitial) {
-      // Increased timeout to 1000ms to load more items in first page before showing content
       future
           .timeout(const Duration(milliseconds: 1000), onTimeout: () {})
           .whenComplete(() {
-            if (mounted) {
-              // Trigger auto-scroll as soon as the current page of shows is fully loaded,
-              // then show the content. This ensures the scroll happens before rendering.
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) setState(() => _showContent = true);
-              });
-            }
+            if (mounted) setState(() => _showContent = true);
           });
     }
     return future;
@@ -411,33 +388,78 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   Future<void> _refresh() async {
     widget.tmdb.clearCache();
-    setState(() {
-      _autoScrolledPastHistory = false;
-      _loadHistory = false;
-    });
     await _resolveVisible(isInitial: false);
   }
 
-  /// The list opens scrolled past the watch history so "À voir" is the first
-  /// thing visible — history is still there, just a scroll-up away. Waits
-  /// for the current page to fully settle first: jumping based on a still-
-  /// growing history section (shows are still streaming in) would measure
-  /// the wrong height and land the scroll partway through it instead of
-  /// past it.
-  void _autoScrollPastHistoryOnce() {
-    if (_autoScrolledPastHistory || !_loadHistory) return;
-    final visibleIds = _sortedItems().take(_visibleCount).map((i) => i.tmdbId);
-    if (!visibleIds.every(_settled.contains)) return;
-    _autoScrolledPastHistory = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      final height = _historyKey.currentContext?.size?.height;
-      if (height != null && height > 0) {
-        _scrollController.jumpTo(
-          height.clamp(0, _scrollController.position.maxScrollExtent),
+  List<_HistorySkeletonEntry> _historySkeleton() {
+    final entries = <_HistorySkeletonEntry>[];
+    for (final item in widget.tvItems) {
+      for (final e in item.episodeWatchedAt.entries) {
+        final match = _episodeKeyPattern.firstMatch(e.key);
+        if (match == null) continue;
+        entries.add(
+          _HistorySkeletonEntry(
+            item: item,
+            seasonNumber: int.parse(match.group(1)!),
+            episodeNumber: int.parse(match.group(2)!),
+            watchedAt: e.value,
+          ),
         );
       }
+    }
+    entries.sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
+    return entries;
+  }
+
+  Future<void> _loadMoreHistory() async {
+    if (_historyLoadingMore) return;
+    final skeleton = _historySkeleton();
+    if (_historyVisibleCount >= skeleton.length) return;
+    setState(() => _historyLoadingMore = true);
+    final newCount = (_historyVisibleCount + _historyPageSize).clamp(
+      0,
+      skeleton.length,
+    );
+    final needed = {
+      for (final s in skeleton.sublist(_historyVisibleCount, newCount))
+        if (!_resolved.containsKey(s.item.tmdbId)) s.item.tmdbId: s.item,
+    }.values.toList();
+    await forEachBounded(needed, 4, (item) async {
+      try {
+        final data = await widget.resolveRow(widget.tmdb, item);
+        if (mounted) setState(() => _resolved[item.tmdbId] = data);
+      } catch (_) {}
     });
+    if (mounted) {
+      setState(() {
+        _historyVisibleCount = newCount;
+        _historyLoadingMore = false;
+      });
+    }
+  }
+
+  // Oldest-of-the-batch first, so the most recently watched entry sits next
+  // to "à voir" and older ones stack upward above it.
+  List<_HistoryEntry> _resolvedHistoryEntries() {
+    final skeleton = _historySkeleton();
+    final entries = <_HistoryEntry>[];
+    for (final s in skeleton.take(_historyVisibleCount).toList().reversed) {
+      final show = _resolved[s.item.tmdbId];
+      if (show == null) continue;
+      final key = 's${s.seasonNumber}e${s.episodeNumber}';
+      EpisodeRef? ep;
+      for (final e in show.allEpisodes) {
+        if (e.key == key) {
+          ep = e;
+          break;
+        }
+      }
+      if (ep == null) continue;
+      entries.add(
+        _HistoryEntry(show: show, episode: ep, watchedAt: s.watchedAt),
+      );
+    }
+    return entries;
   }
 
   Future<void> _toggleEpisode(
@@ -499,8 +521,6 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         .toList();
     final now = DateTime.now();
 
-    final history = _loadHistory ? _buildHistory(data) : <_HistoryEntry>[];
-
     final notStarted = <_ShowEpisodesData>[];
     final withNext = <_ShowEpisodesData>[];
 
@@ -534,7 +554,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
     notStarted.sort((a, b) => (b.item.addedAt).compareTo(a.item.addedAt));
 
-    if (history.isEmpty &&
+    final hasAnyHistory = _historySkeleton().isNotEmpty;
+    if (!hasAnyHistory &&
         active.isEmpty &&
         stale.isEmpty &&
         notStarted.isEmpty) {
@@ -546,47 +567,96 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       );
     }
 
-    final showHistory = history.isNotEmpty && widget.viewMode == _ViewMode.list;
-    if (showHistory) {
-      _autoScrollPastHistoryOnce();
-    }
-
     return AnimatedViewSwitcher(
       child: widget.viewMode == _ViewMode.list
-          ? _buildListView(
-              context,
-              showHistory,
-              history,
-              active,
-              notStarted,
-              stale,
-            )
+          ? _buildListView(context, active, notStarted, stale)
           : _buildGridView(context, active, notStarted, stale),
     );
   }
 
   Widget _buildListView(
     BuildContext context,
-    bool showHistory,
-    List<_HistoryEntry> history,
     List<_ShowEpisodesData> active,
     List<_ShowEpisodesData> notStarted,
     List<_ShowEpisodesData> stale,
   ) {
+    final hasAnyHistory = _historySkeleton().isNotEmpty;
+    final hasMoreHistory = _historyVisibleCount < _historySkeleton().length;
+    final history = _historyExpanded
+        ? _resolvedHistoryEntries()
+        : const <_HistoryEntry>[];
     return ListView(
       key: const ValueKey('list_view'),
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(top: 8, bottom: 16),
       children: [
-        if (showHistory)
-          Column(key: _historyKey, children: _historySection(context, history)),
+        if (hasAnyHistory) _historyToggleRow(context),
+        if (_historyExpanded && _historyLoadingMore) _historyLoaderRow(),
+        if (_historyExpanded && !_historyLoadingMore && hasMoreHistory)
+          _historyLoadMoreRow(context),
+        if (history.isNotEmpty) ..._historyEntryWidgets(context, history),
         if (active.isNotEmpty) ..._activeSection(context, active),
         if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
         if (stale.isNotEmpty) ..._staleSection(context, stale),
       ],
     );
   }
+
+  Widget _historyToggleRow(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        final expanding = !_historyExpanded;
+        setState(() => _historyExpanded = expanding);
+        if (expanding && _historyVisibleCount == 0) _loadMoreHistory();
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              context.tr(
+                _historyExpanded ? 'series.watchHistory' : 'series.showHistory',
+              ),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Icon(
+              _historyExpanded ? Icons.expand_less : Icons.expand_more,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _historyLoadMoreRow(BuildContext context) {
+    return Center(
+      child: TextButton(
+        onPressed: _loadMoreHistory,
+        child: Text(context.tr('common.loadMore')),
+      ),
+    );
+  }
+
+  Widget _historyLoaderRow() => const Padding(
+    padding: EdgeInsets.symmetric(vertical: 16),
+    child: Center(
+      child: SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    ),
+  );
 
   Widget _buildGridView(
     BuildContext context,
@@ -693,12 +763,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     );
   }
 
-  List<Widget> _historySection(
+  List<Widget> _historyEntryWidgets(
     BuildContext context,
     List<_HistoryEntry> entries,
   ) {
     return [
-      _sectionHeader(context.tr('series.watchHistory')),
       ...entries.map((h) {
         final ep = h.episode;
         final d = h.show;
@@ -938,13 +1007,10 @@ class _UpcomingTabState extends State<_UpcomingTab> {
         final row = await widget.resolveRow(widget.tmdb, item);
         if (row != null && mounted)
           setState(() => _resolved[item.tmdbId] = row);
-      } catch (_) {
-        // A single show failing to load shouldn't block the rest of the list.
-      }
+      } catch (_) {}
     });
 
     if (isInitial) {
-      // Increased timeout to 1000ms to load more items in first page before showing content
       future
           .timeout(const Duration(milliseconds: 1000), onTimeout: () {})
           .whenComplete(() {
@@ -955,7 +1021,6 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   }
 
   void _onUpcomingScroll() {
-    // Prefetch next batch at 80% scroll (eager load before user reaches bottom)
     final maxExtent = _scrollController.position.maxScrollExtent;
     if (_scrollController.position.pixels > maxExtent * 0.8) {
       if (_visibleCount >= widget.tvItems.length) return;
@@ -967,7 +1032,6 @@ class _UpcomingTabState extends State<_UpcomingTab> {
       return;
     }
 
-    // Load more shows when scrolling near bottom (legacy fallback)
     if (_scrollController.position.pixels <
         _scrollController.position.maxScrollExtent - 400)
       return;
@@ -1227,10 +1291,8 @@ class _UpcomingTabState extends State<_UpcomingTab> {
               return FadeInEntry(
                 index: index,
                 child: _SeriesProgressCard(
-                  // No heroTag here: this "à venir" grid and the "à voir"
-                  // grid are both built at once by TabBarView, and a show
-                  // can be in both simultaneously — only one tab may claim
-                  // the shared tag without risking a duplicate-Hero error.
+                  // No heroTag: a show can appear in both tabs at once, and
+                  // only one may claim the tag (duplicate-Hero error otherwise).
                   posterPath: row.posterPath,
                   daysUntil: date != null ? daysUntil(date) : null,
                   onTap: () => Navigator.of(context).push(
@@ -1452,11 +1514,8 @@ class _EpisodeCard extends StatelessWidget {
 }
 
 class _SeriesProgressCard extends StatelessWidget {
-  // Nullable — the "à voir" and "à venir" tabs are both built simultaneously
-  // by TabBarView, so a show that's in both at once would register two
-  // Heroes with the same tag in the same route. Only one tab (whichever
-  // passes a tag) gets the animated transition; the other still navigates
-  // normally, just without the morph.
+  // Nullable so only one of the two tabs claims the Hero tag for a show
+  // that's in both (see _buildGridView above).
   final String? heroTag;
   final String? posterPath;
   final VoidCallback onTap;

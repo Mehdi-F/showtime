@@ -9,7 +9,7 @@ class AppConstants {
   // Pagination
   static const filmsPageSize = 21;
   static const seriesPageSize = 20;
-  static const profileInitialLoadTimeout = Duration(milliseconds: 600);
+  static const initialLoadTimeout = Duration(milliseconds: 600);
   static const profileMaxRecentHistory = 200;
 
   // UI

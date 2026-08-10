@@ -47,6 +47,7 @@ class AppStrings {
       'series.toWatch': 'EN COURS',
       'series.upcoming': 'À VENIR',
       'series.watchHistory': 'HISTORIQUE DE VISIONNAGE',
+      'series.showHistory': 'Voir l\'historique',
       'series.notWatching': 'PAS REGARDÉ DEPUIS UN MOMENT',
       'series.notStarted': 'PAS COMMENCÉ',
       'series.allCaughtUp': 'Tu es à jour.',
@@ -140,7 +141,8 @@ class AppStrings {
       'explorer.popularMovies': 'Films populaires',
       'explorer.series': 'Séries',
       'explorer.movie': 'Film',
-      'explorer.searchFailed': 'Search failed. Check your connection and try again.',
+      'explorer.searchFailed':
+          'Search failed. Check your connection and try again.',
 
       // List operations
       'list.rename': 'Renommer la liste',
@@ -274,6 +276,7 @@ class AppStrings {
       'series.toWatch': 'WATCHING',
       'series.upcoming': 'UPCOMING',
       'series.watchHistory': 'WATCH HISTORY',
+      'series.showHistory': 'Show history',
       'series.notWatching': 'HAVEN\'T WATCHED IN A WHILE',
       'series.notStarted': 'NOT STARTED',
       'series.allCaughtUp': 'All caught up.',
@@ -367,7 +370,8 @@ class AppStrings {
       'explorer.popularMovies': 'Popular movies',
       'explorer.series': 'Series',
       'explorer.movie': 'Movie',
-      'explorer.searchFailed': 'Search failed. Check your connection and try again.',
+      'explorer.searchFailed':
+          'Search failed. Check your connection and try again.',
 
       // List operations
       'list.rename': 'Rename list',
@@ -460,11 +464,16 @@ class AppStrings {
     return _translations[language]?[key] ?? key;
   }
 
-  static String getOrDefault(String key, String defaultValue, {String language = 'fr'}) {
+  static String getOrDefault(
+    String key,
+    String defaultValue, {
+    String language = 'fr',
+  }) {
     return _translations[language]?[key] ?? defaultValue;
   }
 }
 
 extension StringLocalization on String {
-  String tr({String language = 'fr'}) => AppStrings.get(this, language: language);
+  String tr({String language = 'fr'}) =>
+      AppStrings.get(this, language: language);
 }

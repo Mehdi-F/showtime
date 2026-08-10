@@ -323,7 +323,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
       }
     });
     if (isInitial) {
-      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () {}).whenComplete(() {
+      all.timeout(AppConstants.initialLoadTimeout, onTimeout: () {}).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
@@ -1505,7 +1505,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       }
     });
     if (isInitial) {
-      all.timeout(AppConstants.profileInitialLoadTimeout, onTimeout: () {}).whenComplete(() {
+      all.timeout(AppConstants.initialLoadTimeout, onTimeout: () {}).whenComplete(() {
         if (mounted) setState(() => _showContent = true);
       });
     }
