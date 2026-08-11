@@ -37,7 +37,10 @@ import 'movie_detail_screen.dart';
 Future<_ResolvedItem> _resolveItem(TmdbService tmdb, LibraryItem item) async {
   if (item.type == 'tv') {
     final details = await tmdb.getTvDetails(item.tmdbId);
-    final totalEpisodeCount = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
+    final totalEpisodeCount = details.seasons.fold<int>(
+      0,
+      (sum, s) => sum + s.episodeCount,
+    );
     return _ResolvedItem(
       item: item,
       title: details.name,
@@ -81,12 +84,14 @@ class _ResolvedItem {
     this.status,
   });
 
-  int get watchedEpisodesCount => item.watchedEpisodes.values.where((w) => w).length;
+  int get watchedEpisodesCount =>
+      item.watchedEpisodes.values.where((w) => w).length;
 
   /// A movie is "watched" via its own flag; a series is "watched" once every
   /// released episode has been checked off.
-  bool get isWatched =>
-      item.type == 'movie' ? item.watched : (totalEpisodeCount > 0 && watchedEpisodesCount >= totalEpisodeCount);
+  bool get isWatched => item.type == 'movie'
+      ? item.watched
+      : (totalEpisodeCount > 0 && watchedEpisodesCount >= totalEpisodeCount);
 
   DateTime get recency {
     if (item.type == 'tv') {
@@ -98,6 +103,7 @@ class _ResolvedItem {
     }
   }
 }
+
 // Cached sorted lists to avoid re-sorting on every build
 class _SortedLists {
   final List<_ResolvedItem> series;
@@ -121,14 +127,14 @@ class _SortedLists {
   });
 
   const _SortedLists.empty()
-      : series = const [],
-        seriesFav = const [],
-        films = const [],
-        filmsFav = const [],
-        allSeries = const [],
-        allSeriesFav = const [],
-        allFilms = const [],
-        allFilmsFav = const [];
+    : series = const [],
+      seriesFav = const [],
+      films = const [],
+      filmsFav = const [],
+      allSeries = const [],
+      allSeriesFav = const [],
+      allFilms = const [],
+      allFilmsFav = const [];
 }
 
 // A frozen snapshot of the profile's aggregate numbers (not the per-title
@@ -157,23 +163,24 @@ class _ProfileStatsSnapshot {
   });
 
   const _ProfileStatsSnapshot.empty()
-      : seriesCount = 0,
-        filmsCount = 0,
-        episodesWatched = 0,
-        seriesMinutes = 0,
-        filmsMinutes = 0,
-        bannerBackdrop = null;
+    : seriesCount = 0,
+      filmsCount = 0,
+      episodesWatched = 0,
+      seriesMinutes = 0,
+      filmsMinutes = 0,
+      bannerBackdrop = null;
 
   Map<String, dynamic> toJson() => {
-        'seriesCount': seriesCount,
-        'filmsCount': filmsCount,
-        'episodesWatched': episodesWatched,
-        'seriesMinutes': seriesMinutes,
-        'filmsMinutes': filmsMinutes,
-        'bannerBackdrop': bannerBackdrop,
-      };
+    'seriesCount': seriesCount,
+    'filmsCount': filmsCount,
+    'episodesWatched': episodesWatched,
+    'seriesMinutes': seriesMinutes,
+    'filmsMinutes': filmsMinutes,
+    'bannerBackdrop': bannerBackdrop,
+  };
 
-  factory _ProfileStatsSnapshot.fromJson(Map<String, dynamic> json) => _ProfileStatsSnapshot(
+  factory _ProfileStatsSnapshot.fromJson(Map<String, dynamic> json) =>
+      _ProfileStatsSnapshot(
         seriesCount: json['seriesCount'] as int? ?? 0,
         filmsCount: json['filmsCount'] as int? ?? 0,
         episodesWatched: json['episodesWatched'] as int? ?? 0,
@@ -186,12 +193,23 @@ class _ProfileStatsSnapshot {
 _ProfileStatsSnapshot _computeStatsSnapshot(List<_ResolvedItem> resolved) {
   final series = resolved.where((r) => r.item.type == 'tv').toList();
   final films = resolved.where((r) => r.item.type == 'movie').toList();
-  final episodesWatched = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount);
-  final seriesMinutes = series.fold<int>(0, (sum, r) => sum + r.watchedEpisodesCount * r.runtimeMinutes);
-  final filmsMinutes = films.fold<int>(0, (sum, r) => sum + (r.item.watched ? r.runtimeMinutes : 0));
+  final episodesWatched = series.fold<int>(
+    0,
+    (sum, r) => sum + r.watchedEpisodesCount,
+  );
+  final seriesMinutes = series.fold<int>(
+    0,
+    (sum, r) => sum + r.watchedEpisodesCount * r.runtimeMinutes,
+  );
+  final filmsMinutes = films.fold<int>(
+    0,
+    (sum, r) => sum + (r.item.watched ? r.runtimeMinutes : 0),
+  );
   String? bannerBackdrop;
   if (resolved.isNotEmpty) {
-    final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
+    final mostRecent = resolved.reduce(
+      (a, b) => a.recency.isAfter(b.recency) ? a : b,
+    );
     bannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
   }
   return _ProfileStatsSnapshot(
@@ -204,14 +222,15 @@ _ProfileStatsSnapshot _computeStatsSnapshot(List<_ResolvedItem> resolved) {
   );
 }
 
-
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final library = context.watch<LibraryProvider>();
     return _ProfileBody(
-      items: context.watch<LibraryProvider>().items,
+      items: library.items,
+      isLoaded: library.isLoaded,
       tmdb: context.read<TmdbService>(),
       user: context.watch<AuthProvider>().user,
       lists: context.watch<ListsProvider>().lists,
@@ -221,11 +240,18 @@ class ProfileScreen extends StatelessWidget {
 
 class _ProfileBody extends StatefulWidget {
   final List<LibraryItem> items;
+  final bool isLoaded;
   final TmdbService tmdb;
   final User? user;
   final List<WatchList> lists;
 
-  const _ProfileBody({required this.items, required this.tmdb, required this.user, required this.lists});
+  const _ProfileBody({
+    required this.items,
+    required this.isLoaded,
+    required this.tmdb,
+    required this.user,
+    required this.lists,
+  });
 
   @override
   State<_ProfileBody> createState() => _ProfileBodyState();
@@ -247,10 +273,24 @@ class _ProfileBodyState extends State<_ProfileBody> {
 
   bool get _allSettled => _settled.length >= widget.items.length;
 
+  // LibraryProvider's `items` reads as an empty list both when the library
+  // genuinely is empty and before its Firestore stream has delivered a
+  // first snapshot. Resolving that placeholder as the "initial" batch would
+  // settle instantly and reveal an empty profile before the real data ever
+  // arrives, skipping the skeleton entirely — so the initial resolve waits
+  // for `isLoaded`, and only fires once.
+  bool _hasResolvedInitial = false;
+
   @override
   void initState() {
     super.initState();
     _loadCachedStats();
+    _maybeResolveInitial();
+  }
+
+  void _maybeResolveInitial() {
+    if (_hasResolvedInitial || !widget.isLoaded) return;
+    _hasResolvedInitial = true;
     _resolveAll(widget.items, isInitial: true);
   }
 
@@ -263,15 +303,25 @@ class _ProfileBodyState extends State<_ProfileBody> {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('$_statsPrefsPrefix$uid');
     if (raw == null || !mounted || _allSettled) return;
-    setState(() => _lastSnapshot = _ProfileStatsSnapshot.fromJson(jsonDecode(raw) as Map<String, dynamic>));
+    setState(
+      () => _lastSnapshot = _ProfileStatsSnapshot.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      ),
+    );
   }
 
   Future<void> _saveStatsSnapshot() async {
     final uid = widget.user?.uid;
     if (uid == null) return;
-    final resolved = widget.items.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
+    final resolved = widget.items
+        .map((i) => _resolved[_key(i)])
+        .whereType<_ResolvedItem>()
+        .toList();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_statsPrefsPrefix$uid', jsonEncode(_computeStatsSnapshot(resolved).toJson()));
+    await prefs.setString(
+      '$_statsPrefsPrefix$uid',
+      jsonEncode(_computeStatsSnapshot(resolved).toJson()),
+    );
   }
 
   @override
@@ -285,6 +335,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
     // list reference back down. Re-resolving anyway discarded the already-
     // rendered profile back to the loading skeleton for no reason, which is
     // what made it feel like every visit had to re-fetch from scratch.
+    if (!_hasResolvedInitial) {
+      _maybeResolveInitial();
+      return;
+    }
     if (!identical(oldWidget.items, widget.items)) {
       _resolveAll(widget.items, isInitial: false);
     }
@@ -323,9 +377,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
       }
     });
     if (isInitial) {
-      all.timeout(AppConstants.initialLoadTimeout, onTimeout: () {}).whenComplete(() {
-        if (mounted) setState(() => _showContent = true);
-      });
+      all
+          .timeout(AppConstants.initialLoadTimeout, onTimeout: () {})
+          .whenComplete(() {
+            if (mounted) setState(() => _showContent = true);
+          });
     }
     unawaited(all.whenComplete(_saveStatsSnapshot));
     return all;
@@ -349,7 +405,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
           decoration: InputDecoration(hintText: context.tr('list.createNew')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(context.tr('common.cancel')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: Text(context.tr('common.done')),
@@ -363,7 +422,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
     }
   }
 
-  Future<void> _editDisplayName(BuildContext context, String currentName) async {
+  Future<void> _editDisplayName(
+    BuildContext context,
+    String currentName,
+  ) async {
     final controller = TextEditingController(text: currentName);
     final name = await showDialog<String>(
       context: context,
@@ -372,7 +434,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
         title: Text(context.tr('dialog.editProfileName')),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('common.cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(context.tr('common.cancel')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: Text(context.tr('common.save')),
@@ -386,22 +451,60 @@ class _ProfileBodyState extends State<_ProfileBody> {
   }
 
   _SortedLists _buildSortedLists(List<_ResolvedItem> resolved) {
-    final series = resolved.where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0).toList()
-      ..sort((a, b) => b.recency.compareTo(a.recency));
-    final seriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite && r.watchedEpisodesCount > 0).toList()
-      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
-    final films = resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
-      ..sort((a, b) => b.recency.compareTo(a.recency));
-    final filmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite && r.item.watched).toList()
-      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final series =
+        resolved
+            .where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0)
+            .toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
+    final seriesFav =
+        resolved
+            .where(
+              (r) =>
+                  r.item.type == 'tv' &&
+                  r.item.favorite &&
+                  r.watchedEpisodesCount > 0,
+            )
+            .toList()
+          ..sort(
+            (a, b) => (b.item.favoritedAt ?? b.recency).compareTo(
+              a.item.favoritedAt ?? a.recency,
+            ),
+          );
+    final films =
+        resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
+    final filmsFav =
+        resolved
+            .where(
+              (r) =>
+                  r.item.type == 'movie' && r.item.favorite && r.item.watched,
+            )
+            .toList()
+          ..sort(
+            (a, b) => (b.item.favoritedAt ?? b.recency).compareTo(
+              a.item.favoritedAt ?? a.recency,
+            ),
+          );
     final allSeries = resolved.where((r) => r.item.type == 'tv').toList()
       ..sort((a, b) => b.recency.compareTo(a.recency));
-    final allSeriesFav = resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
-      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final allSeriesFav =
+        resolved.where((r) => r.item.type == 'tv' && r.item.favorite).toList()
+          ..sort(
+            (a, b) => (b.item.favoritedAt ?? b.recency).compareTo(
+              a.item.favoritedAt ?? a.recency,
+            ),
+          );
     final allFilms = resolved.where((r) => r.item.type == 'movie').toList()
       ..sort((a, b) => b.recency.compareTo(a.recency));
-    final allFilmsFav = resolved.where((r) => r.item.type == 'movie' && r.item.favorite).toList()
-      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+    final allFilmsFav =
+        resolved
+            .where((r) => r.item.type == 'movie' && r.item.favorite)
+            .toList()
+          ..sort(
+            (a, b) => (b.item.favoritedAt ?? b.recency).compareTo(
+              a.item.favoritedAt ?? a.recency,
+            ),
+          );
 
     return _SortedLists(
       series: series,
@@ -424,7 +527,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
       return const Scaffold(body: ProfileSkeleton());
     }
 
-    final resolved = widget.items.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
+    final resolved = widget.items
+        .map((i) => _resolved[_key(i)])
+        .whereType<_ResolvedItem>()
+        .toList();
 
     // Cache sorted lists to avoid re-sorting on every build
     if (!identical(_cachedResolved, resolved)) {
@@ -441,123 +547,166 @@ class _ProfileBodyState extends State<_ProfileBody> {
     final allFilms = _sortedLists.allFilms;
     final allFilmsFav = _sortedLists.allFilmsFav;
 
-        // See _ProfileStatsSnapshot: these numbers only move once every title
-        // in the batch has settled, never mid-stream, and fall back to the
-        // last known-good values (this session's, or disk-cached from a
-        // previous one) instead of climbing from zero in the meantime.
-        final statsSnapshot =
-            _allSettled ? _computeStatsSnapshot(resolved) : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
-        if (_allSettled) _lastSnapshot = statsSnapshot;
+    // See _ProfileStatsSnapshot: these numbers only move once every title
+    // in the batch has settled, never mid-stream, and fall back to the
+    // last known-good values (this session's, or disk-cached from a
+    // previous one) instead of climbing from zero in the meantime.
+    final statsSnapshot = _allSettled
+        ? _computeStatsSnapshot(resolved)
+        : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
+    if (_allSettled) _lastSnapshot = statsSnapshot;
 
-        String? liveBannerBackdrop;
-        if (resolved.isNotEmpty) {
-          final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
-          liveBannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
-        }
-        final bannerBackdrop = liveBannerBackdrop ?? statsSnapshot.bannerBackdrop;
+    String? liveBannerBackdrop;
+    if (resolved.isNotEmpty) {
+      final mostRecent = resolved.reduce(
+        (a, b) => a.recency.isAfter(b.recency) ? a : b,
+      );
+      liveBannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
+    }
+    final bannerBackdrop = liveBannerBackdrop ?? statsSnapshot.bannerBackdrop;
 
-        final displayName = user?.displayName ?? user?.email?.split('@').first ?? context.tr('profile.user');
+    final displayName =
+        user?.displayName ??
+        user?.email?.split('@').first ??
+        context.tr('profile.user');
 
-        return Scaffold(
-          body: RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView(
-              padding: EdgeInsets.zero,
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                _ProfileHeader(
-                  backdropPath: bannerBackdrop,
-                  photoUrl: user?.photoURL,
-                  displayName: displayName,
-                  onEdit: () => _editDisplayName(context, displayName),
-                  onSignOut: () => context.read<AuthProvider>().signOut(),
-                  onImport: () => Navigator.of(context).push(appRoute(
-                    builder: (_) => const ImportTvTimeScreen(),
-                  )),
-                  onSettings: () => Navigator.of(context).push(appRoute(
-                    builder: (_) => const SettingsScreen(),
-                  )),
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            _ProfileHeader(
+              backdropPath: bannerBackdrop,
+              photoUrl: user?.photoURL,
+              displayName: displayName,
+              onEdit: () => _editDisplayName(context, displayName),
+              onSignOut: () => context.read<AuthProvider>().signOut(),
+              onImport: () => Navigator.of(
+                context,
+              ).push(appRoute(builder: (_) => const ImportTvTimeScreen())),
+              onSettings: () => Navigator.of(
+                context,
+              ).push(appRoute(builder: (_) => const SettingsScreen())),
+            ),
+            const SizedBox(height: 8),
+            _StatsRow(
+              seriesCount: statsSnapshot.seriesCount,
+              filmsCount: statsSnapshot.filmsCount,
+              episodesWatched: statsSnapshot.episodesWatched,
+            ),
+            const Divider(height: 33, indent: 16, endIndent: 16),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(
+                context,
+              ).push(appRoute(builder: (_) => const FriendsScreen())),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      context.tr('profile.friends'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                _StatsRow(
-                  seriesCount: statsSnapshot.seriesCount,
-                  filmsCount: statsSnapshot.filmsCount,
-                  episodesWatched: statsSnapshot.episodesWatched,
-                ),
-                const Divider(height: 33, indent: 16, endIndent: 16),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () =>
-                      Navigator.of(context).push(appRoute(builder: (_) => const FriendsScreen())),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(context.tr('profile.friends'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                        const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                      ],
+              ),
+            ),
+            const Divider(height: 33, indent: 16, endIndent: 16),
+            _SectionHeader(title: context.tr('profile.stats')),
+            SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _StatCard(
+                    icon: Icons.tv,
+                    label: context.tr('profile.timeSpentSeries'),
+                    minutes: statsSnapshot.seriesMinutes,
+                  ),
+                  _StatCard(
+                    icon: Icons.movie,
+                    label: context.tr('profile.timeSpentFilms'),
+                    minutes: statsSnapshot.filmsMinutes,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 33, indent: 16, endIndent: 16),
+            _SectionHeader(title: context.tr('profile.lists')),
+            SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _CreateListCard(onTap: () => _createList(context)),
+                  ...lists.map(
+                    (l) => _ListCard(
+                      list: l,
+                      onTap: () => Navigator.of(context).push(
+                        appRoute(
+                          builder: (_) => ListDetailScreen(listId: l.id),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const Divider(height: 33, indent: 16, endIndent: 16),
-                _SectionHeader(title: context.tr('profile.stats')),
-                SizedBox(
-                  height: 120,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: [
-                      _StatCard(
-                          icon: Icons.tv,
-                          label: context.tr('profile.timeSpentSeries'),
-                          minutes: statsSnapshot.seriesMinutes),
-                      _StatCard(
-                          icon: Icons.movie,
-                          label: context.tr('profile.timeSpentFilms'),
-                          minutes: statsSnapshot.filmsMinutes),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Divider(height: 33, indent: 16, endIndent: 16),
-                _SectionHeader(title: context.tr('profile.lists')),
-                SizedBox(
-                  height: 120,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: [
-                      _CreateListCard(onTap: () => _createList(context)),
-                      ...lists.map((l) => _ListCard(
-                            list: l,
-                            onTap: () => Navigator.of(context).push(appRoute(
-                              builder: (_) => ListDetailScreen(listId: l.id),
-                            )),
-                          )),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Divider(height: 33, indent: 16, endIndent: 16),
-                _CarouselSection(title: context.tr('profile.series'), items: series, allItems: allSeries),
-                _CarouselSection(title: context.tr('profile.seriesFavorite'), items: seriesFav, allItems: allSeriesFav, showHeart: true),
-                _CarouselSection(title: context.tr('profile.films'), items: films, allItems: allFilms),
-                _CarouselSection(title: context.tr('profile.filmsFavorite'), items: filmsFav, allItems: allFilmsFav, showHeart: true),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    TmdbConfig.attribution,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+            const SizedBox(height: 12),
+            const Divider(height: 33, indent: 16, endIndent: 16),
+            _CarouselSection(
+              title: context.tr('profile.series'),
+              items: series,
+              allItems: allSeries,
+            ),
+            _CarouselSection(
+              title: context.tr('profile.seriesFavorite'),
+              items: seriesFav,
+              allItems: allSeriesFav,
+              showHeart: true,
+            ),
+            _CarouselSection(
+              title: context.tr('profile.films'),
+              items: films,
+              allItems: allFilms,
+            ),
+            _CarouselSection(
+              title: context.tr('profile.filmsFavorite'),
+              items: filmsFav,
+              allItems: allFilmsFav,
+              showHeart: true,
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                TmdbConfig.attribution,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -610,7 +759,10 @@ class _ProfileHeader extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.black.withValues(alpha: 0.35), Colors.black.withValues(alpha: 0.85)],
+                        colors: [
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
                       ),
                     ),
                   ),
@@ -623,9 +775,18 @@ class _ProfileHeader extends StatelessWidget {
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         color: AppColors.surface,
                         itemBuilder: (context) => [
-                          PopupMenuItem(onTap: onSettings, child: Text(context.tr('settings.title'))),
-                          PopupMenuItem(onTap: onImport, child: Text(context.tr('profile.import'))),
-                          PopupMenuItem(onTap: onSignOut, child: Text(context.tr('profile.signOut'))),
+                          PopupMenuItem(
+                            onTap: onSettings,
+                            child: Text(context.tr('settings.title')),
+                          ),
+                          PopupMenuItem(
+                            onTap: onImport,
+                            child: Text(context.tr('profile.import')),
+                          ),
+                          PopupMenuItem(
+                            onTap: onSignOut,
+                            child: Text(context.tr('profile.signOut')),
+                          ),
                         ],
                       ),
                     ),
@@ -660,7 +821,11 @@ class _ProfileHeader extends StatelessWidget {
                       : Container(
                           color: AppColors.surfaceVariant,
                           alignment: Alignment.center,
-                          child: const Icon(Icons.person, color: AppColors.textSecondary, size: 40),
+                          child: const Icon(
+                            Icons.person,
+                            color: AppColors.textSecondary,
+                            size: 40,
+                          ),
                         ),
                 ),
               ),
@@ -669,18 +834,35 @@ class _ProfileHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(displayName,
-                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+                  Text(
+                    displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   OutlinedButton(
                     onPressed: onEdit,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white54),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    child: Text(context.tr('profile.editProfile'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    child: Text(
+                      context.tr('profile.editProfile'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -697,7 +879,11 @@ class _StatsRow extends StatelessWidget {
   final int filmsCount;
   final int episodesWatched;
 
-  const _StatsRow({required this.seriesCount, required this.filmsCount, required this.episodesWatched});
+  const _StatsRow({
+    required this.seriesCount,
+    required this.filmsCount,
+    required this.episodesWatched,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -706,11 +892,26 @@ class _StatsRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Expanded(child: _StatColumn(value: seriesCount, label: context.tr('profile.seriesWatched'))),
+          Expanded(
+            child: _StatColumn(
+              value: seriesCount,
+              label: context.tr('profile.seriesWatched'),
+            ),
+          ),
           const SizedBox(height: 40, child: VerticalDivider(width: 1)),
-          Expanded(child: _StatColumn(value: filmsCount, label: context.tr('profile.filmsWatched'))),
+          Expanded(
+            child: _StatColumn(
+              value: filmsCount,
+              label: context.tr('profile.filmsWatched'),
+            ),
+          ),
           const SizedBox(height: 40, child: VerticalDivider(width: 1)),
-          Expanded(child: _StatColumn(value: episodesWatched, label: context.tr('profile.episodesWatched'))),
+          Expanded(
+            child: _StatColumn(
+              value: episodesWatched,
+              label: context.tr('profile.episodesWatched'),
+            ),
+          ),
         ],
       ),
     );
@@ -727,9 +928,15 @@ class _StatColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('$value', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+        Text(
+          '$value',
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
       ],
     );
   }
@@ -747,7 +954,10 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          ),
           const Icon(Icons.chevron_right, color: AppColors.textSecondary),
         ],
       ),
@@ -760,7 +970,11 @@ class _StatCard extends StatelessWidget {
   final String label;
   final int minutes;
 
-  const _StatCard({required this.icon, required this.label, required this.minutes});
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.minutes,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -782,10 +996,15 @@ class _StatCard extends StatelessWidget {
               Icon(icon, size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(label,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -814,8 +1033,14 @@ class _TimeUnit extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('$value', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+        Text(
+          '$value',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+        ),
       ],
     );
   }
@@ -848,7 +1073,10 @@ class _CreateListCard extends StatelessWidget {
               child: Text(
                 context.tr('profile.createList'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -883,11 +1111,20 @@ class _ListCard extends StatelessWidget {
           children: [
             const Icon(Icons.playlist_play, color: AppColors.accent),
             const SizedBox(height: 10),
-            Text(list.name,
-                maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              list.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 6),
-            Text('${list.items.length} ${context.tr('list.items')}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            Text(
+              '${list.items.length} ${context.tr('list.items')}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),
@@ -922,9 +1159,15 @@ class _CarouselSection extends StatelessWidget {
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => Navigator.of(context).push(appRoute(
-            builder: (_) => _FullListScreen(title: title, items: allItems ?? items, readOnly: readOnly),
-          )),
+          onTap: () => Navigator.of(context).push(
+            appRoute(
+              builder: (_) => _FullListScreen(
+                title: title,
+                items: allItems ?? items,
+                readOnly: readOnly,
+              ),
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(
@@ -936,10 +1179,23 @@ class _CarouselSection extends StatelessWidget {
                       Container(
                         margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                        child: const Icon(Icons.favorite, color: Colors.white, size: 14),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.favorite,
+                          color: Colors.white,
+                          size: 14,
+                        ),
                       ),
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
                   ],
                 ),
                 const Icon(Icons.chevron_right, color: AppColors.textSecondary),
@@ -959,15 +1215,23 @@ class _CarouselSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.of(context).push(appRoute(
-                      builder: (_) => readOnly
-                          ? (resolved.item.type == 'tv'
-                              ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
-                              : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
-                          : (resolved.item.type == 'tv'
-                              ? ShowDetailScreen(libraryItem: resolved.item)
-                              : MovieDetailScreen(libraryItem: resolved.item)),
-                    ));
+                    Navigator.of(context).push(
+                      appRoute(
+                        builder: (_) => readOnly
+                            ? (resolved.item.type == 'tv'
+                                  ? ShowDetailScreen.preview(
+                                      tmdbId: resolved.item.tmdbId,
+                                    )
+                                  : MovieDetailScreen.preview(
+                                      tmdbId: resolved.item.tmdbId,
+                                    ))
+                            : (resolved.item.type == 'tv'
+                                  ? ShowDetailScreen(libraryItem: resolved.item)
+                                  : MovieDetailScreen(
+                                      libraryItem: resolved.item,
+                                    )),
+                      ),
+                    );
                   },
                   child: SizedBox(
                     width: 90,
@@ -975,7 +1239,8 @@ class _CarouselSection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       child: resolved.posterPath != null
                           ? CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrlSmall}${resolved.posterPath}',
+                              imageUrl:
+                                  '${TmdbConfig.imageBaseUrlSmall}${resolved.posterPath}',
                               fit: BoxFit.cover,
                               height: 130,
                               width: 90,
@@ -984,7 +1249,10 @@ class _CarouselSection extends StatelessWidget {
                               color: AppColors.surfaceVariant,
                               height: 130,
                               width: 90,
-                              child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                              child: const Icon(
+                                Icons.tv,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                     ),
                   ),
@@ -999,29 +1267,37 @@ class _CarouselSection extends StatelessWidget {
   }
 }
 
-enum _SeriesProgressFilter { all, inProgress, notStarted, upToDate, completed, cancelled, favorites }
+enum _SeriesProgressFilter {
+  all,
+  inProgress,
+  notStarted,
+  upToDate,
+  completed,
+  cancelled,
+  favorites,
+}
 
 extension on _SeriesProgressFilter {
   String get label => switch (this) {
-        _SeriesProgressFilter.all => 'Tout',
-        _SeriesProgressFilter.inProgress => 'Vos séries en cours',
-        _SeriesProgressFilter.notStarted => "N'a pas encore commencé",
-        _SeriesProgressFilter.upToDate => 'À jour',
-        _SeriesProgressFilter.completed => 'Terminé',
-        _SeriesProgressFilter.cancelled => 'Arrêtées',
-        _SeriesProgressFilter.favorites => 'Favoris',
-      };
+    _SeriesProgressFilter.all => 'Tout',
+    _SeriesProgressFilter.inProgress => 'Vos séries en cours',
+    _SeriesProgressFilter.notStarted => "N'a pas encore commencé",
+    _SeriesProgressFilter.upToDate => 'À jour',
+    _SeriesProgressFilter.completed => 'Terminé',
+    _SeriesProgressFilter.cancelled => 'Arrêtées',
+    _SeriesProgressFilter.favorites => 'Favoris',
+  };
 }
 
 enum _FilmProgressFilter { all, watched, unwatched, favorites }
 
 extension on _FilmProgressFilter {
   String get label => switch (this) {
-        _FilmProgressFilter.all => 'Tous',
-        _FilmProgressFilter.watched => 'Vu',
-        _FilmProgressFilter.unwatched => 'Non vu',
-        _FilmProgressFilter.favorites => 'Favoris',
-      };
+    _FilmProgressFilter.all => 'Tous',
+    _FilmProgressFilter.watched => 'Vu',
+    _FilmProgressFilter.unwatched => 'Non vu',
+    _FilmProgressFilter.favorites => 'Favoris',
+  };
 }
 
 /// Cancelled takes priority over watch progress (there will never be more
@@ -1031,7 +1307,9 @@ _SeriesProgressFilter _categorizeSeries(_ResolvedItem r) {
   final total = r.totalEpisodeCount;
   final watched = r.watchedEpisodesCount;
   if (total > 0 && watched >= total) {
-    return r.isEnded ? _SeriesProgressFilter.completed : _SeriesProgressFilter.upToDate;
+    return r.isEnded
+        ? _SeriesProgressFilter.completed
+        : _SeriesProgressFilter.upToDate;
   }
   if (watched == 0) return _SeriesProgressFilter.notStarted;
   return _SeriesProgressFilter.inProgress;
@@ -1042,7 +1320,11 @@ class _FullListScreen extends StatefulWidget {
   final List<_ResolvedItem> items;
   final bool readOnly;
 
-  const _FullListScreen({required this.title, required this.items, this.readOnly = false});
+  const _FullListScreen({
+    required this.title,
+    required this.items,
+    this.readOnly = false,
+  });
 
   @override
   State<_FullListScreen> createState() => _FullListScreenState();
@@ -1079,13 +1361,15 @@ class _FullListScreenState extends State<_FullListScreen> {
   Future<void> _refresh() async {
     final tmdb = context.read<TmdbService>();
     tmdb.clearCache();
-    final refreshed = await Future.wait(_items.map((r) async {
-      try {
-        return await _resolveItem(tmdb, r.item);
-      } catch (_) {
-        return r;
-      }
-    }));
+    final refreshed = await Future.wait(
+      _items.map((r) async {
+        try {
+          return await _resolveItem(tmdb, r.item);
+        } catch (_) {
+          return r;
+        }
+      }),
+    );
     if (mounted) setState(() => _items = refreshed);
   }
 
@@ -1185,15 +1469,17 @@ class _FullListScreenState extends State<_FullListScreen> {
   Widget _buildTile(_ResolvedItem resolved) {
     final ratio = _progressRatio(resolved);
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(appRoute(
-        builder: (_) => widget.readOnly
-            ? (resolved.item.type == 'tv'
-                ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
-                : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
-            : (resolved.item.type == 'tv'
-                ? ShowDetailScreen(libraryItem: resolved.item)
-                : MovieDetailScreen(libraryItem: resolved.item)),
-      )),
+      onTap: () => Navigator.of(context).push(
+        appRoute(
+          builder: (_) => widget.readOnly
+              ? (resolved.item.type == 'tv'
+                    ? ShowDetailScreen.preview(tmdbId: resolved.item.tmdbId)
+                    : MovieDetailScreen.preview(tmdbId: resolved.item.tmdbId))
+              : (resolved.item.type == 'tv'
+                    ? ShowDetailScreen(libraryItem: resolved.item)
+                    : MovieDetailScreen(libraryItem: resolved.item)),
+        ),
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -1203,12 +1489,16 @@ class _FullListScreenState extends State<_FullListScreen> {
               tag: posterHeroTag(resolved.item.type, resolved.item.tmdbId),
               child: resolved.posterPath != null
                   ? CachedNetworkImage(
-                      imageUrl: '${TmdbConfig.imageBaseUrlMedium}${resolved.posterPath}',
+                      imageUrl:
+                          '${TmdbConfig.imageBaseUrlMedium}${resolved.posterPath}',
                       fit: BoxFit.cover,
                     )
                   : Container(
                       color: AppColors.surfaceVariant,
-                      child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                      child: const Icon(
+                        Icons.tv,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
             ),
           ),
@@ -1230,10 +1520,17 @@ class _FullListScreenState extends State<_FullListScreen> {
               right: 6,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(
-                  resolved.item.watched ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: resolved.item.watched ? Colors.greenAccent : Colors.white70,
+                  resolved.item.watched
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: resolved.item.watched
+                      ? Colors.greenAccent
+                      : Colors.white70,
                   size: 18,
                 ),
               ),
@@ -1247,7 +1544,10 @@ class _FullListScreenState extends State<_FullListScreen> {
   // Time's grouped library view. Sections are derived from progress, not
   // from the active filter, so e.g. filtering to "Favoris" still groups the
   // favorited titles by where they stand.
-  List<MapEntry<String, List<_ResolvedItem>>> _buildGroups(BuildContext context, List<_ResolvedItem> visible) {
+  List<MapEntry<String, List<_ResolvedItem>>> _buildGroups(
+    BuildContext context,
+    List<_ResolvedItem> visible,
+  ) {
     final groups = <MapEntry<String, List<_ResolvedItem>>>[];
     if (_isSeries) {
       const order = [
@@ -1258,14 +1558,29 @@ class _FullListScreenState extends State<_FullListScreen> {
         _SeriesProgressFilter.cancelled,
       ];
       for (final category in order) {
-        final items = visible.where((r) => _categorizeSeries(r) == category).toList();
-        if (items.isNotEmpty) groups.add(MapEntry(_getGroupLabel(context, category), items));
+        final items = visible
+            .where((r) => _categorizeSeries(r) == category)
+            .toList();
+        if (items.isNotEmpty)
+          groups.add(MapEntry(_getGroupLabel(context, category), items));
       }
     } else {
       final unwatched = visible.where((r) => !r.item.watched).toList();
       final watched = visible.where((r) => r.item.watched).toList();
-      if (unwatched.isNotEmpty) groups.add(MapEntry(_getGroupLabel(context, _FilmProgressFilter.unwatched), unwatched));
-      if (watched.isNotEmpty) groups.add(MapEntry(_getGroupLabel(context, _FilmProgressFilter.watched), watched));
+      if (unwatched.isNotEmpty)
+        groups.add(
+          MapEntry(
+            _getGroupLabel(context, _FilmProgressFilter.unwatched),
+            unwatched,
+          ),
+        );
+      if (watched.isNotEmpty)
+        groups.add(
+          MapEntry(
+            _getGroupLabel(context, _FilmProgressFilter.watched),
+            watched,
+          ),
+        );
     }
     return groups;
   }
@@ -1284,7 +1599,10 @@ class _FullListScreenState extends State<_FullListScreen> {
             slivers: [
               SliverPersistentHeader(
                 pinned: true,
-                delegate: _StickyPillHeaderDelegate(label: group.key, onTap: _openFilterSheet),
+                delegate: _StickyPillHeaderDelegate(
+                  label: group.key,
+                  onTap: _openFilterSheet,
+                ),
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
@@ -1296,7 +1614,10 @@ class _FullListScreenState extends State<_FullListScreen> {
                     mainAxisSpacing: 4,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => FadeInEntry(index: index, child: _buildTile(group.value[index])),
+                    (context, index) => FadeInEntry(
+                      index: index,
+                      child: _buildTile(group.value[index]),
+                    ),
                     childCount: group.value.length,
                   ),
                 ),
@@ -1347,28 +1668,33 @@ class _FullListScreenState extends State<_FullListScreen> {
               onRefresh: _refresh,
               child: visible.isEmpty
                   ? ScrollableCenter(
-                      child: Text(context.tr('films.nothingToWatch'),
-                          style: const TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        context.tr('films.nothingToWatch'),
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
                     )
                   : _grouped
-                      ? _buildGroupedGrid(context, visible)
-                      : GridView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          // Extra top padding clears the floating filter badge
-                          // overlaid above the grid (see Positioned below) —
-                          // the grid scrolls underneath it, same "floaty" look
-                          // as the grouped mode's sticky pills.
-                          padding: const EdgeInsets.fromLTRB(10, 56, 10, 10),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  ? _buildGroupedGrid(context, visible)
+                  : GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      // Extra top padding clears the floating filter badge
+                      // overlaid above the grid (see Positioned below) —
+                      // the grid scrolls underneath it, same "floaty" look
+                      // as the grouped mode's sticky pills.
+                      padding: const EdgeInsets.fromLTRB(10, 56, 10, 10),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,
                             childAspectRatio: 0.6,
                             crossAxisSpacing: 4,
                             mainAxisSpacing: 4,
                           ),
-                          itemCount: visible.length,
-                          itemBuilder: (context, index) =>
-                              FadeInEntry(index: index, child: _buildTile(visible[index])),
-                        ),
+                      itemCount: visible.length,
+                      itemBuilder: (context, index) => FadeInEntry(
+                        index: index,
+                        child: _buildTile(visible[index]),
+                      ),
+                    ),
             ),
           ),
           // In grouped mode, the sticky per-section pills (En cours, Pas
@@ -1379,7 +1705,10 @@ class _FullListScreenState extends State<_FullListScreen> {
               top: 0,
               left: 0,
               right: 0,
-              child: LibraryFilterBadge(label: filterLabel, onTap: _openFilterSheet),
+              child: LibraryFilterBadge(
+                label: filterLabel,
+                onTap: _openFilterSheet,
+              ),
             ),
           Positioned(
             bottom: 16,
@@ -1409,7 +1738,11 @@ class _StickyPillHeaderDelegate extends SliverPersistentHeaderDelegate {
   // badge over the scrolling posters (matching LibraryFilterBadge) rather
   // than a solid bar painted across the header's whole width.
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return LibraryFilterBadge(label: label, onTap: onTap);
   }
 
@@ -1456,19 +1789,22 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _subscription = context.read<LibraryService>().watchLibrary(widget.friendUid).listen(
-      (items) {
-        final isInitial = !_hasData;
-        _libraryItems = items;
-        _hasData = true;
-        _streamError = null;
-        if (mounted) setState(() {});
-        _resolveAll(items, isInitial: isInitial);
-      },
-      onError: (e) {
-        if (mounted) setState(() => _streamError = e);
-      },
-    );
+    _subscription = context
+        .read<LibraryService>()
+        .watchLibrary(widget.friendUid)
+        .listen(
+          (items) {
+            final isInitial = !_hasData;
+            _libraryItems = items;
+            _hasData = true;
+            _streamError = null;
+            if (mounted) setState(() {});
+            _resolveAll(items, isInitial: isInitial);
+          },
+          onError: (e) {
+            if (mounted) setState(() => _streamError = e);
+          },
+        );
   }
 
   @override
@@ -1505,9 +1841,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       }
     });
     if (isInitial) {
-      all.timeout(AppConstants.initialLoadTimeout, onTimeout: () {}).whenComplete(() {
-        if (mounted) setState(() => _showContent = true);
-      });
+      all
+          .timeout(AppConstants.initialLoadTimeout, onTimeout: () {})
+          .whenComplete(() {
+            if (mounted) setState(() => _showContent = true);
+          });
     }
     return all;
   }
@@ -1538,7 +1876,10 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                   Text(
                     '$_streamError',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -1551,24 +1892,42 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       return const Scaffold(body: ProfileSkeleton());
     }
 
-    final resolved = _libraryItems.map((i) => _resolved[_key(i)]).whereType<_ResolvedItem>().toList();
+    final resolved = _libraryItems
+        .map((i) => _resolved[_key(i)])
+        .whereType<_ResolvedItem>()
+        .toList();
 
-    final series = resolved.where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0).toList()
-      ..sort((a, b) => b.recency.compareTo(a.recency));
+    final series =
+        resolved
+            .where((r) => r.item.type == 'tv' && r.watchedEpisodesCount > 0)
+            .toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
     final seriesFav = series.where((r) => r.item.favorite).toList()
-      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
-    final films = resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
-      ..sort((a, b) => b.recency.compareTo(a.recency));
+      ..sort(
+        (a, b) => (b.item.favoritedAt ?? b.recency).compareTo(
+          a.item.favoritedAt ?? a.recency,
+        ),
+      );
+    final films =
+        resolved.where((r) => r.item.type == 'movie' && r.item.watched).toList()
+          ..sort((a, b) => b.recency.compareTo(a.recency));
     final filmsFav = films.where((r) => r.item.favorite).toList()
-      ..sort((a, b) => (b.item.favoritedAt ?? b.recency).compareTo(a.item.favoritedAt ?? a.recency));
+      ..sort(
+        (a, b) => (b.item.favoritedAt ?? b.recency).compareTo(
+          a.item.favoritedAt ?? a.recency,
+        ),
+      );
 
-    final statsSnapshot =
-        _allSettled ? _computeStatsSnapshot(resolved) : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
+    final statsSnapshot = _allSettled
+        ? _computeStatsSnapshot(resolved)
+        : _lastSnapshot ?? const _ProfileStatsSnapshot.empty();
     if (_allSettled) _lastSnapshot = statsSnapshot;
 
     String? liveBannerBackdrop;
     if (resolved.isNotEmpty) {
-      final mostRecent = resolved.reduce((a, b) => a.recency.isAfter(b.recency) ? a : b);
+      final mostRecent = resolved.reduce(
+        (a, b) => a.recency.isAfter(b.recency) ? a : b,
+      );
       liveBannerBackdrop = mostRecent.backdropPath ?? mostRecent.posterPath;
     }
     final bannerBackdrop = liveBannerBackdrop ?? statsSnapshot.bannerBackdrop;
@@ -1593,10 +1952,32 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
             ),
             const Divider(height: 33, indent: 16, endIndent: 16),
             if (_allSettled) ...[
-              _CarouselSection(key: ValueKey('series_${series.length}'), title: context.tr('profile.series'), items: series, readOnly: true),
-              _CarouselSection(key: ValueKey('seriesFav_${seriesFav.length}'), title: context.tr('profile.seriesFavorite'), items: seriesFav, showHeart: true, readOnly: true),
-              _CarouselSection(key: ValueKey('films_${films.length}'), title: context.tr('profile.films'), items: films, readOnly: true),
-              _CarouselSection(key: ValueKey('filmsFav_${filmsFav.length}'), title: context.tr('profile.filmsFavorite'), items: filmsFav, showHeart: true, readOnly: true),
+              _CarouselSection(
+                key: ValueKey('series_${series.length}'),
+                title: context.tr('profile.series'),
+                items: series,
+                readOnly: true,
+              ),
+              _CarouselSection(
+                key: ValueKey('seriesFav_${seriesFav.length}'),
+                title: context.tr('profile.seriesFavorite'),
+                items: seriesFav,
+                showHeart: true,
+                readOnly: true,
+              ),
+              _CarouselSection(
+                key: ValueKey('films_${films.length}'),
+                title: context.tr('profile.films'),
+                items: films,
+                readOnly: true,
+              ),
+              _CarouselSection(
+                key: ValueKey('filmsFav_${filmsFav.length}'),
+                title: context.tr('profile.filmsFavorite'),
+                items: filmsFav,
+                showHeart: true,
+                readOnly: true,
+              ),
             ],
             const SizedBox(height: 24),
           ],
@@ -1646,7 +2027,10 @@ class _FriendProfileHeader extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.black.withValues(alpha: 0.35), Colors.black.withValues(alpha: 0.85)],
+                        colors: [
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
                       ),
                     ),
                   ),
@@ -1691,13 +2075,23 @@ class _FriendProfileHeader extends StatelessWidget {
                       : Container(
                           color: AppColors.surfaceVariant,
                           alignment: Alignment.center,
-                          child: const Icon(Icons.person, color: AppColors.textSecondary, size: 40),
+                          child: const Icon(
+                            Icons.person,
+                            color: AppColors.textSecondary,
+                            size: 40,
+                          ),
                         ),
                 ),
               ),
               const SizedBox(width: 12),
-              Text(displayName,
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+              Text(
+                displayName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ],
           ),
         ),
