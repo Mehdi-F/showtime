@@ -22,6 +22,8 @@ class AppStrings {
       'common.retry': 'Réessayer',
       'common.loadMore': 'Charger plus',
       'common.chooseFile': 'Choisir le fichier zip',
+      'common.yes': 'Oui',
+      'common.no': 'Non',
 
       // Sort options
       'sort.lastActivity': 'Dernier visionnage',
@@ -114,6 +116,12 @@ class AppStrings {
       'settings.languageEnglish': 'Anglais',
       'settings.notifications': 'Notifications',
       'settings.notificationsDesc': 'Notifications pour les nouveaux épisodes',
+      'settings.exportLibrary': 'Exporter ma bibliothèque',
+      'settings.exportLibraryDesc': 'Génère un fichier CSV de tes séries et films',
+      'settings.exportInProgress': 'Génération du fichier…',
+      'settings.exportSuccess': 'Bibliothèque exportée',
+      'settings.exportError': "Échec de l'export. Réessaie.",
+      'settings.exportEmpty': 'Ta bibliothèque est vide.',
       'settings.clearCache': 'Vider le cache',
       'settings.clearCacheDesc': 'Supprime les données TMDB en cache',
       'settings.logout': 'Déconnexion',
@@ -123,6 +131,22 @@ class AppStrings {
       'settings.clearCacheConfirmDesc':
           'Cela supprimera les données TMDB en cache. Tu pourras les recharger.',
       'settings.cacheClear': 'Cache vidé',
+
+      // Export CSV
+      'export.type': 'Type',
+      'export.title': 'Titre',
+      'export.status': 'Statut',
+      'export.addedAt': 'Ajoutée le',
+      'export.favorite': 'Favori',
+      'export.completed': 'Terminé',
+      'export.episodesWatched': 'Épisodes vus',
+      'export.episodesTotal': 'Épisodes totaux',
+      'export.rewatches': 'Revisionnages',
+      'export.tv': 'Série',
+      'export.movie': 'Film',
+      'export.statusWatching': 'En cours',
+      'export.statusCompleted': 'Terminé',
+      'export.statusPlanToWatch': 'À voir',
 
       // Explorer
       'explorer.trending': 'Tendances',
@@ -251,6 +275,8 @@ class AppStrings {
       'common.retry': 'Retry',
       'common.loadMore': 'Load more',
       'common.chooseFile': 'Choose zip file',
+      'common.yes': 'Yes',
+      'common.no': 'No',
 
       // Sort options
       'sort.lastActivity': 'Last watched',
@@ -343,6 +369,12 @@ class AppStrings {
       'settings.languageEnglish': 'English',
       'settings.notifications': 'Notifications',
       'settings.notificationsDesc': 'Notifications for new episodes',
+      'settings.exportLibrary': 'Export my library',
+      'settings.exportLibraryDesc': 'Generates a CSV file of your shows and movies',
+      'settings.exportInProgress': 'Generating file…',
+      'settings.exportSuccess': 'Library exported',
+      'settings.exportError': 'Export failed. Try again.',
+      'settings.exportEmpty': 'Your library is empty.',
       'settings.clearCache': 'Clear cache',
       'settings.clearCacheDesc': 'Removes cached TMDB data',
       'settings.logout': 'Sign out',
@@ -352,6 +384,22 @@ class AppStrings {
       'settings.clearCacheConfirmDesc':
           'This will remove cached TMDB data. You can reload it later.',
       'settings.cacheClear': 'Cache cleared',
+
+      // Export CSV
+      'export.type': 'Type',
+      'export.title': 'Title',
+      'export.status': 'Status',
+      'export.addedAt': 'Added on',
+      'export.favorite': 'Favorite',
+      'export.completed': 'Completed',
+      'export.episodesWatched': 'Episodes watched',
+      'export.episodesTotal': 'Total episodes',
+      'export.rewatches': 'Rewatches',
+      'export.tv': 'Show',
+      'export.movie': 'Movie',
+      'export.statusWatching': 'Watching',
+      'export.statusCompleted': 'Completed',
+      'export.statusPlanToWatch': 'Plan to watch',
 
       // Explorer
       'explorer.trending': 'Trending',

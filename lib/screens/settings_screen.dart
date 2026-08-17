@@ -1,7 +1,12 @@
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/library_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/library_export_service.dart';
+import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../l10n/localization_context.dart';
 
@@ -25,6 +30,7 @@ class SettingsScreen extends StatelessWidget {
             _buildNotificationsOption(context),
           ]),
           _buildSection(context.tr('settings.data'), [
+            _buildExportTile(context),
             _buildCacheTile(context),
           ]),
           _buildSection(context.tr('settings.account'), [
@@ -147,6 +153,102 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildExportTile(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        title: Text(context.tr('settings.exportLibrary'), style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(context.tr('settings.exportLibraryDesc')),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        contentPadding: EdgeInsets.zero,
+        onTap: () => _exportLibrary(context),
+      ),
+    );
+  }
+
+  Future<void> _exportLibrary(BuildContext context) async {
+    final items = context.read<LibraryProvider>().items;
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('settings.exportEmpty'))));
+      return;
+    }
+    final tmdb = context.read<TmdbService>();
+    final header = [
+      context.tr('export.type'),
+      context.tr('export.title'),
+      context.tr('export.status'),
+      context.tr('export.addedAt'),
+      context.tr('export.favorite'),
+      context.tr('export.completed'),
+      context.tr('export.episodesWatched'),
+      context.tr('export.episodesTotal'),
+      context.tr('export.rewatches'),
+    ];
+    final tvLabel = context.tr('export.tv');
+    final movieLabel = context.tr('export.movie');
+    final yes = context.tr('common.yes');
+    final no = context.tr('common.no');
+    final watchingLabel = context.tr('export.statusWatching');
+    final completedLabel = context.tr('export.statusCompleted');
+    final planToWatchLabel = context.tr('export.statusPlanToWatch');
+    String statusLabel(String status) => switch (status) {
+          'watching' => watchingLabel,
+          'completed' => completedLabel,
+          'plan_to_watch' => planToWatchLabel,
+          _ => status,
+        };
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Expanded(child: Text(context.tr('settings.exportInProgress'))),
+          ],
+        ),
+      ),
+    );
+
+    List<int> bytes;
+    try {
+      bytes = await buildLibraryCsvBytes(
+        items: items,
+        tmdb: tmdb,
+        header: header,
+        tvTypeLabel: tvLabel,
+        movieTypeLabel: movieLabel,
+        statusLabel: statusLabel,
+        yesNo: (v) => v ? yes : no,
+      );
+    } catch (_) {
+      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('settings.exportError'))));
+      }
+      return;
+    }
+    if (context.mounted) Navigator.of(context).pop();
+
+    final fileName = 'showtime_export_${DateTime.now().toIso8601String().split('T').first}.csv';
+    try {
+      final path = await FilePicker.platform.saveFile(
+        fileName: fileName,
+        bytes: Uint8List.fromList(bytes),
+      );
+      if (context.mounted && path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('settings.exportSuccess'))));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('settings.exportError'))));
+      }
+    }
   }
 
   Widget _buildCacheTile(BuildContext context) {
