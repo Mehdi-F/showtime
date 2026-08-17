@@ -289,6 +289,31 @@ class _ProfileBodyState extends State<_ProfileBody> {
     super.initState();
     _loadCachedStats();
     _maybeResolveInitial();
+    _maybeAutoShowRecap();
+  }
+
+  // Surfaces the recap on its own, like other "wrapped" features do, once
+  // per year, during the Dec 26 – Jan 31 window (i.e. once the year being
+  // recapped is essentially or fully over).
+  int? get _autoRecapYear {
+    final now = DateTime.now();
+    if (now.month == 12 && now.day >= 26) return now.year;
+    if (now.month == 1) return now.year - 1;
+    return null;
+  }
+
+  Future<void> _maybeAutoShowRecap() async {
+    final year = _autoRecapYear;
+    if (year == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'recap_shown_$year';
+    if (prefs.getBool(key) == true) return;
+    await prefs.setBool(key, true);
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(appRoute(builder: (_) => YearRecapScreen(year: year)));
+    });
   }
 
   void _maybeResolveInitial() {
@@ -608,8 +633,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _RecapCard(
+                year: currentRecapYear(),
                 onTap: () => Navigator.of(context).push(appRoute(
-                  builder: (_) => YearRecapScreen(year: DateTime.now().year),
+                  builder: (_) => YearRecapScreen(year: currentRecapYear()),
                 )),
               ),
             ),
@@ -930,9 +956,10 @@ class _SurpriseMeCard extends StatelessWidget {
 }
 
 class _RecapCard extends StatelessWidget {
+  final int year;
   final VoidCallback onTap;
 
-  const _RecapCard({required this.onTap});
+  const _RecapCard({required this.year, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -955,7 +982,7 @@ class _RecapCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    context.tr('recap.cardTitle').replaceAll('{year}', '${DateTime.now().year}'),
+                    context.tr('recap.cardTitle').replaceAll('{year}', '$year'),
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   Text(context.tr('recap.cardSubtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
@@ -1024,9 +1051,14 @@ class _StatColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          '$value',
-          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+        TweenAnimationBuilder<int>(
+          tween: IntTween(begin: 0, end: value),
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeOutCubic,
+          builder: (context, animatedValue, child) => Text(
+            '$animatedValue',
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+          ),
         ),
         const SizedBox(height: 4),
         Text(

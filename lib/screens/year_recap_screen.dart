@@ -6,6 +6,14 @@ import '../providers/library_provider.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 
+/// The year to show by default: the previous year for the whole of January
+/// (it just ended and is the more interesting recap), the current year
+/// otherwise.
+int currentRecapYear() {
+  final now = DateTime.now();
+  return now.month == 1 ? now.year - 1 : now.year;
+}
+
 class YearRecapScreen extends StatefulWidget {
   final int year;
 
