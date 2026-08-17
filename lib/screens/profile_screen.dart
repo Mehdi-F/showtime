@@ -27,6 +27,7 @@ import '../widgets/library_filter_sheet.dart';
 import '../widgets/poster_hero_tag.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
+import '../widgets/surprise_me_sheet.dart';
 import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
@@ -596,6 +597,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
               filmsCount: statsSnapshot.filmsCount,
               episodesWatched: statsSnapshot.episodesWatched,
             ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _SurpriseMeCard(onTap: () => showSurpriseMeSheet(context)),
+            ),
             const Divider(height: 33, indent: 16, endIndent: 16),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -870,6 +876,44 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SurpriseMeCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _SurpriseMeCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.casino_outlined, color: AppColors.accent, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(context.tr('surprise.cardTitle'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(context.tr('surprise.cardSubtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
     );
   }
 }

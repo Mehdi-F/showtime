@@ -132,6 +132,15 @@ class AppStrings {
           'Cela supprimera les données TMDB en cache. Tu pourras les recharger.',
       'settings.cacheClear': 'Cache vidé',
 
+      // Surprise-moi
+      'surprise.cardTitle': 'Surprise-moi ce soir',
+      'surprise.cardSubtitle': 'On choisit pour toi',
+      'surprise.title': 'Ce soir, tu regardes...',
+      'surprise.watch': "C'est parti",
+      'surprise.reroll': 'Une autre suggestion',
+      'surprise.empty': 'Rien à te proposer, tout est déjà vu !',
+      'surprise.notFound': 'Impossible de charger la suggestion.',
+
       // Export CSV
       'export.type': 'Type',
       'export.title': 'Titre',
@@ -384,6 +393,15 @@ class AppStrings {
       'settings.clearCacheConfirmDesc':
           'This will remove cached TMDB data. You can reload it later.',
       'settings.cacheClear': 'Cache cleared',
+
+      // Surprise-moi
+      'surprise.cardTitle': 'Surprise me tonight',
+      'surprise.cardSubtitle': "We'll pick for you",
+      'surprise.title': 'Tonight, you\'re watching...',
+      'surprise.watch': "Let's go",
+      'surprise.reroll': 'Another suggestion',
+      'surprise.empty': "Nothing left to suggest, you've watched it all!",
+      'surprise.notFound': 'Could not load the suggestion.',
 
       // Export CSV
       'export.type': 'Type',
