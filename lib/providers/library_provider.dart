@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/library_item.dart';
+import '../services/home_widget_service.dart';
 import '../services/library_service.dart';
 
 class LibraryProvider extends ChangeNotifier {
@@ -30,6 +31,7 @@ class LibraryProvider extends ChangeNotifier {
       _items = items;
       _loaded = true;
       notifyListeners();
+      updateLibraryWidget(items);
     });
   }
 
