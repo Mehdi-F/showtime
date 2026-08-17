@@ -34,6 +34,7 @@ import 'list_detail_screen.dart';
 import 'settings_screen.dart';
 import 'show_detail_screen.dart';
 import 'movie_detail_screen.dart';
+import 'year_recap_screen.dart';
 
 Future<_ResolvedItem> _resolveItem(TmdbService tmdb, LibraryItem item) async {
   if (item.type == 'tv') {
@@ -602,6 +603,15 @@ class _ProfileBodyState extends State<_ProfileBody> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _SurpriseMeCard(onTap: () => showSurpriseMeSheet(context)),
             ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _RecapCard(
+                onTap: () => Navigator.of(context).push(appRoute(
+                  builder: (_) => YearRecapScreen(year: DateTime.now().year),
+                )),
+              ),
+            ),
             const Divider(height: 33, indent: 16, endIndent: 16),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -907,6 +917,47 @@ class _SurpriseMeCard extends StatelessWidget {
                 children: [
                   Text(context.tr('surprise.cardTitle'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                   Text(context.tr('surprise.cardSubtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecapCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _RecapCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: AppColors.accent, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.tr('recap.cardTitle').replaceAll('{year}', '${DateTime.now().year}'),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                  Text(context.tr('recap.cardSubtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                 ],
               ),
             ),

@@ -141,6 +141,21 @@ class AppStrings {
       'surprise.empty': 'Rien à te proposer, tout est déjà vu !',
       'surprise.notFound': 'Impossible de charger la suggestion.',
 
+      // Récap annuel
+      'recap.cardTitle': 'Récap {year}',
+      'recap.cardSubtitle': 'Ton année en un coup d\'œil',
+      'recap.introTitle': 'Ton année {year} sur Showtime',
+      'recap.episodesWatched': 'épisodes regardés',
+      'recap.moviesWatched': 'films regardés',
+      'recap.watchTimeHours': 'heures passées devant l\'écran',
+      'recap.watchTimeDays': 'jours passés devant l\'écran',
+      'recap.topShow': 'Ta série de l\'année',
+      'recap.showsCompleted': 'séries terminées',
+      'recap.itemsAdded': 'ajoutés à ta bibliothèque',
+      'recap.outro': 'À l\'année prochaine !',
+      'recap.error': 'Impossible de générer le récap.',
+      'recap.empty': 'Pas assez d\'activité cette année pour un récap.',
+
       // Export CSV
       'export.type': 'Type',
       'export.title': 'Titre',
@@ -402,6 +417,21 @@ class AppStrings {
       'surprise.reroll': 'Another suggestion',
       'surprise.empty': "Nothing left to suggest, you've watched it all!",
       'surprise.notFound': 'Could not load the suggestion.',
+
+      // Year recap
+      'recap.cardTitle': '{year} Recap',
+      'recap.cardSubtitle': 'Your year at a glance',
+      'recap.introTitle': 'Your {year} on Showtime',
+      'recap.episodesWatched': 'episodes watched',
+      'recap.moviesWatched': 'movies watched',
+      'recap.watchTimeHours': 'hours spent watching',
+      'recap.watchTimeDays': 'days spent watching',
+      'recap.topShow': 'Your show of the year',
+      'recap.showsCompleted': 'shows completed',
+      'recap.itemsAdded': 'added to your library',
+      'recap.outro': 'See you next year!',
+      'recap.error': 'Could not generate the recap.',
+      'recap.empty': 'Not enough activity this year for a recap.',
 
       // Export CSV
       'export.type': 'Type',
