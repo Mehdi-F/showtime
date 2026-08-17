@@ -18,6 +18,9 @@ class AppConstants {
   static const maxCastMembers = 12;
   static const confettiDuration = Duration(seconds: 3);
 
+  // Notifications
+  static const episodeReminderHour = 19; // local time, evening before air date
+
   // Localization
   static const supportedLanguages = {'fr', 'en'};
   static const defaultLanguage = 'fr';

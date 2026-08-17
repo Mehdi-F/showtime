@@ -11,6 +11,7 @@ import '../models/tmdb_models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/library_provider.dart';
 import '../services/library_service.dart';
+import '../services/notification_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_bar.dart';
@@ -61,6 +62,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Map<String, bool> _watchedEpisodes = {};
   Map<String, int> _rewatchCounts = {};
   bool _favorite = false;
+  bool _notificationsEnabled = false;
   late TabController _tabController;
   late final ConfettiController _confettiController = ConfettiController(duration: AppConstants.confettiDuration);
 
@@ -79,6 +81,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     _watchedEpisodes = Map.of(widget.libraryItem?.watchedEpisodes ?? {});
     _rewatchCounts = Map.of(widget.libraryItem?.episodeRewatchCounts ?? {});
     _favorite = widget.libraryItem?.favorite ?? false;
+    _notificationsEnabled = widget.libraryItem?.notificationsEnabled ?? false;
     _tabController = TabController(length: 2, vsync: this);
     final tmdb = context.read<TmdbService>();
     _watchProvidersFuture = tmdb.getTvWatchProviders(widget.tmdbId);
@@ -157,8 +160,62 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             tmdbId: item.tmdbId,
             type: 'tv',
           );
+      await NotificationService.instance.cancelShowReminder(item.tmdbId);
       if (mounted) Navigator.of(context).maybePop();
     } catch (_) {
+      _showSaveError();
+    }
+  }
+
+  Future<void> _syncNotification() async {
+    final item = _libraryItem;
+    final details = _details;
+    if (item == null || details == null || !_notificationsEnabled) return;
+    final airDate = _nextEpisode?.airDate;
+    if (airDate == null) {
+      await NotificationService.instance.cancelShowReminder(item.tmdbId);
+      return;
+    }
+    await NotificationService.instance.scheduleShowReminder(
+      tmdbId: item.tmdbId,
+      showName: details.name,
+      episodeAirDate: airDate,
+    );
+  }
+
+  Future<void> _toggleNotifications() async {
+    final newValue = !_notificationsEnabled;
+    if (newValue) {
+      final granted = await NotificationService.instance.requestPermission();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Autorise les notifications dans les réglages pour recevoir des rappels.')),
+          );
+        }
+        return;
+      }
+    }
+    setState(() => _notificationsEnabled = newValue);
+    final item = await _ensureFollowed();
+    if (item == null) {
+      if (mounted) setState(() => _notificationsEnabled = !newValue);
+      return;
+    }
+    final uid = context.read<AuthProvider>().user!.uid;
+    try {
+      await context.read<LibraryService>().setNotificationsEnabled(
+            uid: uid,
+            tmdbId: item.tmdbId,
+            enabled: newValue,
+          );
+      if (newValue) {
+        await _syncNotification();
+      } else {
+        await NotificationService.instance.cancelShowReminder(item.tmdbId);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _notificationsEnabled = !newValue);
       _showSaveError();
     }
   }
@@ -192,6 +249,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     final defaultSeason =
         next?.seasonNumber ?? (details.seasons.isNotEmpty ? details.seasons.first.seasonNumber : null);
     setState(() => _expandedSeasons = defaultSeason != null ? {defaultSeason} : {});
+    await _syncNotification();
   }
 
   Future<void> _refresh() async {
@@ -1086,8 +1144,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 seasonCount: details.seasons.where((s) => s.seasonNumber >= 1).length,
                 progress: _totalMainEpisodes > 0 ? _totalWatchedMain / _totalMainEpisodes : null,
                 favorite: _favorite,
+                notificationsEnabled: _notificationsEnabled,
                 followed: _libraryItem != null,
                 onToggleFavorite: _toggleFavorite,
+                onToggleNotifications: _toggleNotifications,
                 onUnfollow: _unfollow,
                 onAddToList: () => showAddToListSheet(
                   context,
@@ -1145,8 +1205,10 @@ class _ShowBanner extends StatelessWidget {
   final int seasonCount;
   final double? progress;
   final bool favorite;
+  final bool notificationsEnabled;
   final bool followed;
   final VoidCallback onToggleFavorite;
+  final VoidCallback onToggleNotifications;
   final VoidCallback onUnfollow;
   final VoidCallback onAddToList;
 
@@ -1158,8 +1220,10 @@ class _ShowBanner extends StatelessWidget {
     required this.seasonCount,
     required this.progress,
     required this.favorite,
+    required this.notificationsEnabled,
     required this.followed,
     required this.onToggleFavorite,
+    required this.onToggleNotifications,
     required this.onUnfollow,
     required this.onAddToList,
   });
@@ -1216,6 +1280,19 @@ class _ShowBanner extends StatelessWidget {
                             ),
                           ),
                           onPressed: onToggleFavorite,
+                        ),
+                      if (followed)
+                        IconButton(
+                          icon: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                            child: Icon(
+                              notificationsEnabled ? Icons.notifications_active : Icons.notifications_none,
+                              key: ValueKey(notificationsEnabled),
+                              color: notificationsEnabled ? AppColors.accent : Colors.white,
+                            ),
+                          ),
+                          onPressed: onToggleNotifications,
                         ),
                       if (followed)
                         PopupMenuButton<void>(

@@ -16,6 +16,7 @@ class LibraryItem {
   final Map<String, int> episodeRewatchCounts; // tv only, key = "s{season}e{episode}"
   final Map<String, DateTime> episodeWatchedAt; // tv only, key = "s{season}e{episode}"
   final int movieRewatchCount; // movie only
+  final bool notificationsEnabled; // tv only, reminder the evening before next episode airs
 
   LibraryItem({
     required this.docId,
@@ -33,9 +34,10 @@ class LibraryItem {
     this.episodeRewatchCounts = const {},
     this.episodeWatchedAt = const {},
     this.movieRewatchCount = 0,
+    this.notificationsEnabled = false,
   });
 
-  LibraryItem copyWith({bool? skipGapPrompt}) => LibraryItem(
+  LibraryItem copyWith({bool? skipGapPrompt, bool? notificationsEnabled}) => LibraryItem(
         docId: docId,
         tmdbId: tmdbId,
         type: type,
@@ -51,6 +53,7 @@ class LibraryItem {
         episodeRewatchCounts: episodeRewatchCounts,
         episodeWatchedAt: episodeWatchedAt,
         movieRewatchCount: movieRewatchCount,
+        notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       );
 
   static String buildDocId({required int tmdbId, required String type}) => '${type}_$tmdbId';
@@ -77,6 +80,7 @@ class LibraryItem {
           return MapEntry(k as String, parsed ?? DateTime.now());
         }),
         movieRewatchCount: (map['movieRewatchCount'] as num?)?.toInt() ?? 0,
+        notificationsEnabled: map['notificationsEnabled'] as bool? ?? false,
       );
     } catch (e) {
       throw FormatException('Invalid library item format for docId=$docId: $e');
@@ -98,5 +102,6 @@ class LibraryItem {
         'episodeRewatchCounts': episodeRewatchCounts,
         'episodeWatchedAt': episodeWatchedAt.map((k, v) => MapEntry(k, v.toIso8601String())),
         'movieRewatchCount': movieRewatchCount,
+        'notificationsEnabled': notificationsEnabled,
       };
 }

@@ -9,6 +9,7 @@ import 'services/library_service.dart';
 import 'services/link_service.dart';
 import 'services/lists_service.dart';
 import 'services/tmdb_service.dart';
+import 'services/notification_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/library_provider.dart';
@@ -21,6 +22,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+  await NotificationService.instance.init();
   runApp(const ShowtimeApp());
 }
 
@@ -51,6 +53,7 @@ class ShowtimeApp extends StatelessWidget {
           }
 
           return MaterialApp(
+            navigatorKey: NotificationService.instance.navigatorKey,
             title: 'Showtime',
             theme: buildAppTheme(isDark: false),
             darkTheme: buildAppTheme(isDark: true),

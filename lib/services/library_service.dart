@@ -173,6 +173,15 @@ class LibraryService {
     return _libraryRef(uid).doc(docId).update({'skipGapPrompt': skip});
   }
 
+  Future<void> setNotificationsEnabled({
+    required String uid,
+    required int tmdbId,
+    required bool enabled,
+  }) {
+    final docId = LibraryItem.buildDocId(tmdbId: tmdbId, type: 'tv');
+    return _libraryRef(uid).doc(docId).update({'notificationsEnabled': enabled});
+  }
+
   Future<void> toggleFavorite({
     required String uid,
     required int tmdbId,
