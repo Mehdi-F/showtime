@@ -141,6 +141,16 @@ class AppStrings {
       'surprise.empty': 'Rien à te proposer, tout est déjà vu !',
       'surprise.notFound': 'Impossible de charger la suggestion.',
 
+      // Comparaison amis
+      'compare.cardTitle': 'Comparer nos bibliothèques',
+      'compare.title': 'Comparaison',
+      'compare.you': 'Toi',
+      'compare.episodes': 'Épisodes vus',
+      'compare.movies': 'Films vus',
+      'compare.commonTitles': 'EN COMMUN',
+      'compare.noCommon': 'Aucune série ou film en commun pour le moment.',
+      'compare.error': 'Impossible de charger la comparaison.',
+
       // Récap annuel
       'recap.cardTitle': 'Récap {year}',
       'recap.cardSubtitle': 'Ton année en un coup d\'œil',
@@ -417,6 +427,16 @@ class AppStrings {
       'surprise.reroll': 'Another suggestion',
       'surprise.empty': "Nothing left to suggest, you've watched it all!",
       'surprise.notFound': 'Could not load the suggestion.',
+
+      // Friend comparison
+      'compare.cardTitle': 'Compare our libraries',
+      'compare.title': 'Comparison',
+      'compare.you': 'You',
+      'compare.episodes': 'Episodes watched',
+      'compare.movies': 'Movies watched',
+      'compare.commonTitles': 'IN COMMON',
+      'compare.noCommon': 'No shared shows or movies yet.',
+      'compare.error': 'Could not load the comparison.',
 
       // Year recap
       'recap.cardTitle': '{year} Recap',

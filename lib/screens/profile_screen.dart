@@ -28,6 +28,7 @@ import '../widgets/poster_hero_tag.dart';
 import '../widgets/scrollable_center.dart';
 import '../widgets/skeletons.dart';
 import '../widgets/surprise_me_sheet.dart';
+import 'friend_comparison_screen.dart';
 import 'friends_screen.dart';
 import 'import_tvtime_screen.dart';
 import 'list_detail_screen.dart';
@@ -2044,6 +2045,19 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               seriesCount: statsSnapshot.seriesCount,
               filmsCount: statsSnapshot.filmsCount,
               episodesWatched: statsSnapshot.episodesWatched,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(appRoute(
+                    builder: (_) => FriendComparisonScreen(friendUid: widget.friendUid, friendName: widget.displayName),
+                  )),
+                  icon: const Icon(Icons.bar_chart, size: 18),
+                  label: Text(context.tr('compare.cardTitle')),
+                ),
+              ),
             ),
             const Divider(height: 33, indent: 16, endIndent: 16),
             if (_allSettled) ...[
