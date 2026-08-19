@@ -14,6 +14,13 @@ int currentRecapYear() {
   return now.month == 1 ? now.year - 1 : now.year;
 }
 
+/// The window during which the recap is relevant enough to surface on the
+/// profile screen — same Dec 26 - Jan 31 range as the auto-popup.
+bool isRecapSeason() {
+  final now = DateTime.now();
+  return (now.month == 12 && now.day >= 26) || now.month == 1;
+}
+
 class YearRecapScreen extends StatefulWidget {
   final int year;
 

@@ -295,12 +295,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
   // Surfaces the recap on its own, like other "wrapped" features do, once
   // per year, during the Dec 26 – Jan 31 window (i.e. once the year being
   // recapped is essentially or fully over).
-  int? get _autoRecapYear {
-    final now = DateTime.now();
-    if (now.month == 12 && now.day >= 26) return now.year;
-    if (now.month == 1) return now.year - 1;
-    return null;
-  }
+  int? get _autoRecapYear => isRecapSeason() ? currentRecapYear() : null;
 
   Future<void> _maybeAutoShowRecap() async {
     final year = _autoRecapYear;
@@ -629,16 +624,18 @@ class _ProfileBodyState extends State<_ProfileBody> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _SurpriseMeCard(onTap: () => showSurpriseMeSheet(context)),
             ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _RecapCard(
-                year: currentRecapYear(),
-                onTap: () => Navigator.of(context).push(appRoute(
-                  builder: (_) => YearRecapScreen(year: currentRecapYear()),
-                )),
+            if (isRecapSeason()) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _RecapCard(
+                  year: currentRecapYear(),
+                  onTap: () => Navigator.of(context).push(appRoute(
+                    builder: (_) => YearRecapScreen(year: currentRecapYear()),
+                  )),
+                ),
               ),
-            ),
+            ],
             const Divider(height: 33, indent: 16, endIndent: 16),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
