@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import '../config/tmdb_config.dart';
 import '../config/constants.dart';
+import '../l10n/localization_context.dart';
 import '../utils/concurrency.dart';
 import '../logic/up_next.dart';
 import '../models/library_item.dart';
@@ -1301,11 +1302,11 @@ class _ShowBanner extends StatelessWidget {
                           itemBuilder: (context) => [
                             PopupMenuItem(
                               onTap: onAddToList,
-                              child: const Text('Ajouter à une liste'),
+                              child: Text(context.tr('media.addToList')),
                             ),
                             PopupMenuItem(
                               onTap: onUnfollow,
-                              child: const Text('Remove from Library'),
+                              child: Text(context.tr('media.removeFromLibrary')),
                             ),
                           ],
                         ),
