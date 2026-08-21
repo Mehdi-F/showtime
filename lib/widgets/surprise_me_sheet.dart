@@ -53,22 +53,18 @@ class _SurpriseSheetState extends State<_SurpriseSheet> {
     _buildPool();
   }
 
-  /// item.status never actually transitions to "completed" anywhere in the
-  /// app, so the pool has to be built from each title's real watch progress
-  /// instead of trusting that field — otherwise already-finished movies and
-  /// fully-watched shows keep showing up here. Movies expose an accurate
-  /// `watched` flag directly; shows need their season episode counts, which
-  /// the single getTvDetails call already returns (no per-season fetch).
+  /// Surprise-me is meant to surface something untouched, not just
+  /// something unfinished — so it excludes anything with any watch progress
+  /// at all (any watched episode, or a watched movie), not only titles
+  /// that are already fully finished.
   Future<void> _buildPool() async {
     final candidates = <_Candidate>[];
     await forEachBounded(widget.items, 8, (item) async {
       try {
         if (item.type == 'tv') {
+          if (item.watchedEpisodes.values.any((w) => w)) return;
           final details = await widget.tmdb.getTvDetails(item.tmdbId);
-          final total = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
-          final watched = item.watchedEpisodes.values.where((w) => w).length;
-          final finished = total > 0 && watched >= total;
-          if (!finished) candidates.add(_Candidate(item: item, title: details.name, posterPath: details.posterPath));
+          candidates.add(_Candidate(item: item, title: details.name, posterPath: details.posterPath));
         } else {
           if (item.watched) return;
           final details = await widget.tmdb.getMovieDetails(item.tmdbId);
