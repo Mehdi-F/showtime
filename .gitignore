@@ -1,4 +1,6 @@
 .superpowers/
+.claude/
+docs/superpowers/
 graphify-out/
 
 # Contains the real allowlisted emails; deployed to Firebase directly via
