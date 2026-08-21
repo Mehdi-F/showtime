@@ -10,108 +10,100 @@ import '../screens/movie_detail_screen.dart';
 import '../screens/show_detail_screen.dart';
 import '../services/tmdb_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/concurrency.dart';
 import 'app_page_route.dart';
 
-/// Random pick from the not-yet-completed part of the library — favorites
-/// count twice in the pool so they surface more often without being the
-/// only thing suggested.
-List<LibraryItem> _weightedPool(List<LibraryItem> items) {
-  final candidates = items.where((i) => i.status != 'completed').toList();
-  return [
-    ...candidates,
-    ...candidates.where((i) => i.favorite),
-  ];
+class _Candidate {
+  final LibraryItem item;
+  final String? title;
+  final String? posterPath;
+
+  _Candidate({required this.item, required this.title, required this.posterPath});
 }
 
 void showSurpriseMeSheet(BuildContext context) {
   final items = context.read<LibraryProvider>().items;
-  final pool = _weightedPool(items);
-  if (pool.isEmpty) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(context.tr('surprise.empty'))));
-    return;
-  }
   showModalBottomSheet(
     context: context,
     backgroundColor: AppColors.surface,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) => _SurpriseSheet(pool: pool, tmdb: context.read<TmdbService>()),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (_) => _SurpriseSheet(items: items, tmdb: context.read<TmdbService>()),
   );
 }
 
 class _SurpriseSheet extends StatefulWidget {
-  final List<LibraryItem> pool;
+  final List<LibraryItem> items;
   final TmdbService tmdb;
 
-  const _SurpriseSheet({required this.pool, required this.tmdb});
+  const _SurpriseSheet({required this.items, required this.tmdb});
 
   @override
   State<_SurpriseSheet> createState() => _SurpriseSheetState();
 }
 
 class _SurpriseSheetState extends State<_SurpriseSheet> {
-  late LibraryItem _pick;
-  String? _title;
-  String? _posterPath;
+  List<_Candidate> _pool = [];
+  _Candidate? _pick;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _pick = _randomPick();
-    _resolve();
+    _buildPool();
   }
 
-  LibraryItem _randomPick({LibraryItem? exclude}) {
-    final candidates =
-        exclude == null || widget.pool.length == 1 ? widget.pool : widget.pool.where((i) => i.docId != exclude.docId).toList();
-    return candidates[Random().nextInt(candidates.length)];
-  }
-
-  Future<void> _resolve() async {
-    setState(() => _loading = true);
-    try {
-      if (_pick.type == 'tv') {
-        final details = await widget.tmdb.getTvDetails(_pick.tmdbId);
-        if (!mounted) return;
-        setState(() {
-          _title = details.name;
-          _posterPath = details.posterPath;
-        });
-      } else {
-        final details = await widget.tmdb.getMovieDetails(_pick.tmdbId);
-        if (!mounted) return;
-        setState(() {
-          _title = details.title;
-          _posterPath = details.posterPath;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _title = null);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+  /// item.status never actually transitions to "completed" anywhere in the
+  /// app, so the pool has to be built from each title's real watch progress
+  /// instead of trusting that field — otherwise already-finished movies and
+  /// fully-watched shows keep showing up here. Movies expose an accurate
+  /// `watched` flag directly; shows need their season episode counts, which
+  /// the single getTvDetails call already returns (no per-season fetch).
+  Future<void> _buildPool() async {
+    final candidates = <_Candidate>[];
+    await forEachBounded(widget.items, 8, (item) async {
+      try {
+        if (item.type == 'tv') {
+          final details = await widget.tmdb.getTvDetails(item.tmdbId);
+          final total = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
+          final watched = item.watchedEpisodes.values.where((w) => w).length;
+          final finished = total > 0 && watched >= total;
+          if (!finished) candidates.add(_Candidate(item: item, title: details.name, posterPath: details.posterPath));
+        } else {
+          if (item.watched) return;
+          final details = await widget.tmdb.getMovieDetails(item.tmdbId);
+          candidates.add(_Candidate(item: item, title: details.title, posterPath: details.posterPath));
+        }
+      } catch (_) {}
+    });
+    if (!mounted) return;
+    final pool = [...candidates, ...candidates.where((c) => c.item.favorite)];
+    setState(() {
+      _pool = pool;
+      _pick = pool.isEmpty ? null : pool[Random().nextInt(pool.length)];
+      _loading = false;
+    });
   }
 
   void _reroll() {
-    setState(() => _pick = _randomPick(exclude: _pick));
-    _resolve();
+    if (_pool.length <= 1) return;
+    final current = _pick;
+    final candidates = current == null ? _pool : _pool.where((c) => c.item.docId != current.item.docId).toList();
+    setState(() => _pick = candidates[Random().nextInt(candidates.length)]);
   }
 
   void _watch() {
+    final pick = _pick;
+    if (pick == null) return;
     Navigator.of(context).pop();
     Navigator.of(context).push(appRoute(
-      builder: (_) => _pick.type == 'tv'
-          ? ShowDetailScreen(libraryItem: _pick)
-          : MovieDetailScreen(libraryItem: _pick),
+      builder: (_) => pick.item.type == 'tv' ? ShowDetailScreen(libraryItem: pick.item) : MovieDetailScreen(libraryItem: pick.item),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
+    final pick = _pick;
     return SafeArea(
       top: false,
       child: Padding(
@@ -119,56 +111,53 @@ class _SurpriseSheetState extends State<_SurpriseSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              context.tr('surprise.title'),
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-            ),
+            Text(context.tr('surprise.title'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             const SizedBox(height: 20),
-            SizedBox(
-              height: 220,
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _posterPath != null
-                          ? CachedNetworkImage(
-                              imageUrl: '${TmdbConfig.imageBaseUrlLarge}$_posterPath',
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: AppColors.surfaceVariant,
-                              alignment: Alignment.center,
-                              child: Icon(
-                                _pick.type == 'tv' ? Icons.tv : Icons.movie,
-                                color: AppColors.textSecondary,
-                                size: 48,
-                              ),
-                            ),
-                    ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _loading ? '' : (_title ?? context.tr('surprise.notFound')),
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (_loading)
+              const SizedBox(height: 220, child: Center(child: CircularProgressIndicator()))
+            else if (pick == null)
+              SizedBox(
+                height: 120,
+                child: Center(
+                  child: Text(context.tr('surprise.empty'), style: const TextStyle(color: AppColors.textSecondary)),
+                ),
+              )
+            else ...[
+              SizedBox(
+                height: 220,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: pick.posterPath != null
+                      ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlLarge}${pick.posterPath}', fit: BoxFit.cover)
+                      : Container(
+                          color: AppColors.surfaceVariant,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            pick.item.type == 'tv' ? Icons.tv : Icons.movie,
+                            color: AppColors.textSecondary,
+                            size: 48,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                pick.title ?? context.tr('surprise.notFound'),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
-                onPressed: _loading ? null : _watch,
-                child: Text(context.tr('surprise.watch')),
-              ),
+              child: FilledButton(onPressed: pick == null ? null : _watch, child: Text(context.tr('surprise.watch'))),
             ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: TextButton(
-                onPressed: _loading ? null : _reroll,
-                child: Text(context.tr('surprise.reroll')),
-              ),
+              child: TextButton(onPressed: pick == null || _loading ? null : _reroll, child: Text(context.tr('surprise.reroll'))),
             ),
           ],
         ),
