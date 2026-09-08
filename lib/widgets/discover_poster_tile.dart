@@ -80,10 +80,10 @@ class DiscoverPosterTile extends StatelessWidget {
             height: height,
           )
         : Container(
-            color: AppColors.surfaceVariant,
+            color: context.colorSurfaceVariant,
             width: width,
             height: height,
-            child: Icon(media.type == 'tv' ? Icons.tv : Icons.movie, color: AppColors.textSecondary),
+            child: Icon(media.type == 'tv' ? Icons.tv : Icons.movie, color: context.colorTextSecondary),
           );
 
     final poster = ClipRRect(

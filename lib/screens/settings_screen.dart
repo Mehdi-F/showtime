@@ -15,6 +15,11 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // context.tr() reads the language without subscribing, and a pushed
+    // route isn't rebuilt when MaterialApp rebuilds — so without this the
+    // whole page kept its old-language strings until you left and came
+    // back. Watching here re-runs build() on every settings change.
+    context.watch<SettingsProvider>();
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('settings.title')),
@@ -22,18 +27,18 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          _buildSection(context.tr('settings.appearance'), [
+          _buildSection(context, context.tr('settings.appearance'), [
             _buildThemeOption(context),
           ]),
-          _buildSection(context.tr('settings.general'), [
+          _buildSection(context, context.tr('settings.general'), [
             _buildLanguageOption(context),
             _buildNotificationsOption(context),
           ]),
-          _buildSection(context.tr('settings.data'), [
+          _buildSection(context, context.tr('settings.data'), [
             _buildExportTile(context),
             _buildCacheTile(context),
           ]),
-          _buildSection(context.tr('settings.account'), [
+          _buildSection(context, context.tr('settings.account'), [
             _buildLogoutTile(context),
           ]),
         ],
@@ -41,7 +46,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(String title, List<Widget> children) {
+  Widget _buildSection(BuildContext context, String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -49,8 +54,8 @@ class SettingsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           child: Text(
             title.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: context.colorTextSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
@@ -97,10 +102,10 @@ class SettingsScreen extends StatelessWidget {
       onSelected: (_) => context.read<SettingsProvider>().setThemeMode(mode),
       selectedColor: AppColors.accent,
       labelStyle: TextStyle(
-        color: selected ? Colors.black : AppColors.textPrimary,
+        color: selected ? Colors.black : context.colorTextPrimary,
         fontWeight: FontWeight.w700,
       ),
-      backgroundColor: AppColors.surfaceVariant,
+      backgroundColor: context.colorSurfaceVariant,
       side: BorderSide.none,
     );
   }
@@ -128,10 +133,10 @@ class SettingsScreen extends StatelessWidget {
               decoration: InputDecoration(
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 filled: true,
-                fillColor: AppColors.surfaceVariant,
+                fillColor: context.colorSurfaceVariant,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: context.colorTextPrimary),
             ),
           ],
         ),
@@ -161,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
       child: ListTile(
         title: Text(context.tr('settings.exportLibrary'), style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(context.tr('settings.exportLibraryDesc')),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        trailing: Icon(Icons.chevron_right, color: context.colorTextSecondary),
         contentPadding: EdgeInsets.zero,
         onTap: () => _exportLibrary(context),
       ),
@@ -204,7 +209,7 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         content: Row(
           children: [
             const CircularProgressIndicator(),
@@ -257,7 +262,7 @@ class SettingsScreen extends StatelessWidget {
       child: ListTile(
         title: Text(context.tr('settings.clearCache'), style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(context.tr('settings.clearCacheDesc')),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        trailing: Icon(Icons.chevron_right, color: context.colorTextSecondary),
         contentPadding: EdgeInsets.zero,
         onTap: () => _showClearCacheDialog(context),
       ),
@@ -279,7 +284,7 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('settings.clearCacheConfirm')),
         content: Text(context.tr('settings.clearCacheConfirmDesc')),
         actions: [
@@ -302,7 +307,7 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('settings.logoutConfirm')),
         content: Text(context.tr('settings.logoutDesc')),
         actions: [

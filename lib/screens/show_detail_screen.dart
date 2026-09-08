@@ -311,13 +311,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     return showDialog<_RewatchChoice>(
       context: context,
       builder: (context) => SimpleDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: const Text('Marquer comme...'),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(_RewatchChoice.notWatched),
-            child: const Row(children: [
-              Icon(Icons.visibility_off_outlined, color: AppColors.textSecondary),
+            child: Row(children: [
+              Icon(Icons.visibility_off_outlined, color: context.colorTextSecondary),
               SizedBox(width: 12),
               Text('Pas vue'),
             ]),
@@ -333,8 +333,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           if (showWatchedOnce)
             SimpleDialogOption(
               onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
-              child: const Row(children: [
-                Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+              child: Row(children: [
+                Icon(Icons.looks_one_outlined, color: context.colorTextSecondary),
                 SizedBox(width: 12),
                 Text('Vue une fois'),
               ]),
@@ -846,7 +846,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
         onToggleWatched: (episode, newWatched) => _toggleEpisode(episode),
       ),
       child: Container(
-        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: context.colorSurfaceVariant, borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
@@ -857,7 +857,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 height: 60,
                 child: ep.stillPath != null
                     ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlSmall}${ep.stillPath}', fit: BoxFit.cover)
-                    : Container(color: AppColors.surface, child: const Icon(Icons.tv, color: AppColors.textSecondary)),
+                    : Container(color: context.colorSurface, child: Icon(Icons.tv, color: context.colorTextSecondary)),
               ),
             ),
             const SizedBox(width: 12),
@@ -868,7 +868,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 children: [
                   Text(
                     'S${ep.seasonNumber.toString().padLeft(2, '0')} | E${ep.episodeNumber.toString().padLeft(2, '0')}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w700, fontSize: 12),
+                    style: TextStyle(color: context.colorTextSecondary, fontWeight: FontWeight.w700, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Text(ep.name,
@@ -887,7 +887,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   Widget _buildCaughtUpCard(TvDetails details) {
     final done = details.isEnded && _totalMainEpisodes > 0;
     return Container(
-      decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: context.colorSurfaceVariant, borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.all(20),
       alignment: Alignment.center,
       child: Column(
@@ -897,7 +897,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           const SizedBox(height: 4),
           Text(
             done ? "C'est tout, les sériévores !" : 'En attente du prochain épisode.',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.colorTextSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -921,8 +921,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           child: ep.stillPath != null
               ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlSmall}${ep.stillPath}', fit: BoxFit.cover)
               : Container(
-                  color: AppColors.surfaceVariant,
-                  child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 18),
+                  color: context.colorSurfaceVariant,
+                  child: Icon(Icons.tv, color: context.colorTextSecondary, size: 18),
                 ),
         ),
       ),
@@ -968,19 +968,19 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               children: [
                 RotateWidget(
                   isRotated: expanded,
-                  child: Icon(Icons.expand_more, color: AppColors.textSecondary),
+                  child: Icon(Icons.expand_more, color: context.colorTextSecondary),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(summary.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                 ),
-                Text('$watchedCount/$total', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text('$watchedCount/$total', style: TextStyle(color: context.colorTextSecondary, fontSize: 13)),
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: () => _toggleSeason(summary.seasonNumber),
                   child: Icon(
                     fullyWatched ? Icons.check_circle : Icons.check_circle_outline,
-                    color: fullyWatched ? barColor : AppColors.textSecondary,
+                    color: fullyWatched ? barColor : context.colorTextSecondary,
                   ),
                 ),
               ],
@@ -994,7 +994,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             child: AnimatedProgressBar(
               value: ratio,
               color: barColor,
-              backgroundColor: AppColors.surfaceVariant,
+              backgroundColor: context.colorSurfaceVariant,
             ),
           ),
         ),
@@ -1037,19 +1037,19 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
               children: [
                 RotateWidget(
                   isRotated: expanded,
-                  child: Icon(Icons.expand_more, color: AppColors.textSecondary),
+                  child: Icon(Icons.expand_more, color: context.colorTextSecondary),
                 ),
                 const SizedBox(width: 4),
                 const Expanded(
                   child: Text('Spéciaux', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                 ),
-                Text('$watchedCount/$total', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text('$watchedCount/$total', style: TextStyle(color: context.colorTextSecondary, fontSize: 13)),
                 const SizedBox(width: 12),
                 GestureDetector(
                   onTap: () => _toggleSeason(0),
                   child: Icon(
                     fullyWatched ? Icons.check_circle : Icons.check_circle_outline,
-                    color: fullyWatched ? AppColors.accent : AppColors.textSecondary,
+                    color: fullyWatched ? AppColors.accent : context.colorTextSecondary,
                   ),
                 ),
               ],
@@ -1074,10 +1074,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text('DÉMARRER LE SUIVI',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.colorTextSecondary)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1089,13 +1089,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('TOUS LES ÉPISODES',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              Text('TOUS LES ÉPISODES',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.colorTextSecondary)),
               GestureDetector(
                 onTap: _toggleAll,
                 child: Icon(
                   _isFullyWatched ? Icons.check_circle : Icons.check_circle_outline,
-                  color: _isFullyWatched ? (details.isEnded ? Colors.purple : Colors.green) : AppColors.textSecondary,
+                  color: _isFullyWatched ? (details.isEnded ? Colors.purple : Colors.green) : context.colorTextSecondary,
                 ),
               ),
             ],
@@ -1118,8 +1118,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Impossible de charger cette série.',
-                    style: TextStyle(color: AppColors.textSecondary)),
+                Text('Impossible de charger cette série.',
+                    style: TextStyle(color: context.colorTextSecondary)),
                 const SizedBox(height: 12),
                 FilledButton(onPressed: _load, child: const Text('Réessayer')),
               ],
@@ -1243,7 +1243,7 @@ class _ShowBanner extends StatelessWidget {
                     imageUrl: '${TmdbConfig.imageBaseUrlLarge}$posterPath',
                     fit: BoxFit.cover,
                   )
-                : Container(color: AppColors.surfaceVariant),
+                : Container(color: context.colorSurfaceVariant),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -1298,7 +1298,7 @@ class _ShowBanner extends StatelessWidget {
                       if (followed)
                         PopupMenuButton<void>(
                           icon: const Icon(Icons.more_vert, color: Colors.white),
-                          color: AppColors.surface,
+                          color: context.colorSurface,
                           itemBuilder: (context) => [
                             PopupMenuItem(
                               onTap: onAddToList,

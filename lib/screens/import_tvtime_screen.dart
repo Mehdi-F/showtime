@@ -194,15 +194,15 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.upload_file, size: 48, color: AppColors.textSecondary),
+            Icon(Icons.upload_file, size: 48, color: context.colorTextSecondary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               "Sélectionne le fichier zip de ton export RGPD TV Time. On importe les séries suivies, "
               "le statut favori, et on marque comme vus les premiers épisodes (dans l'ordre) à hauteur du "
               "nombre d'épisodes vus rapporté par TV Time — TV Time ne fournit pas la liste exacte des "
               "épisodes vus, ni les films.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.colorTextSecondary),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -232,7 +232,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
             const SizedBox(height: 16),
             Text(label, textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text('$_progress / $_total', style: const TextStyle(color: AppColors.textSecondary)),
+            Text('$_progress / $_total', style: TextStyle(color: context.colorTextSecondary)),
           ],
         ),
       ),
@@ -250,7 +250,7 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
           padding: const EdgeInsets.all(16),
           child: Text(
             '$alreadyCount déjà dans ta bibliothèque (ignorées) · $notFoundCount sans correspondance TMDB',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.colorTextSecondary, fontSize: 12),
           ),
         ),
         Expanded(
@@ -280,8 +280,8 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
                               ),
                             )
                           : Container(
-                              color: AppColors.surfaceVariant,
-                              child: const Icon(Icons.tv, color: AppColors.textSecondary, size: 18),
+                              color: context.colorSurfaceVariant,
+                              child: Icon(Icons.tv, color: context.colorTextSecondary, size: 18),
                             ),
                     ),
                     const SizedBox(width: 12),
@@ -294,13 +294,13 @@ class _ImportTvTimeScreenState extends State<ImportTvTimeScreen> {
                             match != null
                                 ? '${match.title}${match.year != null ? ' (${match.year})' : ''}'
                                 : 'Aucune correspondance',
-                            style: TextStyle(color: match != null ? AppColors.textPrimary : Colors.redAccent),
+                            style: TextStyle(color: match != null ? context.colorTextPrimary : Colors.redAccent),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             'TV Time : ${row.show.name} · ${row.show.nbEpisodesSeen} épisode(s) vu(s)',
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                            style: TextStyle(color: context.colorTextSecondary, fontSize: 12),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -398,7 +398,7 @@ class _ChangeMatchDialogState extends State<_ChangeMatchDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.colorSurface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
@@ -433,7 +433,7 @@ class _ChangeMatchDialogState extends State<_ChangeMatchDialog> {
                               child: r.posterPath != null
                                   ? CachedNetworkImage(
                                       imageUrl: '${TmdbConfig.imageBaseUrlTiny}${r.posterPath}', fit: BoxFit.cover)
-                                  : Container(color: AppColors.surfaceVariant),
+                                  : Container(color: context.colorSurfaceVariant),
                             ),
                             title: Text(r.title),
                             subtitle: r.year != null ? Text(r.year!) : null,

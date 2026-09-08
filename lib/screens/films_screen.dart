@@ -249,7 +249,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       return ScrollableCenter(
         child: Text(
           context.tr('series.trackShow'),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.colorTextSecondary),
         ),
       );
     }
@@ -278,7 +278,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       return ScrollableCenter(
         child: Text(
           context.tr('series.allCaughtUp'),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.colorTextSecondary),
         ),
       );
     }
@@ -323,11 +323,11 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                       fit: BoxFit.cover,
                     )
                   : Container(
-                      color: AppColors.surfaceVariant,
+                      color: context.colorSurfaceVariant,
                       alignment: Alignment.center,
-                      child: const Icon(
+                      child: Icon(
                         Icons.movie,
-                        color: AppColors.textSecondary,
+                        color: context.colorTextSecondary,
                       ),
                     ),
             ),
@@ -365,7 +365,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                 );
               },
               child: Container(
-                color: AppColors.surface,
+                color: context.colorSurface,
                 margin: const EdgeInsets.only(bottom: 2),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -387,10 +387,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                                   fit: BoxFit.cover,
                                 )
                               : Container(
-                                  color: AppColors.surfaceVariant,
-                                  child: const Icon(
+                                  color: context.colorSurfaceVariant,
+                                  child: Icon(
                                     Icons.movie,
-                                    color: AppColors.textSecondary,
+                                    color: context.colorTextSecondary,
                                   ),
                                 ),
                         ),
@@ -415,8 +415,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                             const SizedBox(height: 4),
                             Text(
                               parts.join(' • '),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
+                              style: TextStyle(
+                                color: context.colorTextSecondary,
                                 fontSize: 13,
                               ),
                               maxLines: 1,

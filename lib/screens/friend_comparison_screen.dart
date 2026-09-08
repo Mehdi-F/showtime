@@ -68,7 +68,7 @@ class _FriendComparisonScreenState extends State<FriendComparisonScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(32),
-            child: Text(context.tr('compare.error'), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('compare.error'), textAlign: TextAlign.center, style: TextStyle(color: context.colorTextSecondary)),
           ),
         ],
       );
@@ -82,13 +82,13 @@ class _FriendComparisonScreenState extends State<FriendComparisonScreen> {
         const SizedBox(height: 24),
         Text(
           context.tr('compare.commonTitles'),
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.colorTextSecondary),
         ),
         const SizedBox(height: 8),
         if (result.commonTitles.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Text(context.tr('compare.noCommon'), style: const TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('compare.noCommon'), style: TextStyle(color: context.colorTextSecondary)),
           )
         else
           ...result.commonTitles.map((t) => _CommonTitleRow(title: t, friendName: widget.friendName)),
@@ -107,7 +107,7 @@ class _TotalsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: context.colorSurfaceVariant, borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           _CompareRow(
@@ -143,13 +143,13 @@ class _CompareRow extends StatelessWidget {
     final friendAhead = friendValue > myValue;
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700)),
+        Text(label, style: TextStyle(color: context.colorTextSecondary, fontSize: 12, fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _CompareValue(label: context.tr('compare.you'), value: myValue, highlighted: iAmAhead),
-            const Text('vs', style: TextStyle(color: AppColors.textSecondary)),
+            Text('vs', style: TextStyle(color: context.colorTextSecondary)),
             _CompareValue(label: friendName, value: friendValue, highlighted: friendAhead),
           ],
         ),
@@ -174,10 +174,10 @@ class _CompareValue extends StatelessWidget {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
-            color: highlighted ? AppColors.accent : AppColors.textPrimary,
+            color: highlighted ? AppColors.accent : context.colorTextPrimary,
           ),
         ),
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(label, style: TextStyle(color: context.colorTextSecondary, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
       ],
     );
   }
@@ -206,8 +206,8 @@ class _CommonTitleRow extends StatelessWidget {
               child: title.posterPath != null
                   ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlTiny}${title.posterPath}', fit: BoxFit.cover)
                   : Container(
-                      color: AppColors.surfaceVariant,
-                      child: Icon(title.type == 'tv' ? Icons.tv : Icons.movie, color: AppColors.textSecondary, size: 18),
+                      color: context.colorSurfaceVariant,
+                      child: Icon(title.type == 'tv' ? Icons.tv : Icons.movie, color: context.colorTextSecondary, size: 18),
                     ),
             ),
           ),
@@ -244,16 +244,16 @@ class _ProgressLine extends StatelessWidget {
       children: [
         SizedBox(
           width: 56,
-          child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+          child: Text(label, style: TextStyle(color: context.colorTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(value: ratio, minHeight: 6, backgroundColor: AppColors.surface, color: AppColors.accent),
+            child: LinearProgressIndicator(value: ratio, minHeight: 6, backgroundColor: context.colorSurface, color: AppColors.accent),
           ),
         ),
         const SizedBox(width: 8),
-        Text('$count/$total', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+        Text('$count/$total', style: TextStyle(color: context.colorTextSecondary, fontSize: 11)),
       ],
     );
   }

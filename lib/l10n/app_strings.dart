@@ -132,8 +132,8 @@ class AppStrings {
           'Cela supprimera les données TMDB en cache. Tu pourras les recharger.',
       'settings.cacheClear': 'Cache vidé',
 
-      // Surprise-moi
-      'surprise.cardTitle': 'Surprise-moi ce soir',
+      // Surprends-moi
+      'surprise.cardTitle': 'Surprends-moi ce soir',
       'surprise.cardSubtitle': 'On choisit pour toi',
       'surprise.title': 'Ce soir, tu regardes...',
       'surprise.watch': "C'est parti",

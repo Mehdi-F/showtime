@@ -13,7 +13,7 @@ Future<void> showAddToListSheet(
 }) {
   return showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.surface,
+    backgroundColor: context.colorSurface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -97,10 +97,10 @@ class _AddToListSheetState extends State<AddToListSheet> {
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             const SizedBox(height: 12),
             if (lists.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text('Aucune liste pour le moment.',
-                    style: TextStyle(color: AppColors.textSecondary)),
+                    style: TextStyle(color: context.colorTextSecondary)),
               )
             else
               ConstrainedBox(
@@ -116,7 +116,7 @@ class _AddToListSheetState extends State<AddToListSheet> {
                       value: checked,
                       title: Text(list.name),
                       subtitle: Text('${list.items.length} élément(s)',
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
                       contentPadding: EdgeInsets.zero,
                       controlAffinity: ListTileControlAffinity.leading,
                       onChanged: (value) => _toggleItem(list, value ?? false),

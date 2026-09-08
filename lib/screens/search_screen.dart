@@ -112,25 +112,25 @@ class _SearchScreenState extends State<SearchScreen> {
         title: Container(
           height: 42,
           decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
+            color: context.colorSurfaceVariant,
             borderRadius: BorderRadius.circular(21),
           ),
           child: TextField(
             controller: _controller,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+            style: TextStyle(color: context.colorTextPrimary, fontSize: 15),
             textAlignVertical: TextAlignVertical.center,
             decoration: InputDecoration(
               hintText: context.tr('explorer.search'),
-              hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
+              hintStyle: TextStyle(color: context.colorTextSecondary, fontSize: 15),
               border: InputBorder.none,
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+              prefixIcon: Icon(Icons.search, color: context.colorTextSecondary, size: 20),
               prefixIconConstraints: const BoxConstraints(minWidth: 40),
               suffixIcon: _controller.text.isEmpty
                   ? null
                   : IconButton(
-                      icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 18),
+                      icon: Icon(Icons.close, color: context.colorTextSecondary, size: 18),
                       onPressed: () {
                         _controller.clear();
                         _onQueryChanged('');
@@ -155,12 +155,12 @@ class _SearchScreenState extends State<SearchScreen> {
       return const MediaListSkeleton();
     }
     if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: AppColors.textSecondary)));
+      return Center(child: Text(_error!, style: TextStyle(color: context.colorTextSecondary)));
     }
     if (_results.isEmpty) {
       return Center(
         child: Text(context.tr('explorer.noResults'),
-            textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            textAlign: TextAlign.center, style: TextStyle(color: context.colorTextSecondary)),
       );
     }
     return Selector<LibraryProvider, Set<String>>(
@@ -337,7 +337,7 @@ class _CategoryRowState extends State<_CategoryRow> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                    const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    Icon(Icons.chevron_right, color: context.colorTextSecondary),
                   ],
                 ),
               ),

@@ -38,7 +38,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('list.rename')),
         content: TextField(controller: controller, autofocus: true),
         actions: [
@@ -60,7 +60,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('list.delete')),
         content: Text('"${list.name}" ${context.tr('list.deleteConfirm')}'),
         actions: [
@@ -117,7 +117,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         onRefresh: _refresh,
         child: list.items.isEmpty
           ? ScrollableCenter(
-              child: Text(context.tr('list.empty'), style: const TextStyle(color: AppColors.textSecondary)),
+              child: Text(context.tr('list.empty'), style: TextStyle(color: context.colorTextSecondary)),
             )
           : GridView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -171,8 +171,8 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                                             fit: BoxFit.cover,
                                           )
                                         : Container(
-                                            color: AppColors.surfaceVariant,
-                                            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                                            color: context.colorSurfaceVariant,
+                                            child: Icon(Icons.tv, color: context.colorTextSecondary),
                                           ),
                                   ),
                                 ),

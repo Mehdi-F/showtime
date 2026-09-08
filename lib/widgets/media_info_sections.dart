@@ -35,7 +35,7 @@ class WatchProvidersRow extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: context.colorSurfaceVariant,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -101,7 +101,7 @@ class InfoCard extends StatelessWidget {
           const SizedBox(height: 10),
           if (subtitleParts.isNotEmpty)
             Text(subtitleParts.join(' • '),
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                style: TextStyle(color: context.colorTextSecondary, fontSize: 13)),
           if (voteAverage > 0)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -124,10 +124,10 @@ class InfoCard extends StatelessWidget {
             child: Row(
               children: [
                 if (runtimeMinutes > 0) ...[
-                  const Icon(Icons.timer_outlined, size: 16, color: AppColors.textSecondary),
+                  Icon(Icons.timer_outlined, size: 16, color: context.colorTextSecondary),
                   const SizedBox(width: 4),
                   Text('$runtimeMinutes min',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
                   const SizedBox(width: 16),
                 ],
               ],
@@ -135,7 +135,7 @@ class InfoCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Text(addedCaption, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            child: Text(addedCaption, style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
           ),
           const Padding(
             padding: EdgeInsets.only(top: 20),
@@ -190,10 +190,10 @@ class CastRow extends StatelessWidget {
                                     width: 100,
                                   )
                                 : Container(
-                                    color: AppColors.surfaceVariant,
+                                    color: context.colorSurfaceVariant,
                                     height: 100,
                                     width: 100,
-                                    child: const Icon(Icons.person, color: AppColors.textSecondary),
+                                    child: Icon(Icons.person, color: context.colorTextSecondary),
                                   ),
                           ),
                           const SizedBox(height: 4),
@@ -204,7 +204,7 @@ class CastRow extends StatelessWidget {
                           Text(member.character,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                              style: TextStyle(color: context.colorTextSecondary, fontSize: 11)),
                         ],
                       ),
                     ),
@@ -268,10 +268,10 @@ class SimilarRow extends StatelessWidget {
                                   width: 90,
                                 )
                               : Container(
-                                  color: AppColors.surfaceVariant,
+                                  color: context.colorSurfaceVariant,
                                   height: 130,
                                   width: 90,
-                                  child: const Icon(Icons.tv, color: AppColors.textSecondary),
+                                  child: Icon(Icons.tv, color: context.colorTextSecondary),
                                 ),
                         ),
                       ),

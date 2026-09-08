@@ -72,12 +72,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
       appBar: AppBar(
         title: Text(context.tr('friends.title')),
         elevation: 0,
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
       ),
       body: Column(
         children: [
           Container(
-            color: AppColors.surface,
+            color: context.colorSurface,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,7 +85,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 Text(
                   'Ajoutez des amis',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: context.colorTextSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -135,10 +135,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.people_outline, size: 48, color: AppColors.textSecondary),
+                            Icon(Icons.people_outline, size: 48, color: context.colorTextSecondary),
                             const SizedBox(height: 16),
                             Text(context.tr('friends.placeholder'),
-                                textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                                textAlign: TextAlign.center, style: TextStyle(color: context.colorTextSecondary, fontSize: 15)),
                           ],
                         ),
                       ),
@@ -161,7 +161,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                             if (profileSnapshot.connectionState == ConnectionState.waiting) {
                               return Container(
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceVariant,
+                                  color: context.colorSurfaceVariant,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 padding: const EdgeInsets.all(12),
@@ -186,9 +186,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
                             return Container(
                               decoration: BoxDecoration(
-                                color: AppColors.surface,
+                                color: context.colorSurface,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.surfaceVariant, width: 1),
+                                border: Border.all(color: context.colorSurfaceVariant, width: 1),
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(12),
@@ -199,9 +199,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                       children: [
                                         CircleAvatar(
                                           radius: 28,
-                                          backgroundColor: AppColors.surfaceVariant,
+                                          backgroundColor: context.colorSurfaceVariant,
                                           backgroundImage: photoUrl != null ? CachedNetworkImageProvider(photoUrl) : null,
-                                          child: photoUrl == null ? const Icon(Icons.person, color: AppColors.textSecondary, size: 28) : null,
+                                          child: photoUrl == null ? Icon(Icons.person, color: context.colorTextSecondary, size: 28) : null,
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -217,10 +217,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                               Row(
                                                 children: [
                                                   Text('$seriesCount séries',
-                                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                                    style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
                                                   const SizedBox(width: 12),
                                                   Text('$filmsCount films',
-                                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                                    style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
                                                 ],
                                               ),
                                             ],

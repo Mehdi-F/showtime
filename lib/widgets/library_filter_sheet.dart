@@ -27,7 +27,7 @@ Future<LibraryFilterResult<T>?> showLibraryFilterSheet<T>(
 }) {
   return showModalBottomSheet<LibraryFilterResult<T>>(
     context: context,
-    backgroundColor: AppColors.surface,
+    backgroundColor: context.colorSurface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
     builder: (_) => _LibraryFilterSheet<T>(
@@ -103,10 +103,10 @@ class _LibraryFilterSheetState<T> extends State<_LibraryFilterSheet<T>> {
                         onSelected: (_) => setState(() => _sort = option),
                         selectedColor: AppColors.accent,
                         labelStyle: TextStyle(
-                          color: _sort == option ? Colors.black : AppColors.textPrimary,
+                          color: _sort == option ? Colors.black : context.colorTextPrimary,
                           fontWeight: FontWeight.w700,
                         ),
-                        backgroundColor: AppColors.surfaceVariant,
+                        backgroundColor: context.colorSurfaceVariant,
                         side: BorderSide.none,
                       ),
                     ),
@@ -205,7 +205,7 @@ class LibraryFilterBadge extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
+            color: context.colorSurfaceVariant,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(label.toUpperCase(),

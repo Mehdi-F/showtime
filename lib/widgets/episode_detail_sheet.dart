@@ -32,7 +32,7 @@ Future<void> showEpisodeDetailSheet(
 }) {
   return showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.surface,
+    backgroundColor: context.colorSurface,
     isScrollControlled: true,
     useSafeArea: true,
     shape: const RoundedRectangleBorder(
@@ -206,21 +206,21 @@ class _EpisodeImageCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     fadeInDuration: const Duration(milliseconds: 200),
                     placeholder: (_, __) =>
-                        Container(color: AppColors.surfaceVariant),
+                        Container(color: context.colorSurfaceVariant),
                     errorWidget: (_, __, ___) => Container(
-                      color: AppColors.surfaceVariant,
-                      child: const Icon(
+                      color: context.colorSurfaceVariant,
+                      child: Icon(
                         Icons.tv,
-                        color: AppColors.textSecondary,
+                        color: context.colorTextSecondary,
                         size: 40,
                       ),
                     ),
                   )
                 : Container(
-                    color: AppColors.surfaceVariant,
-                    child: const Icon(
+                    color: context.colorSurfaceVariant,
+                    child: Icon(
                       Icons.tv,
-                      color: AppColors.textSecondary,
+                      color: context.colorTextSecondary,
                       size: 40,
                     ),
                   ),
@@ -289,8 +289,8 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
                 children: [
                   Text(
                     'S${ep.seasonNumber.toString().padLeft(2, '0')} | E${ep.episodeNumber.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colorTextSecondary,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -319,7 +319,7 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
                   radius: 20,
                   backgroundColor: _watched
                       ? Colors.green
-                      : AppColors.surfaceVariant,
+                      : context.colorSurfaceVariant,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     transitionBuilder: (child, animation) =>
@@ -327,7 +327,7 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
                     child: Icon(
                       Icons.check,
                       key: ValueKey(_watched),
-                      color: _watched ? Colors.white : AppColors.textSecondary,
+                      color: _watched ? Colors.white : context.colorTextSecondary,
                     ),
                   ),
                 ),
@@ -339,26 +339,26 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.calendar_today,
                 size: 16,
-                color: AppColors.textSecondary,
+                color: context.colorTextSecondary,
               ),
               const SizedBox(width: 8),
               Text(
                 formatFrDate(ep.airDate!),
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.colorTextSecondary),
               ),
             ],
           ),
         ],
         const Divider(height: 32),
-        const Text(
+        Text(
           'SYNOPSIS',
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 12,
-            color: AppColors.textSecondary,
+            color: context.colorTextSecondary,
           ),
         ),
         const SizedBox(height: 8),

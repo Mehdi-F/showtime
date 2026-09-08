@@ -25,7 +25,7 @@ void showSurpriseMeSheet(BuildContext context) {
   final items = context.read<LibraryProvider>().items;
   showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.surface,
+    backgroundColor: context.colorSurface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => _SurpriseSheet(items: items, tmdb: context.read<TmdbService>()),
@@ -115,7 +115,7 @@ class _SurpriseSheetState extends State<_SurpriseSheet> {
               SizedBox(
                 height: 120,
                 child: Center(
-                  child: Text(context.tr('surprise.empty'), style: const TextStyle(color: AppColors.textSecondary)),
+                  child: Text(context.tr('surprise.empty'), style: TextStyle(color: context.colorTextSecondary)),
                 ),
               )
             else ...[
@@ -126,11 +126,11 @@ class _SurpriseSheetState extends State<_SurpriseSheet> {
                   child: pick.posterPath != null
                       ? CachedNetworkImage(imageUrl: '${TmdbConfig.imageBaseUrlLarge}${pick.posterPath}', fit: BoxFit.cover)
                       : Container(
-                          color: AppColors.surfaceVariant,
+                          color: context.colorSurfaceVariant,
                           alignment: Alignment.center,
                           child: Icon(
                             pick.item.type == 'tv' ? Icons.tv : Icons.movie,
-                            color: AppColors.textSecondary,
+                            color: context.colorTextSecondary,
                             size: 48,
                           ),
                         ),

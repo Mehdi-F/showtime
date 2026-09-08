@@ -144,7 +144,7 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(context.tr('empty.loadFailed'),
-                                  style: const TextStyle(color: AppColors.textSecondary)),
+                                  style: TextStyle(color: context.colorTextSecondary)),
                               const SizedBox(height: 12),
                               FilledButton(onPressed: _loadMore, child: Text(context.tr('common.retry'))),
                             ],

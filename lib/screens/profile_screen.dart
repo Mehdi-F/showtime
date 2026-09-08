@@ -420,7 +420,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('list.createNew')),
         content: TextField(
           controller: controller,
@@ -453,7 +453,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('dialog.editProfileName')),
         content: TextField(controller: controller, autofocus: true),
         actions: [
@@ -654,9 +654,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
                         fontSize: 18,
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right,
-                      color: AppColors.textSecondary,
+                      color: context.colorTextSecondary,
                     ),
                   ],
                 ),
@@ -735,8 +735,8 @@ class _ProfileBodyState extends State<_ProfileBody> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 TmdbConfig.attribution,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: context.colorTextSecondary,
                   fontSize: 11,
                 ),
                 textAlign: TextAlign.center,
@@ -793,7 +793,7 @@ class _ProfileHeader extends StatelessWidget {
                       fit: BoxFit.cover,
                     )
                   else
-                    Container(color: AppColors.surfaceVariant),
+                    Container(color: context.colorSurfaceVariant),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -813,7 +813,7 @@ class _ProfileHeader extends StatelessWidget {
                       bottom: false,
                       child: PopupMenuButton<void>(
                         icon: const Icon(Icons.more_vert, color: Colors.white),
-                        color: AppColors.surface,
+                        color: context.colorSurface,
                         itemBuilder: (context) => [
                           PopupMenuItem(
                             onTap: onSettings,
@@ -848,7 +848,7 @@ class _ProfileHeader extends StatelessWidget {
                 height: avatarSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 3),
+                  border: Border.all(color: context.colorBackground, width: 3),
                 ),
                 child: ClipOval(
                   child: photoUrl != null
@@ -859,11 +859,11 @@ class _ProfileHeader extends StatelessWidget {
                           height: avatarSize,
                         )
                       : Container(
-                          color: AppColors.surfaceVariant,
+                          color: context.colorSurfaceVariant,
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             Icons.person,
-                            color: AppColors.textSecondary,
+                            color: context.colorTextSecondary,
                             size: 40,
                           ),
                         ),
@@ -927,7 +927,7 @@ class _SurpriseMeCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
+          color: context.colorSurfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -940,11 +940,11 @@ class _SurpriseMeCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(context.tr('surprise.cardTitle'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  Text(context.tr('surprise.cardSubtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  Text(context.tr('surprise.cardSubtitle'), style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right, color: context.colorTextSecondary),
           ],
         ),
       ),
@@ -966,7 +966,7 @@ class _RecapCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
+          color: context.colorSurfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -982,11 +982,11 @@ class _RecapCard extends StatelessWidget {
                     context.tr('recap.cardTitle').replaceAll('{year}', '$year'),
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
-                  Text(context.tr('recap.cardSubtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  Text(context.tr('recap.cardSubtitle'), style: TextStyle(color: context.colorTextSecondary, fontSize: 12)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right, color: context.colorTextSecondary),
           ],
         ),
       ),
@@ -1060,7 +1060,7 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          style: TextStyle(color: context.colorTextSecondary, fontSize: 13),
         ),
       ],
     );
@@ -1083,7 +1083,7 @@ class _SectionHeader extends StatelessWidget {
             title,
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          Icon(Icons.chevron_right, color: context.colorTextSecondary),
         ],
       ),
     );
@@ -1110,7 +1110,7 @@ class _StatCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.surfaceVariant),
+        border: Border.all(color: context.colorSurfaceVariant),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -1118,7 +1118,7 @@ class _StatCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: AppColors.textSecondary),
+              Icon(icon, size: 16, color: context.colorTextSecondary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1164,7 +1164,7 @@ class _TimeUnit extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+          style: TextStyle(color: context.colorTextSecondary, fontSize: 10),
         ),
       ],
     );
@@ -1185,7 +1185,7 @@ class _CreateListCard extends StatelessWidget {
         width: 140,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
+          color: context.colorSurfaceVariant,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1227,7 +1227,7 @@ class _ListCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.colorSurface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1245,8 +1245,8 @@ class _ListCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '${list.items.length} ${context.tr('list.items')}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.colorTextSecondary,
                 fontSize: 12,
               ),
             ),
@@ -1323,7 +1323,7 @@ class _CarouselSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                Icon(Icons.chevron_right, color: context.colorTextSecondary),
               ],
             ),
           ),
@@ -1371,12 +1371,12 @@ class _CarouselSection extends StatelessWidget {
                               width: 90,
                             )
                           : Container(
-                              color: AppColors.surfaceVariant,
+                              color: context.colorSurfaceVariant,
                               height: 130,
                               width: 90,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.tv,
-                                color: AppColors.textSecondary,
+                                color: context.colorTextSecondary,
                               ),
                             ),
                     ),
@@ -1619,10 +1619,10 @@ class _FullListScreenState extends State<_FullListScreen> {
                       fit: BoxFit.cover,
                     )
                   : Container(
-                      color: AppColors.surfaceVariant,
-                      child: const Icon(
+                      color: context.colorSurfaceVariant,
+                      child: Icon(
                         Icons.tv,
-                        color: AppColors.textSecondary,
+                        color: context.colorTextSecondary,
                       ),
                     ),
             ),
@@ -1760,7 +1760,7 @@ class _FullListScreenState extends State<_FullListScreen> {
     final visible = _applyFilterAndSort();
     final filterLabel = _isSeries ? _seriesFilter.label : _filmFilter.label;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colorBackground,
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
@@ -1773,13 +1773,13 @@ class _FullListScreenState extends State<_FullListScreen> {
                 height: 40,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: _grouped ? AppColors.accent : AppColors.surfaceVariant,
+                  color: _grouped ? AppColors.accent : context.colorSurfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.visibility,
                   size: 20,
-                  color: _grouped ? Colors.black : Colors.white,
+                  color: _grouped ? Colors.black : context.colorTextPrimary,
                 ),
               ),
             ),
@@ -1795,7 +1795,7 @@ class _FullListScreenState extends State<_FullListScreen> {
                   ? ScrollableCenter(
                       child: Text(
                         context.tr('films.nothingToWatch'),
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: context.colorTextSecondary),
                       ),
                     )
                   : _grouped
@@ -1992,17 +1992,17 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     "Impossible d'accéder à ce profil.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: context.colorTextSecondary),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '$_streamError',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: context.colorTextSecondary,
                       fontSize: 11,
                     ),
                   ),
@@ -2159,7 +2159,7 @@ class _FriendProfileHeader extends StatelessWidget {
                       fit: BoxFit.cover,
                     )
                   else
-                    Container(color: AppColors.surfaceVariant),
+                    Container(color: context.colorSurfaceVariant),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -2200,7 +2200,7 @@ class _FriendProfileHeader extends StatelessWidget {
                 height: avatarSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 3),
+                  border: Border.all(color: context.colorBackground, width: 3),
                 ),
                 child: ClipOval(
                   child: photoUrl != null
@@ -2211,11 +2211,11 @@ class _FriendProfileHeader extends StatelessWidget {
                           height: avatarSize,
                         )
                       : Container(
-                          color: AppColors.surfaceVariant,
+                          color: context.colorSurfaceVariant,
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             Icons.person,
-                            color: AppColors.textSecondary,
+                            color: context.colorTextSecondary,
                             size: 40,
                           ),
                         ),

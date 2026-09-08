@@ -507,7 +507,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       return ScrollableCenter(
         child: Text(
           context.tr('series.trackShow'),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.colorTextSecondary),
         ),
       );
     }
@@ -562,7 +562,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       return ScrollableCenter(
         child: Text(
           context.tr('series.allCaughtUp'),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.colorTextSecondary),
         ),
       );
     }
@@ -620,8 +620,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               context.tr(
                 _historyExpanded ? 'series.watchHistory' : 'series.showHistory',
               ),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.colorTextSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
@@ -629,7 +629,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
             ),
             Icon(
               _historyExpanded ? Icons.expand_less : Icons.expand_more,
-              color: AppColors.textSecondary,
+              color: context.colorTextSecondary,
               size: 20,
             ),
           ],
@@ -733,8 +733,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
     child: Text(
       label,
-      style: const TextStyle(
-        color: AppColors.textSecondary,
+      style: TextStyle(
+        color: context.colorTextSecondary,
         fontSize: 12,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.5,
@@ -868,9 +868,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   Widget _buildNotStartedCard(BuildContext context, _ShowEpisodesData d) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colorSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceVariant, width: 1),
+        border: Border.all(color: context.colorSurfaceVariant, width: 1),
       ),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       padding: const EdgeInsets.all(12),
@@ -888,7 +888,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
               errorWidget: (context, url, error) => Container(
                 width: 48,
                 height: 72,
-                color: AppColors.surfaceVariant,
+                color: context.colorSurfaceVariant,
               ),
             ),
           ),
@@ -910,7 +910,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
                 Text(
                   '${d.totalEpisodeCount} ${context.tr("count.episode")}',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: context.colorTextSecondary,
                     fontSize: 13,
                   ),
                 ),
@@ -1097,7 +1097,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
                       timeLabel,
                       style: TextStyle(
                         fontSize: 12,
-                        color: accentColor ?? AppColors.textSecondary,
+                        color: accentColor ?? context.colorTextSecondary,
                       ),
                     ),
                   ),
@@ -1106,7 +1106,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
+              color: context.colorSurfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1115,7 +1115,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                color: context.colorTextSecondary,
               ),
             ),
           ),
@@ -1169,7 +1169,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
       return ScrollableCenter(
         child: Text(
           context.tr('series.trackShow'),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.colorTextSecondary),
         ),
       );
     }
@@ -1194,7 +1194,7 @@ class _UpcomingTabState extends State<_UpcomingTab> {
       return ScrollableCenter(
         child: Text(
           context.tr('series.upcomingEmpty'),
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.colorTextSecondary),
         ),
       );
     }
@@ -1379,7 +1379,7 @@ class _EpisodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleColor = dimmed ? AppColors.textSecondary : Colors.white;
+    final titleColor = dimmed ? context.colorTextSecondary : Colors.white;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTapCard,
@@ -1387,7 +1387,7 @@ class _EpisodeCard extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.colorSurface,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -1404,20 +1404,20 @@ class _EpisodeCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         fadeInDuration: const Duration(milliseconds: 150),
                         placeholder: (_, __) =>
-                            Container(color: AppColors.surfaceVariant),
+                            Container(color: context.colorSurfaceVariant),
                         errorWidget: (_, __, ___) => Container(
-                          color: AppColors.surfaceVariant,
-                          child: const Icon(
+                          color: context.colorSurfaceVariant,
+                          child: Icon(
                             Icons.tv,
-                            color: AppColors.textSecondary,
+                            color: context.colorTextSecondary,
                           ),
                         ),
                       )
                     : Container(
-                        color: AppColors.surfaceVariant,
-                        child: const Icon(
+                        color: context.colorSurfaceVariant,
+                        child: Icon(
                           Icons.tv,
-                          color: AppColors.textSecondary,
+                          color: context.colorTextSecondary,
                         ),
                       ),
               ),
@@ -1474,10 +1474,10 @@ class _EpisodeCard extends StatelessWidget {
                           padding: const EdgeInsets.only(left: 6),
                           child: Text(
                             '+$extraCount',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: context.colorTextSecondary,
                             ),
                           ),
                         ),
@@ -1580,7 +1580,7 @@ class _SeriesProgressCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: _posterImage(heroTag),
+            child: _posterImage(context, heroTag),
           ),
           if (dayBadge != null)
             Positioned(
@@ -1608,21 +1608,21 @@ class _SeriesProgressCard extends StatelessWidget {
     );
   }
 
-  Widget _posterImage(String? heroTag) {
+  Widget _posterImage(BuildContext context, String? heroTag) {
     final image = posterPath != null
         ? CachedNetworkImage(
             imageUrl: '${TmdbConfig.imageBaseUrlSmall}$posterPath',
             fit: BoxFit.cover,
             fadeInDuration: const Duration(milliseconds: 200),
-            placeholder: (_, __) => Container(color: AppColors.surfaceVariant),
+            placeholder: (_, __) => Container(color: context.colorSurfaceVariant),
             errorWidget: (_, __, ___) => Container(
-              color: AppColors.surfaceVariant,
-              child: const Icon(Icons.tv, color: AppColors.textSecondary),
+              color: context.colorSurfaceVariant,
+              child: Icon(Icons.tv, color: context.colorTextSecondary),
             ),
           )
         : Container(
-            color: AppColors.surfaceVariant,
-            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+            color: context.colorSurfaceVariant,
+            child: Icon(Icons.tv, color: context.colorTextSecondary),
           );
     return heroTag != null ? Hero(tag: heroTag, child: image) : image;
   }

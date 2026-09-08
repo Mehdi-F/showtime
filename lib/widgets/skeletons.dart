@@ -41,7 +41,7 @@ class _SkeletonBoxState extends State<SkeletonBox> with SingleTickerProviderStat
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
-          color: AppColors.surfaceVariant.withValues(alpha: _opacity.value),
+          color: context.colorSurfaceVariant.withValues(alpha: _opacity.value),
           borderRadius: widget.borderRadius,
         ),
       ),
@@ -256,8 +256,8 @@ Widget buildCachedImage({
       errorWidget: (context, url, error) => Container(
         width: width,
         height: height,
-        color: AppColors.surfaceVariant,
-        child: const Icon(Icons.error_outline, color: AppColors.textSecondary, size: 24),
+        color: context.colorSurfaceVariant,
+        child: Icon(Icons.error_outline, color: context.colorTextSecondary, size: 24),
       ),
     ),
   );

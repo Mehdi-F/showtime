@@ -20,7 +20,7 @@ class RoundCheck extends StatelessWidget {
           shape: BoxShape.circle,
           color: checked ? Colors.greenAccent.shade400 : Colors.transparent,
           border: Border.all(
-            color: checked ? Colors.greenAccent.shade400 : AppColors.textSecondary,
+            color: checked ? Colors.greenAccent.shade400 : context.colorTextSecondary,
             width: 2,
           ),
         ),

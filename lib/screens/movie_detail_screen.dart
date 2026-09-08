@@ -118,13 +118,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return showDialog<_RewatchChoice>(
       context: context,
       builder: (context) => SimpleDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colorSurface,
         title: Text(context.tr('media.markAs')),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(_RewatchChoice.notWatched),
             child: Row(children: [
-              const Icon(Icons.visibility_off_outlined, color: AppColors.textSecondary),
+              Icon(Icons.visibility_off_outlined, color: context.colorTextSecondary),
               const SizedBox(width: 12),
               Text(context.tr('media.notWatched')),
             ]),
@@ -141,7 +141,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             SimpleDialogOption(
               onPressed: () => Navigator.of(context).pop(_RewatchChoice.watchedOnce),
               child: Row(children: [
-                const Icon(Icons.looks_one_outlined, color: AppColors.textSecondary),
+                Icon(Icons.looks_one_outlined, color: context.colorTextSecondary),
                 const SizedBox(width: 12),
                 Text(context.tr('media.watchedOnce')),
               ]),
@@ -332,7 +332,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return GestureDetector(
       onTap: _toggleWatched,
       child: Container(
-        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: context.colorSurfaceVariant, borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
@@ -351,7 +351,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             if (_rewatchCount > 0) '+$_rewatchCount revu${_rewatchCount > 1 ? "s" : ""}',
                           ].join(' · ')
                         : 'Marquez-le comme vu une fois terminé.',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    style: TextStyle(color: context.colorTextSecondary, fontSize: 13),
                   ),
                 ],
               ),
@@ -373,7 +373,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(context.tr('media.watching'),
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.colorTextSecondary)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -413,7 +413,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(context.tr('media.couldNotLoad'),
-                      style: const TextStyle(color: AppColors.textSecondary)),
+                      style: TextStyle(color: context.colorTextSecondary)),
                   const SizedBox(height: 12),
                   FilledButton(onPressed: _retryLoad, child: const Text('Réessayer')),
                 ],
@@ -504,7 +504,7 @@ class _MovieBanner extends StatelessWidget {
                     imageUrl: '${TmdbConfig.imageBaseUrlLarge}$posterPath',
                     fit: BoxFit.cover,
                   )
-                : Container(color: AppColors.surfaceVariant),
+                : Container(color: context.colorSurfaceVariant),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -546,7 +546,7 @@ class _MovieBanner extends StatelessWidget {
                       if (followed)
                         PopupMenuButton<void>(
                           icon: const Icon(Icons.more_vert, color: Colors.white),
-                          color: AppColors.surface,
+                          color: context.colorSurface,
                           itemBuilder: (context) => [
                             PopupMenuItem(
                               onTap: onAddToList,

@@ -26,7 +26,7 @@ class MediaListTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        color: AppColors.surface,
+        color: context.colorSurface,
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -36,7 +36,7 @@ class MediaListTile extends StatelessWidget {
               child: SizedBox(
                 width: 56,
                 height: 78,
-                child: _poster(),
+                child: _poster(context),
               ),
             ),
             const SizedBox(width: 12),
@@ -55,7 +55,7 @@ class MediaListTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle!,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: TextStyle(color: context.colorTextSecondary, fontSize: 13),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -70,15 +70,15 @@ class MediaListTile extends StatelessWidget {
     );
   }
 
-  Widget _poster() {
+  Widget _poster(BuildContext context) {
     final image = posterPath != null
         ? CachedNetworkImage(
             imageUrl: '${TmdbConfig.imageBaseUrlTiny}$posterPath',
             fit: BoxFit.cover,
           )
         : Container(
-            color: AppColors.surfaceVariant,
-            child: const Icon(Icons.tv, color: AppColors.textSecondary),
+            color: context.colorSurfaceVariant,
+            child: Icon(Icons.tv, color: context.colorTextSecondary),
           );
     return heroTag != null ? Hero(tag: heroTag!, child: image) : image;
   }

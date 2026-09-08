@@ -30,11 +30,16 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // These all notify *before* awaiting SharedPreferences on purpose: the
+  // in-memory value is already correct at that point, and persistence is
+  // slow enough on device that notifying afterwards made the UI look
+  // frozen — the selection only appeared after leaving and re-entering
+  // Settings. Persisting stays awaited so callers can still await the write.
   Future<void> setThemeMode(AppThemeMode mode) async {
     _themeMode = mode;
+    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_themeModeKey, mode.index);
-    notifyListeners();
   }
 
   Future<void> setLanguage(String lang) async {
@@ -42,16 +47,16 @@ class SettingsProvider extends ChangeNotifier {
       throw ArgumentError('Unsupported language: $lang. Supported: ${AppConstants.supportedLanguages.join(", ")}');
     }
     _language = lang;
+    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageKey, lang);
-    notifyListeners();
   }
 
   Future<void> setEnableNotifications(bool enabled) async {
     _enableNotifications = enabled;
+    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_enableNotificationsKey, enabled);
-    notifyListeners();
   }
 
   Future<void> clearCache() async {
