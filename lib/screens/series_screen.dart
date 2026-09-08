@@ -597,8 +597,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           _historyLoadMoreRow(context),
         if (history.isNotEmpty) ..._historyEntryWidgets(context, history),
         if (active.isNotEmpty) ..._activeSection(context, active),
-        if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
+        // Stale before not-started: a show you already began and dropped is
+        // a more likely next pick than one you never opened.
         if (stale.isNotEmpty) ..._staleSection(context, stale),
+        if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
       ],
     );
   }
@@ -672,14 +674,15 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       children: [
         if (active.isNotEmpty)
           _buildCardSection(context, context.tr('series.toWatch'), active),
+        // Same order as the list view: stale before never-started.
+        if (stale.isNotEmpty)
+          _buildCardSection(context, context.tr('series.notWatching'), stale),
         if (notStarted.isNotEmpty)
           _buildCardSection(
             context,
             context.tr('series.notStarted'),
             notStarted,
           ),
-        if (stale.isNotEmpty)
-          _buildCardSection(context, context.tr('series.notWatching'), stale),
       ],
     );
   }
