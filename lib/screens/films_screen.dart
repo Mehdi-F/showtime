@@ -203,10 +203,14 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 400) {
-      setState(() => _visibleCount += _pageSize);
-    }
+    final position = _scrollController.position;
+    // Without the extent/bound guards this kept calling setState on every
+    // scroll notification once the end was in view, even with nothing left
+    // to reveal.
+    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
+    if (position.pixels < position.maxScrollExtent - 400) return;
+    if (_visibleCount >= _movieItems.length) return;
+    setState(() => _visibleCount += _pageSize);
   }
 
   Future<void> _toggleWatched(LibraryItem item, bool newValue) async {

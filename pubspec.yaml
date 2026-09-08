@@ -43,6 +43,8 @@ dependencies:
   google_fonts: ^6.2.1
   intl: ^0.19.0
   shared_preferences: ^2.3.2
+  path_provider: ^2.1.4
+  crypto: ^3.0.3
   file_picker: ^8.1.2
   archive: ^3.6.1
   confetti: ^0.8.0

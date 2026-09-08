@@ -343,27 +343,29 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     super.dispose();
   }
 
-  // Guards the scroll loader so it grows the page at most once per frame.
-  // Without this it ran on *every* scroll notification past the threshold,
-  // and since a rebuild doesn't immediately make the list taller, each
-  // notification queued another +20 and another full rebuild — that burst
-  // of rebuilds mid-scroll is what made scrolling feel broken.
+  // Only one page load may be in flight at a time. The loader used to run on
+  // every scroll notification past its threshold and start another
+  // _resolveVisible batch each time; since a rebuild doesn't instantly make
+  // the list taller, the threshold stayed true and it piled up overlapping
+  // batches — hundreds of concurrent TMDB fetches, which OOM'd the app.
   bool _loadingMoreItems = false;
 
   void _growVisibleCount() {
     if (_loadingMoreItems || _visibleCount >= widget.tvItems.length) return;
     _loadingMoreItems = true;
     setState(() => _visibleCount += _pageSize);
-    _resolveVisible(isInitial: false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _resolveVisible(isInitial: false).whenComplete(() {
       if (mounted) _loadingMoreItems = false;
     });
   }
 
   void _onScroll() {
     final position = _scrollController.position;
-    if (position.pixels > position.maxScrollExtent * 0.8 ||
-        position.pixels >= position.maxScrollExtent - 400) {
+    // maxScrollExtent can be 0 (or smaller than the trigger distance) when the
+    // content fits the viewport — without this guard the "near the bottom"
+    // test is true even at rest and the loader fires continuously.
+    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
+    if (position.pixels >= position.maxScrollExtent - 400) {
       _growVisibleCount();
     }
   }
@@ -1035,15 +1037,6 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels <
-        _scrollController.position.maxScrollExtent - 400)
-      return;
-    if (_visibleCount >= widget.tvItems.length) return;
-    setState(() => _visibleCount += _pageSize);
-    _resolveVisible(isInitial: false);
-  }
-
   Future<void> _resolveVisible({required bool isInitial}) {
     final allIds = widget.tvItems.map((i) => i.tmdbId).toSet();
     _resolved.removeWhere((k, _) => !allIds.contains(k));
@@ -1067,24 +1060,20 @@ class _UpcomingTabState extends State<_UpcomingTab> {
     return future;
   }
 
-  void _onUpcomingScroll() {
-    final maxExtent = _scrollController.position.maxScrollExtent;
-    if (_scrollController.position.pixels > maxExtent * 0.8) {
-      if (_visibleCount >= widget.tvItems.length) return;
-      final newCount = _visibleCount + _pageSize;
-      if (newCount > _visibleCount) {
-        setState(() => _visibleCount = newCount);
-        _resolveVisible(isInitial: false);
-      }
-      return;
-    }
+  // Same one-at-a-time guard as the To Watch tab — see _growVisibleCount
+  // there for why overlapping page loads were a problem.
+  bool _loadingMoreItems = false;
 
-    if (_scrollController.position.pixels <
-        _scrollController.position.maxScrollExtent - 400)
-      return;
-    if (_visibleCount >= widget.tvItems.length) return;
+  void _onUpcomingScroll() {
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
+    if (position.pixels < position.maxScrollExtent - 400) return;
+    if (_loadingMoreItems || _visibleCount >= widget.tvItems.length) return;
+    _loadingMoreItems = true;
     setState(() => _visibleCount += _pageSize);
-    _resolveVisible(isInitial: false);
+    _resolveVisible(isInitial: false).whenComplete(() {
+      if (mounted) _loadingMoreItems = false;
+    });
   }
 
   Future<void> _refresh() async {

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/tmdb_config.dart';
 import '../config/constants.dart';
@@ -9,16 +12,54 @@ import '../exceptions/app_exception.dart';
 
 class TmdbService {
   final http.Client _client;
-  SharedPreferences? _prefs;
+  Future<Directory>? _cacheDirFuture;
 
   TmdbService({http.Client? client}) : _client = client ?? http.Client() {
     // Fire-and-forget: by the time any request actually needs the disk
     // cache, this has almost certainly already resolved.
-    unawaited(SharedPreferences.getInstance().then((p) => _prefs = p));
+    unawaited(_cacheDir());
+    unawaited(_purgeLegacyPrefsCache());
   }
 
-  static const _prefsKeyPrefix = 'tmdb_cache:';
   static const _prefsTtl = AppConstants.tmdbCacheTtl;
+
+  /// Response bodies used to be cached in SharedPreferences. That store is
+  /// loaded in full into memory (and marshalled across the platform channel)
+  /// on every launch, so a large library's worth of cached TMDB JSON grew it
+  /// to ~100MB and the app started OOM'ing at startup before it could render.
+  /// Bodies now live in individual files under the app's cache directory,
+  /// which is read only on demand and can be reclaimed by the OS.
+  Future<Directory> _cacheDir() {
+    return _cacheDirFuture ??= () async {
+      final base = await getApplicationCacheDirectory();
+      final dir = Directory('${base.path}/tmdb_cache');
+      if (!await dir.exists()) await dir.create(recursive: true);
+      return dir;
+    }();
+  }
+
+  Future<File> _cacheFile(String key) async {
+    final dir = await _cacheDir();
+    // Keys contain slashes and query strings; hash them into a flat filename.
+    final name = md5.convert(utf8.encode(key)).toString();
+    return File('${dir.path}/$name');
+  }
+
+  /// Deletes the old SharedPreferences-backed cache left over from previous
+  /// versions, so existing installs shed that weight instead of carrying it
+  /// forever.
+  Future<void> _purgeLegacyPrefsCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stale = prefs.getKeys().where((k) => k.startsWith('tmdb_cache:')).toList();
+      for (final key in stale) {
+        await prefs.remove(key);
+      }
+    } catch (_) {
+      // Nothing to do — worst case the legacy entries stay until the OS or
+      // the user clears app storage.
+    }
+  }
   // Without this, a request on a slow/flaky connection could hang
   // indefinitely instead of failing fast enough to fall back to cache below.
   static const _requestTimeout = AppConstants.tmdbRequestTimeout;
@@ -42,11 +83,13 @@ class TmdbService {
   /// viewed this session.
   void clearCache() {
     _memoryCache.clear();
-    final prefs = _prefs;
-    if (prefs == null) return;
-    for (final key in prefs.getKeys()) {
-      if (key.startsWith(_prefsKeyPrefix)) unawaited(prefs.remove(key));
-    }
+    unawaited(() async {
+      try {
+        final dir = await _cacheDir();
+        if (await dir.exists()) await dir.delete(recursive: true);
+        _cacheDirFuture = null;
+      } catch (_) {}
+    }());
   }
 
   Future<String> _cachedBody(String key, Uri uri, String errorLabel) {
@@ -63,15 +106,17 @@ class TmdbService {
   }
 
   Future<String> _fetchBody(String key, Uri uri, String errorLabel) async {
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-
-    final prefsKey = '$_prefsKeyPrefix$key';
-    final cachedAt = prefs.getInt('$prefsKey:at');
-    final cachedBody = prefs.getString(prefsKey);
-    if (cachedAt != null && cachedBody != null) {
-      final age = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(cachedAt));
-      if (age < _prefsTtl) return cachedBody;
+    File? file;
+    String? cachedBody;
+    try {
+      file = await _cacheFile(key);
+      if (await file.exists()) {
+        cachedBody = await file.readAsString();
+        final age = DateTime.now().difference(await file.lastModified());
+        if (age < _prefsTtl) return cachedBody;
+      }
+    } catch (_) {
+      cachedBody = null;
     }
 
     try {
@@ -79,8 +124,9 @@ class TmdbService {
       if (response.statusCode != 200) {
         throw TmdbException('$errorLabel failed', statusCode: response.statusCode);
       }
-      unawaited(prefs.setString(prefsKey, response.body));
-      unawaited(prefs.setInt('$prefsKey:at', DateTime.now().millisecondsSinceEpoch));
+      if (file != null) {
+        unawaited(file.writeAsString(response.body).catchError((_) => file!));
+      }
       return response.body;
     } catch (e) {
       // On a slow or flaky connection, a stale cached copy (even past its
