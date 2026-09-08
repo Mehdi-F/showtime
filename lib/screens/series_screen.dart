@@ -295,6 +295,13 @@ class _ToWatchTab extends StatefulWidget {
 class _ToWatchTabState extends State<_ToWatchTab> {
   static const _pageSize = 20;
 
+  // "Pas commencé" is usually the longest section by far — rendering all of
+  // it at once made the list tall enough that the infinite-scroll loader
+  // kept firing and the scroll position jumped around. It now grows only
+  // when the user asks for more.
+  static const _notStartedPageSize = 20;
+  int _notStartedVisibleCount = _notStartedPageSize;
+
   static const _historyPageSize = 15;
   int _historyVisibleCount = 0;
   bool _historyLoadingMore = false;
@@ -336,24 +343,29 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     super.dispose();
   }
 
-  void _onScroll() {
-    final maxExtent = _scrollController.position.maxScrollExtent;
-    if (_scrollController.position.pixels > maxExtent * 0.8) {
-      if (_visibleCount >= widget.tvItems.length) return;
-      final newCount = _visibleCount + _pageSize;
-      if (newCount > _visibleCount) {
-        setState(() => _visibleCount = newCount);
-        _resolveVisible(isInitial: false);
-      }
-      return;
-    }
+  // Guards the scroll loader so it grows the page at most once per frame.
+  // Without this it ran on *every* scroll notification past the threshold,
+  // and since a rebuild doesn't immediately make the list taller, each
+  // notification queued another +20 and another full rebuild — that burst
+  // of rebuilds mid-scroll is what made scrolling feel broken.
+  bool _loadingMoreItems = false;
 
-    if (_scrollController.position.pixels <
-        _scrollController.position.maxScrollExtent - 400)
-      return;
-    if (_visibleCount >= widget.tvItems.length) return;
+  void _growVisibleCount() {
+    if (_loadingMoreItems || _visibleCount >= widget.tvItems.length) return;
+    _loadingMoreItems = true;
     setState(() => _visibleCount += _pageSize);
     _resolveVisible(isInitial: false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadingMoreItems = false;
+    });
+  }
+
+  void _onScroll() {
+    final position = _scrollController.position;
+    if (position.pixels > position.maxScrollExtent * 0.8 ||
+        position.pixels >= position.maxScrollExtent - 400) {
+      _growVisibleCount();
+    }
   }
 
   Future<void> _resolveVisible({required bool isInitial}) {
@@ -614,7 +626,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         if (expanding && _historyVisibleCount == 0) _loadMoreHistory();
       },
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        // Extra right padding clears the floating ViewModeToggle (40px wide
+        // at right: 16), which otherwise sits directly on top of this row's
+        // expand chevron.
+        padding: const EdgeInsets.fromLTRB(16, 16, 72, 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -681,8 +696,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           _buildCardSection(
             context,
             context.tr('series.notStarted'),
-            notStarted,
+            notStarted.take(_notStartedVisibleCount).toList(),
           ),
+        if (notStarted.isNotEmpty && _hasMoreNotStarted(notStarted))
+          _showMoreNotStartedRow(context),
       ],
     );
   }
@@ -831,10 +848,37 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     BuildContext context,
     List<_ShowEpisodesData> rows,
   ) {
+    final visible = rows.take(_notStartedVisibleCount).toList();
     return [
       _sectionHeader(context.tr('series.notStarted')),
-      for (final d in rows) _buildNotStartedCard(context, d),
+      for (final d in visible) _buildNotStartedCard(context, d),
+      if (_hasMoreNotStarted(rows)) _showMoreNotStartedRow(context),
     ];
+  }
+
+  /// True when there are more rows already resolved than we're showing, or
+  /// more library items that haven't been resolved into rows yet — capping
+  /// the section can otherwise leave the page too short to ever trigger the
+  /// scroll loader, which would hide the rest of the library for good.
+  bool _hasMoreNotStarted(List<_ShowEpisodesData> rows) =>
+      rows.length > _notStartedVisibleCount ||
+      _visibleCount < widget.tvItems.length;
+
+  Widget _showMoreNotStartedRow(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: TextButton(
+          onPressed: () => setState(() {
+            _notStartedVisibleCount += _notStartedPageSize;
+            if (_visibleCount < widget.tvItems.length) {
+              _visibleCount += _pageSize;
+            }
+          }),
+          child: Text(context.tr('common.loadMore')),
+        ),
+      ),
+    );
   }
 
   Widget _buildNextCard(
