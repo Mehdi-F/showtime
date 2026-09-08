@@ -112,7 +112,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                             )
                           : Text(context.tr('friends.addButton')),
                     ),

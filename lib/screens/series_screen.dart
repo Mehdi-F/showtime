@@ -1084,10 +1084,10 @@ class _UpcomingTabState extends State<_UpcomingTab> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: context.colorTextPrimary,
                   ),
                 ),
                 if (timeLabel.isNotEmpty)
@@ -1349,7 +1349,10 @@ class _EpisodeCard extends StatelessWidget {
   Widget _buildBadge(BuildContext context, String label) {
     context.watch<SettingsProvider>();
     Color? fill;
-    var textColor = Colors.white;
+    // Unfilled badges sit directly on the card surface, so they follow the
+    // theme; the filled ones carry their own background and keep fixed
+    // contrast colors (black on accent, white on green).
+    var textColor = context.colorTextPrimary;
     final newLabel = context.tr('badge.new');
     final airedLabel = context.tr('badge.aired');
 
@@ -1358,12 +1361,13 @@ class _EpisodeCard extends StatelessWidget {
       textColor = Colors.black;
     } else if (label == airedLabel) {
       fill = Colors.green;
+      textColor = Colors.white;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: fill,
-        border: fill == null ? Border.all(color: Colors.white38) : null,
+        border: fill == null ? Border.all(color: context.colorTextSecondary) : null,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -1379,7 +1383,7 @@ class _EpisodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleColor = dimmed ? context.colorTextSecondary : Colors.white;
+    final titleColor = dimmed ? context.colorTextSecondary : context.colorTextPrimary;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTapCard,
@@ -1435,7 +1439,7 @@ class _EpisodeCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white38),
+                        border: Border.all(color: context.colorTextSecondary),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(

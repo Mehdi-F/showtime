@@ -886,8 +886,12 @@ class _ProfileHeader extends StatelessWidget {
                   OutlinedButton(
                     onPressed: onEdit,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white54),
+                      // The name above sits on the banner image (so white is
+                      // right there), but this button hangs below the banner's
+                      // bottom edge over the page background — hardcoded white
+                      // made it invisible in light mode.
+                      foregroundColor: context.colorTextPrimary,
+                      side: BorderSide(color: context.colorTextSecondary),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 4,
