@@ -3,7 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
 import '../theme/app_theme.dart';
-import './animations.dart';
 
 const _frMonths = [
   'janvier',
@@ -65,39 +64,38 @@ class _EpisodeDetailSheet extends StatefulWidget {
 }
 
 class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
+  // Leaves the neighbouring episodes peeking at the edges, which is what
+  // tells you the row can be swiped at all — the old full-bleed pages gave
+  // no such hint.
+  static const _viewportFraction = 0.86;
+
   late PageController _pageController;
-  late ScrollController _dotsController;
   late int _currentIndex = widget.initialIndex;
-  late Map<String, bool> _watchedMap = Map.from(widget.watchedMap);
+  late double _page = widget.initialIndex.toDouble();
+  final Map<String, bool> _watchedMap = {};
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: widget.initialIndex);
-    _dotsController = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollDotsToCenter());
+    _watchedMap.addAll(widget.watchedMap);
+    _pageController = PageController(
+      initialPage: widget.initialIndex,
+      viewportFraction: _viewportFraction,
+    );
+    _pageController.addListener(_onPageScroll);
+  }
+
+  void _onPageScroll() {
+    if (!_pageController.hasClients) return;
+    final page = _pageController.page;
+    if (page != null && page != _page) setState(() => _page = page);
   }
 
   @override
   void dispose() {
+    _pageController.removeListener(_onPageScroll);
     _pageController.dispose();
-    _dotsController.dispose();
     super.dispose();
-  }
-
-  void _scrollDotsToCenter() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_dotsController.hasClients) return;
-      const dotSize = 18.0; // ~6 or 24 width + 12 margins
-      final offset =
-          (_currentIndex * dotSize) -
-          (MediaQuery.of(context).size.width / 2 - 12);
-      _dotsController.animateTo(
-        offset.clamp(0.0, _dotsController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    });
   }
 
   @override
@@ -110,54 +108,103 @@ class _EpisodeDetailSheetState extends State<_EpisodeDetailSheet> {
       builder: (context, scrollController) {
         return Column(
           children: [
-            // PageView for swiping between episodes
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.3,
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _currentIndex = index);
-                  _scrollDotsToCenter();
-                },
-                itemCount: widget.episodes.length,
-                itemBuilder: (context, index) {
-                  final ep = widget.episodes[index];
-                  return _EpisodeImageCard(episode: ep);
-                },
-              ),
-            ),
-            // Page indicator dots with scroll effect
+            // Fixed chrome: the close affordance used to live inside the
+            // card, so it was rebuilt per page and slid around with it.
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Colors.transparent,
-                    Colors.white,
-                    Colors.white,
-                    Colors.transparent,
-                  ],
-                  stops: const [0, 0.1, 0.9, 1],
-                ).createShader(bounds),
-                child: SingleChildScrollView(
-                  controller: _dotsController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      widget.episodes.length,
-                      (index) => _DotIndicator(
-                        key: ValueKey(index),
-                        isActive: index == _currentIndex,
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    color: context.colorTextSecondary,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Text(
+                      '${_currentIndex + 1}/${widget.episodes.length}',
+                      style: TextStyle(
+                        color: context.colorTextSecondary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
+            // The card sizes itself from its own 16:9 ratio instead of a
+            // fraction of screen height — the two used to fight, leaving a
+            // gap on tall screens and cropping on short ones.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = constraints.maxWidth * _viewportFraction - 16;
+                return SizedBox(
+                  height: cardWidth * 9 / 16,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) => setState(() => _currentIndex = index),
+                    itemCount: widget.episodes.length,
+                    itemBuilder: (context, index) {
+                      // Neighbours sit back slightly so the focused episode
+                      // reads as the subject rather than one of three.
+                      final distance = (_page - index).abs().clamp(0.0, 1.0);
+                      return Transform.scale(
+                        scale: 1 - distance * 0.06,
+                        child: Opacity(
+                          opacity: 1 - distance * 0.35,
+                          child: _EpisodeImageCard(episode: widget.episodes[index]),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            // A single thin bar beats one dot per episode: a 24-episode
+            // season turned the old indicator into an unreadable row, and
+            // its scroll-centring maths drifted because the dot width
+            // changed with the active state.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final count = widget.episodes.length;
+                  final width = count <= 1
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth / count).clamp(18.0, constraints.maxWidth);
+                  final left = count <= 1
+                      ? 0.0
+                      : (constraints.maxWidth - width) * (_page / (count - 1)).clamp(0.0, 1.0);
+                  return SizedBox(
+                    height: 3,
+                    child: Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: context.colorSurfaceVariant,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        Positioned(
+                          left: left,
+                          child: Container(
+                            width: width,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: AppColors.accent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
             // Scrollable content
             Expanded(
               child: ListView(
@@ -193,50 +240,56 @@ class _EpisodeImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: Stack(
-        children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: episode.stillPath != null
-                ? CachedNetworkImage(
-                    imageUrl:
-                        '${TmdbConfig.imageBaseUrlSmall}${episode.stillPath}',
-                    fit: BoxFit.cover,
-                    fadeInDuration: const Duration(milliseconds: 200),
-                    placeholder: (_, __) =>
-                        Container(color: context.colorSurfaceVariant),
-                    errorWidget: (_, __, ___) => Container(
-                      color: context.colorSurfaceVariant,
-                      child: Icon(
-                        Icons.tv,
-                        color: context.colorTextSecondary,
-                        size: 40,
-                      ),
-                    ),
-                  )
-                : Container(
-                    color: context.colorSurfaceVariant,
-                    child: Icon(
-                      Icons.tv,
-                      color: context.colorTextSecondary,
-                      size: 40,
+    final fallback = Container(
+      color: context.colorSurfaceVariant,
+      alignment: Alignment.center,
+      child: Icon(Icons.tv, color: context.colorTextSecondary, size: 40),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (episode.stillPath != null)
+              CachedNetworkImage(
+                imageUrl: '${TmdbConfig.imageBaseUrlSmall}${episode.stillPath}',
+                fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 200),
+                placeholder: (_, __) => Container(color: context.colorSurfaceVariant),
+                errorWidget: (_, __, ___) => fallback,
+              )
+            else
+              fallback,
+            // Keeps the episode identifiable mid-swipe, when the details
+            // below still belong to the previous page.
+            Positioned(
+              left: 10,
+              bottom: 10,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Text(
+                    'S${episode.seasonNumber.toString().padLeft(2, '0')}'
+                    'E${episode.episodeNumber.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.4,
                     ),
                   ),
-          ),
-          Positioned(
-            top: 8,
-            left: 8,
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).maybePop(),
-              child: const CircleAvatar(
-                backgroundColor: Colors.black54,
-                child: Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -367,38 +420,6 @@ class _EpisodeInfoState extends State<_EpisodeInfo> {
           style: const TextStyle(height: 1.4),
         ),
       ],
-    );
-  }
-}
-
-class _DotIndicator extends StatelessWidget {
-  final bool isActive;
-
-  const _DotIndicator({required super.key, required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: isActive ? 22 : 6,
-      height: 6,
-      decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.accent
-            : Colors.white.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(3),
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.5),
-                  blurRadius: 6,
-                  spreadRadius: 0.5,
-                ),
-              ]
-            : null,
-      ),
     );
   }
 }
