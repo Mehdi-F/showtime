@@ -16,7 +16,7 @@ class AppConstants {
   static const filmsPosterAspectRatio = 0.67;
   static const scrollLoadThreshold = 400;
   static const maxCastMembers = 12;
-  static const confettiDuration = Duration(seconds: 3);
+  static const celebrationDuration = Duration(milliseconds: 1600);
 
   // Notifications
   static const episodeReminderHour = 19; // local time, evening before air date

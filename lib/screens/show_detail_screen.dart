@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:confetti/confetti.dart';
 import '../config/tmdb_config.dart';
 import '../config/constants.dart';
 import '../l10n/localization_context.dart';
@@ -20,6 +20,7 @@ import '../widgets/add_to_list_sheet.dart';
 import '../widgets/animations.dart';
 import '../widgets/animated_progress_bar.dart';
 import '../widgets/app_page_route.dart';
+import '../widgets/completion_celebration.dart';
 import '../widgets/image_gallery.dart';
 import '../widgets/media_info_sections.dart';
 import '../widgets/episode_detail_sheet.dart';
@@ -54,7 +55,7 @@ class ShowDetailScreen extends StatefulWidget {
   State<ShowDetailScreen> createState() => _ShowDetailScreenState();
 }
 
-class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerProviderStateMixin {
+class _ShowDetailScreenState extends State<ShowDetailScreen> with TickerProviderStateMixin {
   LibraryItem? _libraryItem;
   TvDetails? _details;
   bool _loadError = false;
@@ -65,7 +66,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   bool _favorite = false;
   bool _notificationsEnabled = false;
   late TabController _tabController;
-  late final ConfettiController _confettiController = ConfettiController(duration: AppConstants.confettiDuration);
+  late final AnimationController _celebrationController = AnimationController(
+    vsync: this,
+    duration: AppConstants.celebrationDuration,
+  );
 
   // Fetched once and reused across rebuilds — building these inline inside
   // _buildAboutTab would re-hit TMDB on every setState in this screen (e.g.
@@ -95,7 +99,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   @override
   void dispose() {
     _tabController.dispose();
-    _confettiController.dispose();
+    _celebrationController.dispose();
     super.dispose();
   }
 
@@ -300,7 +304,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
   void _maybeCelebrate() {
     final details = _details;
     if (details != null && details.isEnded && _isFullyWatched) {
-      _confettiController.play();
+      _celebrationController.forward(from: 0);
+      HapticFeedback.mediumImpact();
     }
   }
 
@@ -1180,15 +1185,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
             ],
             ),
           ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              numberOfParticles: 30,
-              colors: const [Colors.yellow, Colors.green, Colors.blue, Colors.red, Colors.purple],
-            ),
+          Positioned.fill(
+            child: CompletionCelebration(controller: _celebrationController),
           ),
         ],
       ),
