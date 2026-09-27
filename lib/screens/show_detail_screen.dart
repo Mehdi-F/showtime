@@ -1186,7 +1186,10 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with TickerProvider
             ),
           ),
           Positioned.fill(
-            child: CompletionCelebration(controller: _celebrationController),
+            child: CompletionCelebration(
+              controller: _celebrationController,
+              posterPath: details.posterPath,
+            ),
           ),
         ],
       ),

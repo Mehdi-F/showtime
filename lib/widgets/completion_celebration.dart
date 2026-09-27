@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../config/tmdb_config.dart';
 import '../l10n/localization_context.dart';
 import '../theme/app_theme.dart';
 
@@ -14,7 +16,15 @@ import '../theme/app_theme.dart';
 class CompletionCelebration extends StatelessWidget {
   final AnimationController controller;
 
-  const CompletionCelebration({super.key, required this.controller});
+  /// The finished show's poster, shown in the medallion. Falls back to a
+  /// check mark when TMDB has no poster for the title.
+  final String? posterPath;
+
+  const CompletionCelebration({
+    super.key,
+    required this.controller,
+    this.posterPath,
+  });
 
   static final List<_Particle> _particles = _buildParticles();
 
@@ -67,11 +77,15 @@ class CompletionCelebration extends StatelessWidget {
                     Transform.scale(
                       scale: badgeScale,
                       child: Container(
-                        width: 84,
-                        height: 84,
+                        width: 104,
+                        height: 104,
                         decoration: BoxDecoration(
                           color: AppColors.accent,
                           shape: BoxShape.circle,
+                          // White on dark, black on light: the medallion has
+                          // to read against both the page and whatever the
+                          // poster's edges happen to be.
+                          border: Border.all(color: context.colorTextPrimary, width: 3),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.accent.withValues(alpha: 0.45),
@@ -80,7 +94,19 @@ class CompletionCelebration extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.check_rounded, color: Colors.black, size: 46),
+                        child: ClipOval(
+                          child: posterPath != null
+                              ? CachedNetworkImage(
+                                  imageUrl: '${TmdbConfig.imageBaseUrlSmall}$posterPath',
+                                  fit: BoxFit.cover,
+                                  errorWidget: (context, url, error) => const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.black,
+                                    size: 46,
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded, color: Colors.black, size: 46),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
