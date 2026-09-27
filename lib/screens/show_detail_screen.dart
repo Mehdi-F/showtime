@@ -943,13 +943,15 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildSeasonSection(SeasonSummary summary, bool isEnded) {
+  Widget _buildSeasonSection(SeasonSummary summary, bool isEnded, bool isCancelled) {
     final expanded = _expandedSeasons.contains(summary.seasonNumber);
     final watchedCount = _watchedCountForSeason(summary.seasonNumber);
     final total = summary.episodeCount;
     final ratio = total == 0 ? 0.0 : watchedCount / total;
     final fullyWatched = total > 0 && watchedCount >= total;
-    final barColor = fullyWatched ? (isEnded ? Colors.purple : Colors.green) : AppColors.accent;
+    final barColor = fullyWatched
+        ? (isEnded ? watchedSeriesColor(isCancelled: isCancelled) : Colors.green)
+        : AppColors.accent;
     final seasonDetails = _seasonsByNumber[summary.seasonNumber];
 
     return Column(
@@ -1095,14 +1097,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 onTap: _toggleAll,
                 child: Icon(
                   _isFullyWatched ? Icons.check_circle : Icons.check_circle_outline,
-                  color: _isFullyWatched ? (details.isEnded ? Colors.purple : Colors.green) : context.colorTextSecondary,
+                  color: _isFullyWatched
+                      ? (details.isEnded
+                            ? watchedSeriesColor(isCancelled: details.isCancelled)
+                            : Colors.green)
+                      : context.colorTextSecondary,
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 8),
-        ...seasons.map((s) => _buildSeasonSection(s, details.isEnded)),
+        ...seasons.map((s) => _buildSeasonSection(s, details.isEnded, details.isCancelled)),
         if (details.hasSpecials) _buildSpecialsSection(),
       ],
     );
@@ -1142,6 +1148,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with SingleTickerPr
                 title: details.name,
                 posterPath: details.posterPath,
                 isEnded: details.isEnded,
+                isCancelled: details.isCancelled,
                 seasonCount: details.seasons.where((s) => s.seasonNumber >= 1).length,
                 progress: _totalMainEpisodes > 0 ? _totalWatchedMain / _totalMainEpisodes : null,
                 favorite: _favorite,
@@ -1203,6 +1210,7 @@ class _ShowBanner extends StatelessWidget {
   final String title;
   final String? posterPath;
   final bool isEnded;
+  final bool isCancelled;
   final int seasonCount;
   final double? progress;
   final bool favorite;
@@ -1218,6 +1226,7 @@ class _ShowBanner extends StatelessWidget {
     required this.title,
     required this.posterPath,
     required this.isEnded,
+    required this.isCancelled,
     required this.seasonCount,
     required this.progress,
     required this.favorite,
@@ -1336,7 +1345,7 @@ class _ShowBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$seasonCount saison${seasonCount > 1 ? 's' : ''} • ${isEnded ? 'Terminée' : 'En cours'}',
+                  '$seasonCount saison${seasonCount > 1 ? 's' : ''} • ${context.tr(isCancelled ? 'series.statusCancelled' : isEnded ? 'series.statusEnded' : 'series.statusOngoing')}',
                   style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ],
@@ -1349,7 +1358,9 @@ class _ShowBanner extends StatelessWidget {
               bottom: 0,
               child: AnimatedProgressBar(
                 value: progress!,
-                color: progress! >= 1.0 ? (isEnded ? Colors.purple : Colors.green) : AppColors.accent,
+                color: progress! >= 1.0
+                    ? (isEnded ? watchedSeriesColor(isCancelled: isCancelled) : Colors.green)
+                    : AppColors.accent,
                 backgroundColor: Colors.black45,
               ),
             ),

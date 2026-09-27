@@ -87,6 +87,8 @@ class _ResolvedItem {
     this.status,
   });
 
+  bool get isCancelled => status == 'Canceled';
+
   int get watchedEpisodesCount =>
       item.watchedEpisodes.values.where((w) => w).length;
 
@@ -1413,7 +1415,7 @@ extension on _SeriesProgressFilter {
     _SeriesProgressFilter.notStarted => "N'a pas encore commencé",
     _SeriesProgressFilter.upToDate => 'À jour',
     _SeriesProgressFilter.completed => 'Terminé',
-    _SeriesProgressFilter.cancelled => 'Arrêtées',
+    _SeriesProgressFilter.cancelled => 'Annulées',
     _SeriesProgressFilter.favorites => 'Favoris',
   };
 }
@@ -1513,7 +1515,9 @@ class _FullListScreenState extends State<_FullListScreen> {
 
   Color _progressColor(_ResolvedItem r, double ratio) {
     if (ratio < 1.0) return AppColors.accent;
-    if (r.item.type == 'tv' && r.isEnded) return Colors.purple;
+    if (r.item.type == 'tv' && r.isEnded) {
+      return watchedSeriesColor(isCancelled: r.isCancelled);
+    }
     return Colors.green;
   }
 

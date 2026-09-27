@@ -104,7 +104,10 @@ class TvDetails {
     required this.specialsEpisodeCount,
   });
 
+  /// True for both "Ended" and "Canceled": no further episodes are coming.
+  /// Use [isCancelled] when the two need to read differently to the user.
   bool get isEnded => status == 'Ended' || status == 'Canceled';
+  bool get isCancelled => status == 'Canceled';
   bool get hasSpecials => specialsEpisodeCount > 0;
 
   factory TvDetails.fromJson(Map<String, dynamic> json) {

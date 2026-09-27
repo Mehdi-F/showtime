@@ -50,6 +50,7 @@ class _ShowEpisodesData {
   final int extraUnwatched;
   final int totalEpisodeCount;
   final bool isEnded;
+  final bool isCancelled;
   final List<EpisodeRef> allEpisodes;
 
   _ShowEpisodesData({
@@ -60,6 +61,7 @@ class _ShowEpisodesData {
     required this.extraUnwatched,
     required this.totalEpisodeCount,
     required this.isEnded,
+    required this.isCancelled,
     required this.allEpisodes,
   });
 
@@ -107,8 +109,12 @@ class _ProgressInfo {
 _ProgressInfo? _progressInfo(_ShowEpisodesData d) {
   if (d.totalEpisodeCount <= 0) return null;
   final ratio = d.watchedEpisodesCount / d.totalEpisodeCount;
-  if (ratio >= 1.0)
-    return _ProgressInfo(1.0, d.isEnded ? Colors.purple : Colors.green);
+  if (ratio >= 1.0) {
+    return _ProgressInfo(
+      1.0,
+      d.isEnded ? watchedSeriesColor(isCancelled: d.isCancelled) : Colors.green,
+    );
+  }
   return _ProgressInfo(ratio, AppColors.accent);
 }
 
@@ -210,6 +216,7 @@ class _SeriesScreenState extends State<SeriesScreen>
       extraUnwatched: next == null ? 0 : unwatchedCount - 1,
       totalEpisodeCount: allEpisodes.length,
       isEnded: details.isEnded,
+      isCancelled: details.isCancelled,
       allEpisodes: allEpisodes,
     );
   }

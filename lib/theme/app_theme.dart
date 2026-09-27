@@ -20,6 +20,12 @@ class AppColors {
   static const lightTextSecondary = Color(0xFF666666);
 }
 
+/// Progress colour for a fully-watched show. A cancelled series is a dead
+/// end rather than an achievement, so it reads as inactive instead of
+/// sharing the "you finished it" purple.
+Color watchedSeriesColor({required bool isCancelled}) =>
+    isCancelled ? Colors.blueGrey : Colors.purple;
+
 /// AppColors' fields are fixed dark-mode values by themselves — widgets that
 /// referenced them directly stayed dark even when the user picked light
 /// theme. These getters resolve the right variant from the active [Theme],
