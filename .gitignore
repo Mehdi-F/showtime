@@ -7,6 +7,11 @@ graphify-out/
 # `firebase deploy --only firestore:rules`, not via the public repo.
 firestore.rules
 
+# Holds the real TMDB API key, fed to builds via --dart-define-from-file.
+# See dart_define.example.json and scripts/build.ps1; CI uses the
+# TMDB_API_KEY repo secret instead.
+dart_define.json
+
 # Flutter/Dart/Pub related
 **/doc/api/
 .dart_tool/

@@ -33,10 +33,22 @@ Live at: https://mehdi-f.github.io/showtime/
 
 ## Development
 
+The TMDB key is read via `String.fromEnvironment('TMDB_API_KEY')`, so it is
+baked in at compile time. A build started without it still compiles and
+launches, but every TMDB call comes back 401 — empty Explorer rows, no search
+results, no posters, and nothing at runtime explaining why. Use the build
+script rather than calling `flutter build` directly:
+
 ```
+cp dart_define.example.json dart_define.json   # then paste your TMDB v3 key
 flutter pub get
-flutter run -d chrome
+
+./scripts/build.ps1 -Target run                # run on a connected device
+./scripts/build.ps1 -Target apk -Install       # release APK, installed via adb
+./scripts/build.ps1 -Target web                # release web bundle
 ```
 
-Requires a TMDB API key configured in `lib/config/tmdb_config.dart` and a
-Firebase project (`lib/firebase_options.dart`) to run locally.
+`dart_define.json` is gitignored. CI passes the same key from the
+`TMDB_API_KEY` repo secret, so deploys need no local setup.
+
+A Firebase project (`lib/firebase_options.dart`) is also required.
