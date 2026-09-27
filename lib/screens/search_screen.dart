@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/library_item.dart';
 import '../l10n/localization_context.dart';
 import '../providers/settings_provider.dart';
 import '../models/tmdb_models.dart';
@@ -171,8 +170,7 @@ class _SearchScreenState extends State<SearchScreen> {
           itemBuilder: (context, index) {
             final result = _results[index];
             final added = libraryKeys.contains('${result.mediaType}_${result.id}');
-            void openDetail() async {
-              final lib = context.read<LibraryService>();
+            void openDetail() {
               final items = context.read<LibraryProvider>().items;
               final item = items.where((i) => i.tmdbId == result.id && i.type == result.mediaType).firstOrNull;
               Navigator.of(context).push(appRoute(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../config/tmdb_config.dart';
 import '../models/tmdb_models.dart';
+import '../providers/library_provider.dart';
 import '../theme/app_theme.dart';
 
 class WatchProvidersRow extends StatelessWidget {
@@ -235,7 +237,17 @@ class SimilarRow extends StatelessWidget {
     return FutureBuilder<List<SimilarMedia>>(
       future: future,
       builder: (context, snapshot) {
-        final items = snapshot.data ?? const [];
+        // Suggestions you already track aren't suggestions. Tapping a tile
+        // here only opens the title, so filtering live can't pull a poster
+        // out from under the finger that's tapping it.
+        final followedKeys = context
+            .watch<LibraryProvider>()
+            .items
+            .map((i) => '${i.type}_${i.tmdbId}')
+            .toSet();
+        final items = (snapshot.data ?? const <SimilarMedia>[])
+            .where((m) => !followedKeys.contains('${m.type}_${m.id}'))
+            .toList();
         if (items.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

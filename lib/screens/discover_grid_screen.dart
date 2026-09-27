@@ -39,6 +39,9 @@ class DiscoverGridScreen extends StatefulWidget {
 }
 
 class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
+  /// Six rows of three: enough to be scrollable on any phone.
+  static const _minVisibleItems = 18;
+
   final _scrollController = ScrollController();
   final List<SimilarMedia> _items = [];
   int _nextPage = 1;
@@ -116,20 +119,31 @@ class _DiscoverGridScreenState extends State<DiscoverGridScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Already-watched titles just add clutter to a "what should I watch
-    // next" browse list, so they're hidden here (the library itself, where
-    // you'd go to revisit something, still shows everything).
-    final watchedTmdbIds = widget.mediaType != 'movie'
-        ? const <int>{}
-        : context
-            .watch<LibraryProvider>()
-            .items
-            .where((i) => i.type == 'movie' && i.watched)
-            .map((i) => i.tmdbId)
-            .toSet();
-    final visibleItems = watchedTmdbIds.isEmpty
+    // Anything already in the library is noise in a "what should I watch
+    // next" browse list — whether it's finished, half-watched or just sat
+    // there untouched since you added it. The library itself, where you'd go
+    // to revisit something, still shows everything.
+    //
+    // This matches the filter each Explorer row applies to its own preview.
+    // Series used to fall through to an empty set here, so the grid only
+    // ever hid films, and only films marked watched.
+    final followedKeys = context
+        .watch<LibraryProvider>()
+        .items
+        .map((i) => '${i.type}_${i.tmdbId}')
+        .toSet();
+    final visibleItems = followedKeys.isEmpty
         ? _items
-        : _items.where((m) => !watchedTmdbIds.contains(m.id)).toList();
+        : _items.where((m) => !followedKeys.contains('${m.type}_${m.id}')).toList();
+
+    // A page whose titles are mostly already followed can leave too little
+    // behind to fill the screen, and a grid that doesn't scroll never fires
+    // the scroll loader — so top it up here instead of dead-ending.
+    if (!_loading && !_exhausted && visibleItems.length < _minVisibleItems) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadMore();
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
