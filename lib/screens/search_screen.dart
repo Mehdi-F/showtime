@@ -277,29 +277,42 @@ class _CategoryRow extends StatefulWidget {
 }
 
 class _CategoryRowState extends State<_CategoryRow> {
-  Future<List<SimilarMedia>>? _resolvedFor;
-  List<SimilarMedia>? _visibleItems;
+  /// Titles the user followed while this row was on screen. They stay put
+  /// so the + badge can flip to a check, instead of the poster evaporating
+  /// under the finger that just tapped it. Cleared on a fresh fetch.
+  final Set<String> _sticky = {};
+  Set<String>? _lastFollowed;
+  Future<List<SimilarMedia>>? _fetchedFor;
 
-  // The already-followed filter is only applied once, the moment this row's
-  // data is fetched — not re-applied on every rebuild. Otherwise tapping the
-  // + badge (which adds to the library and notifies LibraryProvider) yanked
-  // the title out of the row before the user ever saw it flip to a
-  // checkmark. It now stays in place until the row's future is replaced by
-  // a fresh fetch (pull-to-refresh), at which point it's correctly excluded.
-  //
-  // Freezing on the first rebuild also means we must wait for the library's
-  // real first snapshot before doing it — right after a fresh app launch,
-  // LibraryProvider briefly reports an empty `items` list before Firestore's
-  // stream connects, and this TMDB fetch (often served from cache) can well
-  // resolve first. Freezing against that transient empty list would lock in
-  // "nothing followed", permanently re-showing titles added in past sessions
-  // for the rest of that session.
-  void _captureBaseline(List<SimilarMedia> data, LibraryProvider library) {
-    if (identical(_resolvedFor, widget.future)) return;
-    if (!library.isLoaded) return;
-    _resolvedFor = widget.future;
-    final followedKeys = library.items.map((i) => '${i.type}_${i.tmdbId}').toSet();
-    _visibleItems = data.where((m) => !followedKeys.contains('${m.type}_${m.id}')).toList();
+  static String _key(String type, int id) => '${type}_$id';
+
+  /// Excludes anything already in the library. This used to be captured once
+  /// and frozen for the life of the row, which quietly failed whenever the
+  /// capture landed before the library stream had really settled: the row
+  /// then kept showing followed titles for the rest of the session, with no
+  /// way back short of a pull-to-refresh. Recomputing every build removes
+  /// that whole class of timing bug; `_sticky` preserves the one behaviour
+  /// the freeze was actually there for.
+  List<SimilarMedia> _visible(List<SimilarMedia> data, LibraryProvider library) {
+    if (!identical(_fetchedFor, widget.future)) {
+      _fetchedFor = widget.future;
+      _sticky.clear();
+      _lastFollowed = null;
+    }
+
+    final followed = library.items.map((i) => _key(i.type, i.tmdbId)).toSet();
+    final previous = _lastFollowed;
+    if (previous != null) {
+      // Anything followed since the last build was, by definition, on screen
+      // a moment ago — keep it there.
+      _sticky.addAll(followed.difference(previous));
+    }
+    _lastFollowed = followed;
+
+    return data.where((m) {
+      final key = _key(m.type, m.id);
+      return !followed.contains(key) || _sticky.contains(key);
+    }).toList();
   }
 
   @override
@@ -310,9 +323,11 @@ class _CategoryRowState extends State<_CategoryRow> {
       builder: (context, snapshot) {
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
-        _captureBaseline(data, library);
-        final items = _visibleItems;
-        if (items == null || items.isEmpty) return const SizedBox.shrink();
+        // An empty `items` before the Firestore stream's first snapshot is
+        // not an empty library, so don't render an unfiltered row against it.
+        if (!library.isLoaded) return const SizedBox.shrink();
+        final items = _visible(data, library);
+        if (items.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
