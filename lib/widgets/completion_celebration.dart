@@ -52,14 +52,14 @@ class CompletionCelebration extends StatelessWidget {
           final t = controller.value;
           if (t == 0) return const SizedBox.shrink();
 
-          final fadeOut = 1 - Curves.easeIn.transform(
-            ((t - 0.82) / 0.18).clamp(0.0, 1.0),
-          );
+          final fadeOut =
+              1 - Curves.easeIn.transform(((t - 0.82) / 0.18).clamp(0.0, 1.0));
           final badgeScale = Curves.elasticOut.transform(
             (t / 0.55).clamp(0.0, 1.0),
           );
-          final labelOpacity =
-              Curves.easeOut.transform(((t - 0.22) / 0.25).clamp(0.0, 1.0));
+          final labelOpacity = Curves.easeOut.transform(
+            ((t - 0.22) / 0.25).clamp(0.0, 1.0),
+          );
 
           return Opacity(
             opacity: fadeOut,
@@ -85,7 +85,10 @@ class CompletionCelebration extends StatelessWidget {
                           // White on dark, black on light: the medallion has
                           // to read against both the page and whatever the
                           // poster's edges happen to be.
-                          border: Border.all(color: context.colorTextPrimary, width: 3),
+                          border: Border.all(
+                            color: context.colorTextPrimary,
+                            width: 3,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.accent.withValues(alpha: 0.45),
@@ -97,35 +100,64 @@ class CompletionCelebration extends StatelessWidget {
                         child: ClipOval(
                           child: posterPath != null
                               ? CachedNetworkImage(
-                                  imageUrl: '${TmdbConfig.imageBaseUrlSmall}$posterPath',
+                                  imageUrl:
+                                      '${TmdbConfig.imageBaseUrlSmall}$posterPath',
                                   fit: BoxFit.cover,
-                                  errorWidget: (context, url, error) => const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.black,
-                                    size: 46,
-                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(
+                                        Icons.check_rounded,
+                                        color: Colors.black,
+                                        size: 46,
+                                      ),
                                 )
-                              : const Icon(Icons.check_rounded, color: Colors.black, size: 46),
+                              : const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.black,
+                                  size: 46,
+                                ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     Opacity(
                       opacity: labelOpacity,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          child: Text(
-                            context.tr('celebrate.seriesCompleted'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                              letterSpacing: 0.3,
+                      // Rises as it fades in, so it lands under the medallion
+                      // instead of just appearing there.
+                      child: Transform.translate(
+                        offset: Offset(0, 10 * (1 - labelOpacity)),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            // Translucent black was barely there over a light
+                            // page. The accent fill carries the same palette as
+                            // the rings and the medallion's glow.
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent.withValues(alpha: 0.35),
+                                blurRadius: 18,
+                                spreadRadius: 1,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 9,
+                            ),
+                            child: Text(
+                              context.tr('celebrate.seriesCompleted'),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                letterSpacing: 0.4,
+                              ),
                             ),
                           ),
                         ),
@@ -195,12 +227,16 @@ class _BloomPainter extends CustomPainter {
         center.dy + sin(p.angle) * radius + drop,
       );
       final paint = Paint()
-        ..color = Color.lerp(AppColors.accent, const Color(0xFFFFE9A8), p.shade)!
-            .withValues(alpha: (1 - pt * pt).clamp(0.0, 1.0));
+        ..color = Color.lerp(
+          AppColors.accent,
+          const Color(0xFFFFE9A8),
+          p.shade,
+        )!.withValues(alpha: (1 - pt * pt).clamp(0.0, 1.0));
       canvas.drawCircle(offset, p.size * (1 - pt * 0.45), paint);
     }
   }
 
   @override
-  bool shouldRepaint(_BloomPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(_BloomPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

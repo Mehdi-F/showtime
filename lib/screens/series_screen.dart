@@ -175,6 +175,21 @@ class _SeriesScreenState extends State<SeriesScreen>
     super.dispose();
   }
 
+  List<LibraryItem>? _tvItemsCache;
+  List<LibraryItem>? _tvItemsSource;
+
+  // Filtering inline in build() handed the tabs a brand new list on every
+  // rebuild, so their own caches (and the didUpdateWidget identity check
+  // that triggers a re-resolve) saw a change even when the library hadn't
+  // moved. Keyed on the provider list's identity instead.
+  List<LibraryItem> _tvItems(List<LibraryItem> all) {
+    if (_tvItemsCache != null && identical(_tvItemsSource, all)) {
+      return _tvItemsCache!;
+    }
+    _tvItemsSource = all;
+    return _tvItemsCache = all.where((i) => i.type == 'tv').toList();
+  }
+
   Future<_ShowEpisodesData> _resolveShowEpisodes(
     TmdbService tmdb,
     LibraryItem item,
@@ -239,11 +254,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   Widget build(BuildContext context) {
     context.watch<SettingsProvider>();
-    final tvItems = context
-        .watch<LibraryProvider>()
-        .items
-        .where((i) => i.type == 'tv')
-        .toList();
+    final tvItems = _tvItems(context.watch<LibraryProvider>().items);
     final tmdb = context.read<TmdbService>();
 
     return Scaffold(
@@ -320,14 +331,24 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   int _visibleCount = _pageSize;
   final _scrollController = ScrollController();
 
+  List<LibraryItem>? _sortedCache;
+  List<LibraryItem>? _sortedCacheSource;
+
+  // Re-sorted on every build, and build runs on every scroll-driven
+  // setState. Cached against the item list's identity, which is what
+  // changes when the library provider emits.
   List<LibraryItem> _sortedItems() {
+    if (_sortedCache != null && identical(_sortedCacheSource, widget.tvItems)) {
+      return _sortedCache!;
+    }
     final sorted = widget.tvItems.toList();
     sorted.sort(
       (a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(
         a.lastActivityAt ?? a.addedAt,
       ),
     );
-    return sorted;
+    _sortedCacheSource = widget.tvItems;
+    return _sortedCache = sorted;
   }
 
   @override
@@ -412,7 +433,17 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     await _resolveVisible(isInitial: false);
   }
 
+  List<_HistorySkeletonEntry>? _historyCache;
+  List<LibraryItem>? _historyCacheSource;
+
+  // This walks every watched episode of every show — tens of thousands of
+  // entries on a large library — runs a regex on each and then sorts. Doing
+  // that on every build is what made scrolling stutter.
   List<_HistorySkeletonEntry> _historySkeleton() {
+    if (_historyCache != null &&
+        identical(_historyCacheSource, widget.tvItems)) {
+      return _historyCache!;
+    }
     final entries = <_HistorySkeletonEntry>[];
     for (final item in widget.tvItems) {
       for (final e in item.episodeWatchedAt.entries) {
@@ -429,7 +460,8 @@ class _ToWatchTabState extends State<_ToWatchTab> {
       }
     }
     entries.sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
-    return entries;
+    _historyCacheSource = widget.tvItems;
+    return _historyCache = entries;
   }
 
   Future<void> _loadMoreHistory() async {
@@ -601,8 +633,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     List<_ShowEpisodesData> notStarted,
     List<_ShowEpisodesData> stale,
   ) {
-    final hasAnyHistory = _historySkeleton().isNotEmpty;
-    final hasMoreHistory = _historyVisibleCount < _historySkeleton().length;
+    final skeleton = _historySkeleton();
+    final hasAnyHistory = skeleton.isNotEmpty;
+    final hasMoreHistory = _historyVisibleCount < skeleton.length;
     final history = _historyExpanded
         ? _resolvedHistoryEntries()
         : const <_HistoryEntry>[];
@@ -1014,14 +1047,24 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   int _visibleCount = _pageSize;
   final _scrollController = ScrollController();
 
+  List<LibraryItem>? _sortedCache;
+  List<LibraryItem>? _sortedCacheSource;
+
+  // Re-sorted on every build, and build runs on every scroll-driven
+  // setState. Cached against the item list's identity, which is what
+  // changes when the library provider emits.
   List<LibraryItem> _sortedItems() {
+    if (_sortedCache != null && identical(_sortedCacheSource, widget.tvItems)) {
+      return _sortedCache!;
+    }
     final sorted = widget.tvItems.toList();
     sorted.sort(
       (a, b) => (b.lastActivityAt ?? b.addedAt).compareTo(
         a.lastActivityAt ?? a.addedAt,
       ),
     );
-    return sorted;
+    _sortedCacheSource = widget.tvItems;
+    return _sortedCache = sorted;
   }
 
   @override
