@@ -313,13 +313,6 @@ class _ToWatchTab extends StatefulWidget {
 class _ToWatchTabState extends State<_ToWatchTab> {
   static const _pageSize = 20;
 
-  // "Pas commencé" is usually the longest section by far — rendering all of
-  // it at once made the list tall enough that the infinite-scroll loader
-  // kept firing and the scroll position jumped around. It now grows only
-  // when the user asks for more.
-  static const _notStartedPageSize = 20;
-  int _notStartedVisibleCount = _notStartedPageSize;
-
   static const _historyPageSize = 15;
   int _historyVisibleCount = 0;
   bool _historyLoadingMore = false;
@@ -354,7 +347,6 @@ class _ToWatchTabState extends State<_ToWatchTab> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     _resolveVisible(isInitial: true);
   }
 
@@ -366,36 +358,44 @@ class _ToWatchTabState extends State<_ToWatchTab> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  // Only one page load may be in flight at a time. The loader used to run on
-  // every scroll notification past its threshold and start another
-  // _resolveVisible batch each time; since a rebuild doesn't instantly make
-  // the list taller, the threshold stayed true and it piled up overlapping
-  // batches — hundreds of concurrent TMDB fetches, which OOM'd the app.
+  // Loading on scroll meant the list grew under the thumb and the position
+  // shifted mid-gesture; it also fired repeatedly while the rebuild caught
+  // up. The next page is requested explicitly instead.
   bool _loadingMoreItems = false;
 
+  bool get _hasMoreItems => _visibleCount < widget.tvItems.length;
+
   void _growVisibleCount() {
-    if (_loadingMoreItems || _visibleCount >= widget.tvItems.length) return;
-    _loadingMoreItems = true;
-    setState(() => _visibleCount += _pageSize);
+    if (_loadingMoreItems || !_hasMoreItems) return;
+    setState(() {
+      _loadingMoreItems = true;
+      _visibleCount += _pageSize;
+    });
     _resolveVisible(isInitial: false).whenComplete(() {
-      if (mounted) _loadingMoreItems = false;
+      if (mounted) setState(() => _loadingMoreItems = false);
     });
   }
 
-  void _onScroll() {
-    final position = _scrollController.position;
-    // maxScrollExtent can be 0 (or smaller than the trigger distance) when the
-    // content fits the viewport — without this guard the "near the bottom"
-    // test is true even at rest and the loader fires continuously.
-    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
-    if (position.pixels >= position.maxScrollExtent - 400) {
-      _growVisibleCount();
-    }
+  Widget _loadMoreRow(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Center(
+        child: _loadingMoreItems
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : OutlinedButton(
+                onPressed: _growVisibleCount,
+                child: Text(context.tr('common.loadMore')),
+              ),
+      ),
+    );
   }
 
   Future<void> _resolveVisible({required bool isInitial}) {
@@ -655,6 +655,7 @@ class _ToWatchTabState extends State<_ToWatchTab> {
         // a more likely next pick than one you never opened.
         if (stale.isNotEmpty) ..._staleSection(context, stale),
         if (notStarted.isNotEmpty) ..._notStartedSection(context, notStarted),
+        if (_hasMoreItems) _loadMoreRow(context),
       ],
     );
   }
@@ -738,10 +739,9 @@ class _ToWatchTabState extends State<_ToWatchTab> {
           _buildCardSection(
             context,
             context.tr('series.notStarted'),
-            notStarted.take(_notStartedVisibleCount).toList(),
+            notStarted,
           ),
-        if (notStarted.isNotEmpty && _hasMoreNotStarted(notStarted))
-          _showMoreNotStartedRow(context),
+        if (_hasMoreItems) _loadMoreRow(context),
       ],
     );
   }
@@ -890,37 +890,10 @@ class _ToWatchTabState extends State<_ToWatchTab> {
     BuildContext context,
     List<_ShowEpisodesData> rows,
   ) {
-    final visible = rows.take(_notStartedVisibleCount).toList();
     return [
       _sectionHeader(context.tr('series.notStarted')),
-      for (final d in visible) _buildNotStartedCard(context, d),
-      if (_hasMoreNotStarted(rows)) _showMoreNotStartedRow(context),
+      for (final d in rows) _buildNotStartedCard(context, d),
     ];
-  }
-
-  /// True when there are more rows already resolved than we're showing, or
-  /// more library items that haven't been resolved into rows yet — capping
-  /// the section can otherwise leave the page too short to ever trigger the
-  /// scroll loader, which would hide the rest of the library for good.
-  bool _hasMoreNotStarted(List<_ShowEpisodesData> rows) =>
-      rows.length > _notStartedVisibleCount ||
-      _visibleCount < widget.tvItems.length;
-
-  Widget _showMoreNotStartedRow(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: TextButton(
-          onPressed: () => setState(() {
-            _notStartedVisibleCount += _notStartedPageSize;
-            if (_visibleCount < widget.tvItems.length) {
-              _visibleCount += _pageSize;
-            }
-          }),
-          child: Text(context.tr('common.loadMore')),
-        ),
-      ),
-    );
   }
 
   Widget _buildNextCard(

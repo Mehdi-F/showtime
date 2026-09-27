@@ -99,6 +99,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with TickerProvider
   @override
   void dispose() {
     _tabController.dispose();
+    _removeCelebration();
     _celebrationController.dispose();
     super.dispose();
   }
@@ -301,12 +302,31 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with TickerProvider
 
   bool get _isFullyWatched => _totalMainEpisodes > 0 && _totalWatchedMain >= _totalMainEpisodes;
 
+  OverlayEntry? _celebrationEntry;
+
+  /// Shown through the root overlay rather than this screen's Stack: marking
+  /// the last episode often happens from the episode sheet, which is itself
+  /// an overlay entry, so an in-tree celebration rendered behind it.
   void _maybeCelebrate() {
     final details = _details;
-    if (details != null && details.isEnded && _isFullyWatched) {
-      _celebrationController.forward(from: 0);
-      HapticFeedback.mediumImpact();
-    }
+    if (details == null || !details.isEnded || !_isFullyWatched) return;
+
+    _removeCelebration();
+    final entry = OverlayEntry(
+      builder: (_) => CompletionCelebration(
+        controller: _celebrationController,
+        posterPath: details.posterPath,
+      ),
+    );
+    _celebrationEntry = entry;
+    Overlay.of(context, rootOverlay: true).insert(entry);
+    HapticFeedback.mediumImpact();
+    _celebrationController.forward(from: 0).whenComplete(_removeCelebration);
+  }
+
+  void _removeCelebration() {
+    _celebrationEntry?.remove();
+    _celebrationEntry = null;
   }
 
   // "Vue une fois" only makes sense — and only appears, matching TV Time —
@@ -1183,12 +1203,6 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> with TickerProvider
                 ),
               ),
             ],
-            ),
-          ),
-          Positioned.fill(
-            child: CompletionCelebration(
-              controller: _celebrationController,
-              posterPath: details.posterPath,
             ),
           ),
         ],
