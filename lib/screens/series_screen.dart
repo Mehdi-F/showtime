@@ -1043,7 +1043,6 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onUpcomingScroll);
     _resolveVisible(isInitial: true);
   }
 
@@ -1055,7 +1054,6 @@ class _UpcomingTabState extends State<_UpcomingTab> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onUpcomingScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -1087,16 +1085,35 @@ class _UpcomingTabState extends State<_UpcomingTab> {
   // there for why overlapping page loads were a problem.
   bool _loadingMoreItems = false;
 
-  void _onUpcomingScroll() {
-    final position = _scrollController.position;
-    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
-    if (position.pixels < position.maxScrollExtent - 400) return;
-    if (_loadingMoreItems || _visibleCount >= widget.tvItems.length) return;
-    _loadingMoreItems = true;
-    setState(() => _visibleCount += _pageSize);
-    _resolveVisible(isInitial: false).whenComplete(() {
-      if (mounted) _loadingMoreItems = false;
+  bool get _hasMoreItems => _visibleCount < widget.tvItems.length;
+
+  void _growVisibleCount() {
+    if (_loadingMoreItems || !_hasMoreItems) return;
+    setState(() {
+      _loadingMoreItems = true;
+      _visibleCount += _pageSize;
     });
+    _resolveVisible(isInitial: false).whenComplete(() {
+      if (mounted) setState(() => _loadingMoreItems = false);
+    });
+  }
+
+  Widget _loadMoreRow(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Center(
+        child: _loadingMoreItems
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : OutlinedButton(
+                onPressed: _growVisibleCount,
+                child: Text(context.tr('common.loadMore')),
+              ),
+      ),
+    );
   }
 
   Future<void> _refresh() async {
@@ -1366,6 +1383,8 @@ class _UpcomingTabState extends State<_UpcomingTab> {
         );
       }
     });
+
+    if (_hasMoreItems) children.add(_loadMoreRow(context));
 
     return ListView(
       controller: _scrollController,
