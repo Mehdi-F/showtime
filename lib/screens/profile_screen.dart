@@ -1409,26 +1409,26 @@ enum _SeriesProgressFilter {
 }
 
 extension on _SeriesProgressFilter {
-  String get label => switch (this) {
-    _SeriesProgressFilter.all => 'Tout',
-    _SeriesProgressFilter.inProgress => 'Vos séries en cours',
-    _SeriesProgressFilter.notStarted => "N'a pas encore commencé",
-    _SeriesProgressFilter.upToDate => 'À jour',
-    _SeriesProgressFilter.completed => 'Terminé',
-    _SeriesProgressFilter.cancelled => 'Annulées',
-    _SeriesProgressFilter.favorites => 'Favoris',
-  };
+  String label(BuildContext context) => context.tr(switch (this) {
+    _SeriesProgressFilter.all => 'filter.seriesAll',
+    _SeriesProgressFilter.inProgress => 'filter.seriesInProgress',
+    _SeriesProgressFilter.notStarted => 'filter.seriesNotStarted',
+    _SeriesProgressFilter.upToDate => 'filter.seriesUpToDate',
+    _SeriesProgressFilter.completed => 'filter.seriesCompleted',
+    _SeriesProgressFilter.cancelled => 'filter.seriesCancelled',
+    _SeriesProgressFilter.favorites => 'filter.favorites',
+  });
 }
 
 enum _FilmProgressFilter { all, watched, unwatched, favorites }
 
 extension on _FilmProgressFilter {
-  String get label => switch (this) {
-    _FilmProgressFilter.all => 'Tous',
-    _FilmProgressFilter.watched => 'Vu',
-    _FilmProgressFilter.unwatched => 'Non vu',
-    _FilmProgressFilter.favorites => 'Favoris',
-  };
+  String label(BuildContext context) => context.tr(switch (this) {
+    _FilmProgressFilter.all => 'filter.filmsAll',
+    _FilmProgressFilter.watched => 'filter.filmsWatched',
+    _FilmProgressFilter.unwatched => 'filter.filmsUnwatched',
+    _FilmProgressFilter.favorites => 'filter.favorites',
+  });
 }
 
 /// Cancelled takes priority over watch progress (there will never be more
@@ -1526,9 +1526,9 @@ class _FullListScreenState extends State<_FullListScreen> {
       final result = await showLibraryFilterSheet<_SeriesProgressFilter>(
         context,
         initialSort: _sort,
-        progressTitle: 'Progress',
+        progressTitle: context.tr('filter.progress'),
         filterValues: _SeriesProgressFilter.values,
-        filterLabel: (f) => f.label,
+        filterLabel: (f) => f.label(context),
         initialFilter: _seriesFilter,
         defaultFilter: _SeriesProgressFilter.all,
       );
@@ -1542,9 +1542,9 @@ class _FullListScreenState extends State<_FullListScreen> {
       final result = await showLibraryFilterSheet<_FilmProgressFilter>(
         context,
         initialSort: _sort,
-        progressTitle: 'Avancement',
+        progressTitle: context.tr('filter.progress'),
         filterValues: _FilmProgressFilter.values,
-        filterLabel: (f) => f.label,
+        filterLabel: (f) => f.label(context),
         initialFilter: _filmFilter,
         defaultFilter: _FilmProgressFilter.all,
       );
@@ -1766,7 +1766,7 @@ class _FullListScreenState extends State<_FullListScreen> {
   Widget build(BuildContext context) {
     context.watch<SettingsProvider>();
     final visible = _applyFilterAndSort();
-    final filterLabel = _isSeries ? _seriesFilter.label : _filmFilter.label;
+    final filterLabel = _isSeries ? _seriesFilter.label(context) : _filmFilter.label(context);
     return Scaffold(
       backgroundColor: context.colorBackground,
       appBar: AppBar(
