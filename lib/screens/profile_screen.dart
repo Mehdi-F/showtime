@@ -270,9 +270,36 @@ class _ProfileBodyState extends State<_ProfileBody> {
   bool _showContent = false;
   _ProfileStatsSnapshot? _lastSnapshot;
 
-  // Cache for sorted lists
-  List<_ResolvedItem>? _cachedResolved;
+  // Bumped whenever _resolved changes, so the sorted lists below are rebuilt
+  // once per batch instead of on every rebuild. The previous identity check
+  // compared against a list rebuilt inside build(), so it never matched and
+  // all eight sorts ran every single time.
+  int _resolvedVersion = 0;
+  int _sortedVersion = -1;
   late _SortedLists _sortedLists = const _SortedLists.empty();
+
+  // Titles resolve one at a time, but calling setState per title rebuilt and
+  // re-sorted the whole profile on each one — that is what made the carousels
+  // visibly fill in item by item. Results are applied in batches instead.
+  Timer? _flushTimer;
+
+  void _scheduleFlush() {
+    if (!mounted || _flushTimer != null) return;
+    _flushTimer = Timer(const Duration(milliseconds: 120), _flush);
+  }
+
+  void _flush() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    if (!mounted) return;
+    setState(() => _resolvedVersion++);
+  }
+
+  @override
+  void dispose() {
+    _flushTimer?.cancel();
+    super.dispose();
+  }
 
   String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
 
@@ -384,21 +411,22 @@ class _ProfileBodyState extends State<_ProfileBody> {
     // (the old behavior) hit TMDB's rate limit on any sizeable library, so
     // most titles silently failed (caught below) and only came back once the
     // user pulled to refresh and got lucky with a smaller retry batch.
+    _resolvedVersion++;
     final all = forEachBounded(items, 8, (item) async {
       final key = _key(item);
       try {
         final r = await _resolveItem(widget.tmdb, item);
-        if (mounted) {
-          setState(() {
-            _resolved[key] = r;
-            _settled.add(key);
-          });
-        }
+        if (!mounted) return;
+        _resolved[key] = r;
+        _settled.add(key);
+        _scheduleFlush();
       } catch (_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
         // rest of the profile from rendering — but it still counts as
         // "settled" so the stats snapshot isn't stuck waiting forever.
-        if (mounted) setState(() => _settled.add(key));
+        if (!mounted) return;
+        _settled.add(key);
+        _scheduleFlush();
       }
     });
     if (isInitial) {
@@ -408,7 +436,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
             if (mounted) setState(() => _showContent = true);
           });
     }
-    unawaited(all.whenComplete(_saveStatsSnapshot));
+    unawaited(all.whenComplete(() {
+      _flush();
+      _saveStatsSnapshot();
+    }));
     return all;
   }
 
@@ -557,9 +588,8 @@ class _ProfileBodyState extends State<_ProfileBody> {
         .whereType<_ResolvedItem>()
         .toList();
 
-    // Cache sorted lists to avoid re-sorting on every build
-    if (!identical(_cachedResolved, resolved)) {
-      _cachedResolved = resolved;
+    if (_sortedVersion != _resolvedVersion) {
+      _sortedVersion = _resolvedVersion;
       _sortedLists = _buildSortedLists(resolved);
     }
 
@@ -1757,7 +1787,11 @@ class _FullListScreenState extends State<_FullListScreen> {
               ),
             ],
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        // Clears the floating filter button *and* the system navigation
+        // bar, so the last row stays reachable.
+        SliverToBoxAdapter(
+          child: SizedBox(height: 88 + MediaQuery.viewPaddingOf(context).bottom),
+        ),
       ],
     );
   }
@@ -1814,7 +1848,12 @@ class _FullListScreenState extends State<_FullListScreen> {
                       // overlaid above the grid (see Positioned below) —
                       // the grid scrolls underneath it, same "floaty" look
                       // as the grouped mode's sticky pills.
-                      padding: const EdgeInsets.fromLTRB(10, 56, 10, 10),
+                      padding: EdgeInsets.fromLTRB(
+                        10,
+                        56,
+                        10,
+                        88 + MediaQuery.viewPaddingOf(context).bottom,
+                      ),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,
@@ -1844,7 +1883,9 @@ class _FullListScreenState extends State<_FullListScreen> {
               ),
             ),
           Positioned(
-            bottom: 16,
+            // The Stack fills the Scaffold body, so a bare 16 puts this
+            // under the system navigation bar on gesture-less devices.
+            bottom: 16 + MediaQuery.viewPaddingOf(context).bottom,
             left: 0,
             right: 0,
             child: Center(child: LibraryFilterButton(onTap: _openFilterSheet)),
@@ -1915,6 +1956,21 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
   Object? _streamError;
   _ProfileStatsSnapshot? _lastSnapshot;
 
+  // Same batching as _ProfileBodyState: one rebuild per batch of resolved
+  // titles rather than one per title.
+  Timer? _flushTimer;
+
+  void _scheduleFlush() {
+    if (!mounted || _flushTimer != null) return;
+    _flushTimer = Timer(const Duration(milliseconds: 120), _flush);
+  }
+
+  void _flush() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    if (mounted) setState(() {});
+  }
+
   String _key(LibraryItem item) => '${item.type}:${item.tmdbId}';
 
   bool get _allSettled => _settled.length >= _libraryItems.length;
@@ -1943,6 +1999,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _flushTimer?.cancel();
     super.dispose();
   }
 
@@ -1960,17 +2017,17 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       final key = _key(item);
       try {
         final r = await _resolveItem(tmdb, item);
-        if (mounted) {
-          setState(() {
-            _resolved[key] = r;
-            _settled.add(key);
-          });
-        }
+        if (!mounted) return;
+        _resolved[key] = r;
+        _settled.add(key);
+        _scheduleFlush();
       } catch (_) {
         // A single title failing to load (TMDB hiccup) shouldn't block the
         // rest of the profile from rendering — but it still counts as
         // "settled" so the stats snapshot isn't stuck waiting forever.
-        if (mounted) setState(() => _settled.add(key));
+        if (!mounted) return;
+        _settled.add(key);
+        _scheduleFlush();
       }
     });
     if (isInitial) {
@@ -1980,6 +2037,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
             if (mounted) setState(() => _showContent = true);
           });
     }
+    unawaited(all.whenComplete(_flush));
     return all;
   }
 
